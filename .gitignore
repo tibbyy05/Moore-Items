@@ -28,6 +28,10 @@ yarn-error.log*
 .env
 .env*.local
 
+# API token caches
+.cj-token-cache.json
+scripts/.cj-token-cache.json
+
 # vercel
 .vercel
 
