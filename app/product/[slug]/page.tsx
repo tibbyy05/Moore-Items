@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Truck, Heart, ShoppingCart, Check } from 'lucide-react';
+import { ChevronRight, Truck, Heart, ShoppingCart, Check, Download } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -311,6 +311,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
           description: data.product.description || '',
           shippingDays: data.product.shipping_estimate || data.product.shipping_days || '7-12 days',
           warehouse: data.product.warehouse || 'CN',
+          isDigital: !!(data.product.digital_file_path || data.product.mi_categories?.slug === 'digital-downloads'),
           inStock: data.product.stock_count > 0,
           stockCount: data.product.stock_count || 0,
         };
@@ -462,6 +463,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       quantity,
       image: product.images[0],
       warehouse: product.warehouse,
+      isDigital: product.isDigital,
     });
     setAddedState(true);
     window.setTimeout(() => setAddedState(false), 1500);
@@ -523,7 +525,23 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
                 className="mb-6"
               />
 
-              {product.warehouse === 'US' ? (
+              {product.isDigital ? (
+                <div className="mb-6 bg-violet-50 border border-violet-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
+                      <Download className="w-5 h-5 text-violet-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-violet-800">
+                        Instant Digital Download
+                      </p>
+                      <p className="text-xs text-violet-600">
+                        Available immediately after purchase · No shipping required
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : product.warehouse === 'US' ? (
                 <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -619,27 +637,50 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
               <Accordion type="single" collapsible className="mt-6">
                 <AccordionItem value="shipping">
-                  <AccordionTrigger>Shipping Information</AccordionTrigger>
+                  <AccordionTrigger>
+                    {product.isDigital ? 'Delivery Information' : 'Shipping Information'}
+                  </AccordionTrigger>
                   <AccordionContent>
-                    <div className="space-y-2 text-warm-700">
-                      <p>
-                        <strong>US Warehouse:</strong> 2-5 business days
-                      </p>
-                      <p>
-                        <strong>International:</strong> {product.shippingDays}
-                      </p>
-                      <p>Free shipping on orders over $50.</p>
-                    </div>
+                    {product.isDigital ? (
+                      <div className="space-y-2 text-warm-700">
+                        <p>
+                          <strong>Delivery:</strong> Instant download after purchase
+                        </p>
+                        <p>
+                          Download links are available on the order confirmation page and in your order history.
+                          A link is also included in your confirmation email.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 text-warm-700">
+                        <p>
+                          <strong>US Warehouse:</strong> 2-5 business days
+                        </p>
+                        <p>
+                          <strong>International:</strong> {product.shippingDays}
+                        </p>
+                        <p>Free shipping on orders over $50.</p>
+                      </div>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="returns">
-                  <AccordionTrigger>Returns Policy</AccordionTrigger>
+                  <AccordionTrigger>
+                    {product.isDigital ? 'Refund Policy' : 'Returns Policy'}
+                  </AccordionTrigger>
                   <AccordionContent>
-                    <p className="text-warm-700 leading-relaxed">
-                      We offer a 30-day return policy for all items. Products must be unused and in
-                      original packaging. Return shipping is free for defective items.
-                    </p>
+                    {product.isDigital ? (
+                      <p className="text-warm-700 leading-relaxed">
+                        Due to the nature of digital products, all sales are final.
+                        If you experience issues with your download, please contact our support team.
+                      </p>
+                    ) : (
+                      <p className="text-warm-700 leading-relaxed">
+                        We offer a 30-day return policy for all items. Products must be unused and in
+                        original packaging. Return shipping is free for defective items.
+                      </p>
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>

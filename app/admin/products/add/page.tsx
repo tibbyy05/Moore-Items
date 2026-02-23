@@ -13,6 +13,7 @@ import {
   ImagePlus,
   X,
   DollarSign,
+  FileUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -79,6 +80,9 @@ function ManualProductForm() {
     []
   );
   const [imageUrls, setImageUrls] = useState<string[]>(['']);
+  const [isDigital, setIsDigital] = useState(false);
+  const [digitalFile, setDigitalFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -98,6 +102,15 @@ function ManualProductForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    // Auto-toggle digital mode when Digital Downloads category is selected
+    if (e.target.name === 'category_id') {
+      const selectedCat = categories.find((c) => c.id === e.target.value);
+      if (selectedCat?.slug === 'digital-downloads') {
+        setIsDigital(true);
+        setForm((prev) => ({ ...prev, category_id: e.target.value, status: 'active' }));
+        return;
+      }
+    }
   };
 
   const handleImageChange = (index: number, value: string) => {
@@ -127,9 +140,36 @@ function ManualProductForm() {
       toast.error('Enter a valid retail price');
       return;
     }
+    if (isDigital && !digitalFile) {
+      toast.error('Please upload a digital file');
+      return;
+    }
 
     setSaving(true);
     try {
+      let digitalFilePath: string | null = null;
+
+      // Upload digital file first if applicable
+      if (isDigital && digitalFile) {
+        setUploadingFile(true);
+        const uploadForm = new FormData();
+        uploadForm.append('file', digitalFile);
+
+        const uploadRes = await fetch('/api/admin/products/upload-digital', {
+          method: 'POST',
+          body: uploadForm,
+        });
+
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json();
+          throw new Error(err.error || 'Failed to upload digital file');
+        }
+
+        const uploadData = await uploadRes.json();
+        digitalFilePath = uploadData.path;
+        setUploadingFile(false);
+      }
+
       const slug = form.name
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
@@ -152,9 +192,10 @@ function ManualProductForm() {
         margin_dollars: Math.round((retailPrice - (retailPrice * 0.029 + 0.3)) * 100) / 100,
         margin_percent:
           Math.round(((retailPrice - (retailPrice * 0.029 + 0.3)) / retailPrice) * 1000) / 10,
-        stock_count: 0,
+        stock_count: isDigital ? 9999 : 0,
         warehouse: null,
         status: form.status,
+        digital_file_path: digitalFilePath,
       };
 
       const response = await fetch('/api/admin/products/add', {
@@ -174,6 +215,7 @@ function ManualProductForm() {
       toast.error(err.message || 'Failed to create product');
     } finally {
       setSaving(false);
+      setUploadingFile(false);
     }
   };
 
@@ -237,6 +279,25 @@ function ManualProductForm() {
                 <option value="hidden">Hidden</option>
               </select>
             </div>
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <input
+              type="checkbox"
+              id="isDigital"
+              checked={isDigital}
+              onChange={(e) => {
+                setIsDigital(e.target.checked);
+                if (e.target.checked) {
+                  setForm((prev) => ({ ...prev, status: 'active' }));
+                } else {
+                  setDigitalFile(null);
+                }
+              }}
+              className="w-4 h-4 rounded border-gray-300 text-gold-500 focus:ring-gold-500/40"
+            />
+            <label htmlFor="isDigital" className="text-sm font-medium text-gray-700">
+              This is a digital product (downloadable file, no shipping)
+            </label>
           </div>
         </div>
       </div>
@@ -304,6 +365,41 @@ function ManualProductForm() {
         </div>
       </div>
 
+      {/* Digital File Upload */}
+      {isDigital && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Digital File</h2>
+          <p className="text-xs text-gray-400 mb-3">
+            Upload the file customers will receive after purchase (PDF, ZIP, etc. &mdash; max 50 MB).
+          </p>
+          <label className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gold-400 hover:bg-gold-50/30 transition-colors">
+            <FileUp className="w-5 h-5 text-gray-400" />
+            <span className="text-sm text-gray-600">
+              {digitalFile ? digitalFile.name : 'Choose a file...'}
+            </span>
+            <input
+              type="file"
+              className="hidden"
+              onChange={(e) => setDigitalFile(e.target.files?.[0] || null)}
+            />
+          </label>
+          {digitalFile && (
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-gray-500">
+                {(digitalFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+              <button
+                type="button"
+                onClick={() => setDigitalFile(null)}
+                className="text-xs text-danger hover:underline"
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-3">
         <button
@@ -314,7 +410,7 @@ function ManualProductForm() {
           {saving ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              Creating...
+              {uploadingFile ? 'Uploading file...' : 'Creating...'}
             </>
           ) : (
             <>

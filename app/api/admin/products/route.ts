@@ -29,6 +29,20 @@ export async function GET(request: NextRequest) {
   if (error) return error;
   const { searchParams } = new URL(request.url);
 
+  // Single product fetch by ID (for edit page)
+  const id = searchParams.get('id');
+  if (id) {
+    const { data, error: fetchError } = await supabase
+      .from('mi_products')
+      .select('*, mi_categories(name, slug)')
+      .eq('id', id)
+      .single();
+    if (fetchError || !data) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    return NextResponse.json({ product: data });
+  }
+
   const page = parseInt(searchParams.get('page') || '1');
   const limit = parseInt(searchParams.get('limit') || '20');
   const status = searchParams.get('status');

@@ -112,6 +112,15 @@ export default function LoginPage() {
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
+
+      <div className="mt-6 pt-4 border-t border-warm-200 text-center">
+        <Link
+          href="/order/lookup"
+          className="text-sm text-warm-600 hover:text-gold-600 transition-colors"
+        >
+          Looking for a guest order? Find it here &rarr;
+        </Link>
+      </div>
     </AuthForm>
   );
 }

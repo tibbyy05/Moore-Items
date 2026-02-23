@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Package, ChevronRight } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 
@@ -21,16 +20,12 @@ export default function OrderHistoryPage() {
         router.replace('/login');
         return;
       }
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('mi_orders')
-        .select(
-          'id, order_number, created_at, total, subtotal, fulfillment_status, payment_status, shipping_method'
-        )
-        .eq('email', user.email)
-        .order('created_at', { ascending: false });
 
-      setOrders(data || []);
+      const response = await fetch('/api/account/orders');
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data.orders || []);
+      }
       setLoading(false);
     };
     load();

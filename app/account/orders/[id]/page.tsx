@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Package, Truck, CheckCircle, Clock, ArrowLeft } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Package, Truck, CheckCircle, Clock, ArrowLeft, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/providers/AuthProvider';
 
@@ -35,27 +34,16 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         router.replace('/login');
         return;
       }
-      const supabase = createClient();
-      const { data: orderData } = await supabase
-        .from('mi_orders')
-        .select('*')
-        .eq('id', params.id)
-        .eq('email', user.email)
-        .single();
 
-      if (!orderData) {
+      const response = await fetch(`/api/account/orders/${params.id}`);
+      if (!response.ok) {
         router.replace('/account/orders');
         return;
       }
 
-      setOrder(orderData);
-
-      const { data: orderItems } = await supabase
-        .from('mi_order_items')
-        .select('*')
-        .eq('order_id', params.id);
-
-      setItems(orderItems || []);
+      const data = await response.json();
+      setOrder(data.order);
+      setItems(data.items || []);
       setLoading(false);
     };
     load();
@@ -65,6 +53,8 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
   if (!order) return null;
 
   const statusIndex = getStatusIndex(order.fulfillment_status);
+  const allDigital = items.length > 0 && items.every((item: any) => item.is_digital);
+  const hasDigital = items.some((item: any) => item.is_digital);
 
   return (
     <div>
@@ -104,48 +94,68 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         </span>
       </div>
 
-      <div className="bg-warm-50 rounded-xl p-6 mb-8">
-        <div className="flex items-center justify-between">
-          {STATUS_STEPS.map((step, index) => {
-            const isCompleted = index <= statusIndex;
-            const isCurrent = index === statusIndex;
-            return (
-              <div key={step.key} className="flex flex-col items-center flex-1">
+      {/* Status timeline: simplified for all-digital orders */}
+      {allDigital ? (
+        <div className="bg-green-50 rounded-xl p-6 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-green-900">Delivered &mdash; Digital Download</p>
+              <p className="text-sm text-green-700">Your digital products are available for download below.</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-warm-50 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between">
+            {STATUS_STEPS.map((step, index) => {
+              const isCompleted = index <= statusIndex;
+              const isCurrent = index === statusIndex;
+              return (
+                <div key={step.key} className="flex flex-col items-center flex-1">
+                  <div
+                    className={cn(
+                      'w-10 h-10 rounded-full flex items-center justify-center mb-2',
+                      isCompleted ? 'bg-green-500 text-white' : 'bg-warm-200 text-warm-400',
+                      isCurrent && 'ring-4 ring-green-200'
+                    )}
+                  >
+                    <step.icon className="w-5 h-5" />
+                  </div>
+                  <p
+                    className={cn(
+                      'text-xs font-medium text-center',
+                      isCompleted ? 'text-warm-900' : 'text-warm-400'
+                    )}
+                  >
+                    {step.label}
+                  </p>
+                  {index < STATUS_STEPS.length - 1 && <div className="hidden" />}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex mt-[-36px] mb-6 px-[20px]">
+            {STATUS_STEPS.slice(0, -1).map((_, index) => (
+              <div key={index} className="flex-1 h-1 mx-1 rounded" style={{ marginTop: '20px' }}>
                 <div
                   className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center mb-2',
-                    isCompleted ? 'bg-green-500 text-white' : 'bg-warm-200 text-warm-400',
-                    isCurrent && 'ring-4 ring-green-200'
+                    'h-full rounded',
+                    index < statusIndex ? 'bg-green-500' : 'bg-warm-200'
                   )}
-                >
-                  <step.icon className="w-5 h-5" />
-                </div>
-                <p
-                  className={cn(
-                    'text-xs font-medium text-center',
-                    isCompleted ? 'text-warm-900' : 'text-warm-400'
-                  )}
-                >
-                  {step.label}
-                </p>
-                {index < STATUS_STEPS.length - 1 && <div className="hidden" />}
+                />
               </div>
-            );
-          })}
+            ))}
+          </div>
+          {hasDigital && (
+            <p className="text-sm text-violet-600 mt-2">
+              Digital items in this order are available for instant download below.
+            </p>
+          )}
         </div>
-        <div className="flex mt-[-36px] mb-6 px-[20px]">
-          {STATUS_STEPS.slice(0, -1).map((_, index) => (
-            <div key={index} className="flex-1 h-1 mx-1 rounded" style={{ marginTop: '20px' }}>
-              <div
-                className={cn(
-                  'h-full rounded',
-                  index < statusIndex ? 'bg-green-500' : 'bg-warm-200'
-                )}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
       {order.tracking_number && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
@@ -162,32 +172,57 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-warm-900 mb-4">Items</h3>
         <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-center gap-4 bg-warm-50 rounded-xl p-4">
-              {item.image && (
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-warm-100 flex-shrink-0">
-                  <Image
-                    src={item.image}
-                    alt={item.product_name || 'Product'}
-                    width={64}
-                    height={64}
-                    className="object-cover w-full h-full"
-                    unoptimized
-                  />
+          {items.map((item) => {
+            const itemImage = item.image_url || item.product_image || item.image;
+            const itemName = item.name || item.product_name || 'Product';
+            const itemVariant = item.variant_info || item.variant_name;
+            const itemTotal = Number(item.total || (item.unit_price || item.price || 0) * item.quantity || 0);
+
+            return (
+              <div key={item.id} className="flex items-center gap-4 bg-warm-50 rounded-xl p-4">
+                {itemImage && (
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-warm-100 flex-shrink-0">
+                    <Image
+                      src={itemImage}
+                      alt={itemName}
+                      width={64}
+                      height={64}
+                      className="object-cover w-full h-full"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-warm-900 truncate">
+                    {itemName}
+                  </p>
+                  {itemVariant && <p className="text-xs text-warm-500">{itemVariant}</p>}
+                  <p className="text-sm text-warm-600">Qty: {item.quantity}</p>
+                  {item.is_digital && (
+                    <span className="inline-block text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded mt-1">
+                      Digital Download
+                    </span>
+                  )}
                 </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-warm-900 truncate">
-                  {item.product_name || 'Product'}
-                </p>
-                {item.variant_name && <p className="text-xs text-warm-500">{item.variant_name}</p>}
-                <p className="text-sm text-warm-600">Qty: {item.quantity}</p>
+                <div className="flex items-center gap-3">
+                  {item.is_digital && order.payment_status === 'paid' && (
+                    <a
+                      href={`/api/downloads/${order.id}/${item.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gold-700 bg-gold-50 rounded-lg hover:bg-gold-100 transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </a>
+                  )}
+                  <p className="font-semibold text-warm-900">
+                    ${itemTotal.toFixed(2)}
+                  </p>
+                </div>
               </div>
-              <p className="font-semibold text-warm-900">
-                ${Number(item.price * item.quantity).toFixed(2)}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -201,9 +236,13 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
           <div className="flex justify-between text-warm-600">
             <span>Shipping</span>
             <span>
-              {Number(order.shipping_cost || 0) === 0
-                ? 'Free'
-                : `$${Number(order.shipping_cost).toFixed(2)}`}
+              {allDigital ? (
+                <span className="text-green-600 font-medium">N/A</span>
+              ) : Number(order.shipping_cost || 0) === 0 ? (
+                'Free'
+              ) : (
+                `$${Number(order.shipping_cost).toFixed(2)}`
+              )}
             </span>
           </div>
           {order.discount_amount > 0 && (
@@ -219,7 +258,7 @@ export default function OrderDetailPage({ params }: { params: { id: string } }) 
         </div>
       </div>
 
-      {order.shipping_address && (
+      {!allDigital && order.shipping_address && (
         <div className="bg-warm-50 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-warm-900 mb-3">Shipping Address</h3>
           <div className="text-sm text-warm-700 space-y-1">

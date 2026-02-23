@@ -35,6 +35,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
       quantity: 1,
       image: product.images[0],
       warehouse: product.warehouse,
+      isDigital: product.isDigital,
     });
   };
 

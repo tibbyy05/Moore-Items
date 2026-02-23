@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Download } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -18,6 +18,8 @@ interface OrderItem {
   unit_price: number;
   total: number;
   warehouse?: 'US' | 'CN';
+  is_digital?: boolean;
+  download_token?: string;
 }
 
 interface OrderDetails {
@@ -66,7 +68,13 @@ export default function OrderConfirmationPage() {
   }, [sessionId, clearCart]);
 
   const hasCN = items.some((item) => item.warehouse === 'CN');
-  const deliveryEstimate = hasCN ? '10-18 business days' : '2-5 business days';
+  const allDigital = items.length > 0 && items.every((item) => item.is_digital);
+  const hasDigital = items.some((item) => item.is_digital);
+  const deliveryEstimate = allDigital
+    ? 'Instant Download'
+    : hasCN
+      ? '10-18 business days'
+      : '2-5 business days';
   const sessionAddress = session?.shipping_details?.address || session?.customer_details?.address;
   const sessionName = session?.shipping_details?.name || session?.customer_details?.name;
   const orderShippingAddress =
@@ -124,7 +132,7 @@ export default function OrderConfirmationPage() {
                     {order.order_number}
                   </p>
                   <p className="text-sm text-warm-600 mt-2">
-                    Estimated delivery: {deliveryEstimate}
+                    {allDigital ? 'Delivery: Instant Download' : `Estimated delivery: ${deliveryEstimate}`}
                   </p>
                 </div>
 
@@ -150,32 +158,73 @@ export default function OrderConfirmationPage() {
                         <div className="flex-1">
                           <p className="font-semibold text-warm-900">{item.name}</p>
                           <p className="text-sm text-warm-500">Qty {item.quantity}</p>
+                          {item.is_digital && (
+                            <span className="inline-block text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded mt-1">
+                              Digital Download
+                            </span>
+                          )}
                         </div>
-                        <p className="font-semibold text-warm-900">
-                          ${Number(item.total || 0).toFixed(2)}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          {item.is_digital && (
+                            <a
+                              href={`/api/downloads/${order.id}/${item.id}${item.download_token ? `?token=${item.download_token}` : ''}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-gold-700 bg-gold-50 rounded-lg hover:bg-gold-100 transition-colors"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download
+                            </a>
+                          )}
+                          <p className="font-semibold text-warm-900">
+                            ${Number(item.total || 0).toFixed(2)}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="bg-white border border-warm-200 rounded-2xl p-6">
-                  <h2 className="text-lg font-semibold text-warm-900 mb-4">Shipping</h2>
-                  {shippingAddress ? (
-                    <div className="text-sm text-warm-600 space-y-1">
-                      <p className="font-semibold text-warm-900">{shippingAddress.name}</p>
-                      <p>{shippingAddress.line1}</p>
-                      {shippingAddress.line2 && <p>{shippingAddress.line2}</p>}
-                      <p>
-                        {shippingAddress.city}, {shippingAddress.state}{' '}
-                        {shippingAddress.postal_code}
+                {allDigital ? (
+                  <div className="bg-green-50 border border-green-200 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold text-green-900 mb-2">Digital Delivery</h2>
+                    <p className="text-sm text-green-700">
+                      Your digital products are ready to download. Use the download buttons above to get your files.
+                      You can also download them anytime from your{' '}
+                      <Link href="/account/orders" className="underline hover:text-green-900">
+                        order history
+                      </Link>{' '}
+                      or by looking up your order at{' '}
+                      <Link href="/order/lookup" className="underline hover:text-green-900">
+                        Find My Order
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-warm-200 rounded-2xl p-6">
+                    <h2 className="text-lg font-semibold text-warm-900 mb-4">Shipping</h2>
+                    {shippingAddress ? (
+                      <div className="text-sm text-warm-600 space-y-1">
+                        <p className="font-semibold text-warm-900">{shippingAddress.name}</p>
+                        <p>{shippingAddress.line1}</p>
+                        {shippingAddress.line2 && <p>{shippingAddress.line2}</p>}
+                        <p>
+                          {shippingAddress.city}, {shippingAddress.state}{' '}
+                          {shippingAddress.postal_code}
+                        </p>
+                        <p>{shippingAddress.country}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-warm-500">Address will appear once payment clears.</p>
+                    )}
+                    {hasDigital && (
+                      <p className="text-sm text-violet-600 mt-3">
+                        Your digital items are available for instant download above.
                       </p>
-                      <p>{shippingAddress.country}</p>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-warm-500">Address will appear once payment clears.</p>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <aside className="bg-warm-50 border border-warm-200 rounded-2xl p-6 h-fit">
@@ -193,7 +242,13 @@ export default function OrderConfirmationPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Shipping</span>
-                    <span>${Number(order.shipping_cost || 0).toFixed(2)}</span>
+                    <span>
+                      {allDigital ? (
+                        <span className="text-green-600 font-medium">N/A</span>
+                      ) : (
+                        `$${Number(order.shipping_cost || 0).toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                 </div>
                 <div className="mt-4 border-t border-warm-200 pt-4 flex items-center justify-between">

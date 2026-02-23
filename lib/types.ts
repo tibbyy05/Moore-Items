@@ -35,6 +35,7 @@ export interface Product {
   description: string;
   shippingDays: string;
   warehouse: 'US' | 'CN' | 'CA';
+  isDigital?: boolean;
   inStock: boolean;
   stockCount: number;
 }
@@ -60,4 +61,5 @@ export interface CartItem {
   quantity: number;
   image: string;
   warehouse: 'US' | 'CN' | 'CA';
+  isDigital?: boolean;
 }

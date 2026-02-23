@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Loader2, Truck } from 'lucide-react';
+import { X, Loader2, Truck, Download } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -12,6 +12,7 @@ import { QuantityStepper } from '@/components/product/QuantityStepper';
 import { CustomButton } from '@/components/ui/custom-button';
 import { TrustBadges } from '@/components/storefront/TrustBadges';
 import { ProductCard } from '@/components/product/ProductCard';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { Product } from '@/lib/types';
 
 interface DiscountState {
@@ -22,6 +23,7 @@ interface DiscountState {
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
+  const { user } = useAuth();
   const [discountCode, setDiscountCode] = useState('');
   const [discount, setDiscount] = useState<DiscountState | null>(null);
   const [discountError, setDiscountError] = useState('');
@@ -128,6 +130,7 @@ export default function CartPage() {
         body: JSON.stringify({
           items,
           discountCode: discount?.code || undefined,
+          email: user?.email || undefined,
         }),
       });
       const data = await response.json();
@@ -250,7 +253,9 @@ export default function CartPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Shipping</span>
-                    <span className="text-warm-500">Calculated at checkout</span>
+                    <span className={items.every((i) => i.isDigital) ? 'text-green-600 font-semibold' : 'text-warm-500'}>
+                      {items.every((i) => i.isDigital) ? 'Free' : 'Calculated at checkout'}
+                    </span>
                   </div>
                   {discount && (
                     <div className="flex items-center justify-between text-success">
@@ -267,12 +272,23 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-3 mt-4">
-                  <Truck className="w-4 h-4 flex-shrink-0" />
-                  <span>
-                    All items ship from US warehouses — estimated delivery in 2-5 business days
-                  </span>
-                </div>
+                {items.every((i) => i.isDigital) ? (
+                  <div className="flex items-center gap-2 text-sm text-violet-700 bg-violet-50 rounded-lg px-4 py-3 mt-4">
+                    <Download className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      Instant Digital Download — available immediately after purchase
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-3 mt-4">
+                    <Truck className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      {items.some((i) => i.isDigital)
+                        ? 'Digital items available instantly — physical items ship in 2-5 business days'
+                        : 'All items ship from US warehouses — estimated delivery in 2-5 business days'}
+                    </span>
+                  </div>
+                )}
 
                 <div className="mt-6">
                   <label className="block text-sm font-semibold text-warm-900 mb-2">

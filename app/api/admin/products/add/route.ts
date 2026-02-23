@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
     stock_count: rest.stock_count ?? 0,
     warehouse: rest.warehouse ?? null,
     status: status || 'pending',
+    digital_file_path: rest.digital_file_path || null,
   };
 
   const { data, error: insertError } = await supabase

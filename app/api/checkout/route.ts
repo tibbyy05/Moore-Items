@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productsError } = await supabase
       .from('mi_products')
-      .select('id, name, retail_price, images, stock_count, status, warehouse')
+      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path')
       .in('id', productIds);
 
     if (productsError || !products) {
@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       quantity: number;
       warehouse: 'US' | 'CN';
       variantName: string | null;
+      isDigital: boolean;
     }> = [];
 
     for (const item of items) {
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
         quantity,
         warehouse: (product.warehouse || 'CN') as 'US' | 'CN',
         variantName,
+        isDigital: !!product.digital_file_path,
       });
     }
 
@@ -160,7 +162,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const cartItems: CartItem[] = validatedItems.map((item) => ({
+    // Determine if cart is all-digital (no shipping needed)
+    const allDigital = validatedItems.every((item) => item.isDigital);
+    const physicalItems = validatedItems.filter((item) => !item.isDigital);
+
+    // Calculate shipping only on physical items
+    const cartItems: CartItem[] = physicalItems.map((item) => ({
       productId: item.productId,
       slug: '',
       variantId: item.variantId,
@@ -172,7 +179,7 @@ export async function POST(request: NextRequest) {
       warehouse: item.warehouse,
     }));
 
-    const shippingCost = calculateShipping(cartItems);
+    const shippingCost = allDigital ? 0 : calculateShipping(cartItems);
     const total = Math.max(subtotal - discountAmount + shippingCost, 0);
 
     const { data: order, error: orderError } = await supabase
@@ -221,26 +228,42 @@ export async function POST(request: NextRequest) {
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || 'http://localhost:3000';
 
-    const shippingLabel =
-      validatedItems.some((item) => item.warehouse === 'CN')
-        ? validatedItems.some((item) => item.warehouse === 'US')
-          ? 'Mixed Shipping'
-          : 'Standard Shipping'
-        : 'Fast US Shipping';
+    // Build shipping options only for carts with physical items
+    let shippingLabel = 'Standard Shipping';
+    let shippingOptions: Array<{
+      shipping_rate_data: {
+        type: string;
+        fixed_amount: { amount: number; currency: string };
+        display_name: string;
+        delivery_estimate: {
+          minimum: { unit: string; value: number };
+          maximum: { unit: string; value: number };
+        };
+      };
+    }> = [];
 
-    const shippingOptions = [
-      {
-        shipping_rate_data: {
-          type: 'fixed_amount',
-          fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
-          display_name: shippingLabel,
-          delivery_estimate: {
-            minimum: { unit: 'business_day', value: validatedItems.some((i) => i.warehouse === 'CN') ? 10 : 3 },
-            maximum: { unit: 'business_day', value: validatedItems.some((i) => i.warehouse === 'CN') ? 18 : 7 },
+    if (!allDigital) {
+      shippingLabel =
+        physicalItems.some((item) => item.warehouse === 'CN')
+          ? physicalItems.some((item) => item.warehouse === 'US')
+            ? 'Mixed Shipping'
+            : 'Standard Shipping'
+          : 'Fast US Shipping';
+
+      shippingOptions = [
+        {
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
+            display_name: shippingLabel,
+            delivery_estimate: {
+              minimum: { unit: 'business_day', value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 3 },
+              maximum: { unit: 'business_day', value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 7 },
+            },
           },
         },
-      },
-    ];
+      ];
+    }
 
     let couponId: string | undefined;
     if (discountAmount > 0) {
@@ -274,9 +297,15 @@ export async function POST(request: NextRequest) {
         discount_code: appliedDiscountCode || '',
         discount_amount: discountAmount.toFixed(2),
         supabase_order_id: order.id,
+        is_all_digital: allDigital ? 'true' : 'false',
       },
-      shipping_address_collection: { allowed_countries: ['US'] },
-      shipping_options: shippingOptions,
+      // Only collect shipping for carts with physical items
+      ...(allDigital
+        ? {}
+        : {
+            shipping_address_collection: { allowed_countries: ['US'] },
+            shipping_options: shippingOptions,
+          }),
     });
 
     await supabase

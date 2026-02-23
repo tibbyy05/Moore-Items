@@ -21,9 +21,10 @@ import { toast } from 'sonner';
 interface AdminProductRow {
   id: string;
   cj_pid: string | null;
+  digital_file_path?: string | null;
   name: string;
   slug: string;
-  mi_categories?: { name?: string | null } | null;
+  mi_categories?: { name?: string | null; slug?: string | null } | null;
   mi_product_variants?: Array<{ count: number }> | null;
   cj_price: number | null;
   shipping_cost: number | null;
@@ -56,6 +57,15 @@ interface AdminProductRow {
     | 'draft';
   images: string[] | null;
   description?: string | null;
+}
+
+/** Detect digital product even when digital_file_path is null (e.g. upload failed) */
+function isDigital(p: AdminProductRow): boolean {
+  return !!(
+    p.digital_file_path ||
+    p.mi_categories?.slug === 'digital-downloads' ||
+    (!p.cj_pid && !p.warehouse && p.stock_count === 9999)
+  );
 }
 
 export default function ProductsPage() {
@@ -658,21 +668,15 @@ export default function ProductsPage() {
                         />
                       </div>
                       <div>
-                        {product.status === 'active' ? (
-                          <Link
-                            href={`/product/${product.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm font-semibold text-[#1a1a2e] line-clamp-1 hover:text-gold-500"
-                          >
-                            {product.name}
-                          </Link>
-                        ) : (
-                          <p className="text-sm font-semibold text-[#1a1a2e] line-clamp-1">
-                            {product.name}
-                          </p>
-                        )}
-                        {product.cj_pid && (
+                        <Link
+                          href={`/product/${product.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-[#1a1a2e] line-clamp-1 hover:text-gold-500"
+                        >
+                          {product.name}
+                        </Link>
+                        {product.cj_pid ? (
                           <div className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">
                             <button
                               type="button"
@@ -697,10 +701,26 @@ export default function ProductsPage() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                            onClick={() => handleVerifyOnCJ(product.cj_pid)}
+                              onClick={() => handleVerifyOnCJ(product.cj_pid)}
                               className="ml-2 px-2 py-1 text-xs font-semibold text-gold-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                             >
                               Verify
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">
+                            {isDigital(product) && (
+                              <span className="text-violet-600 font-medium">Digital product</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                setPreviewProduct(product);
+                                setPreviewImageIndex(0);
+                              }}
+                              className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gold-500 transition-colors"
+                              title="Preview product"
+                            >
+                              <Eye className="w-4 h-4" />
                             </button>
                           </div>
                         )}
@@ -713,17 +733,21 @@ export default function ProductsPage() {
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="text-sm">
-                      <p className="text-[#1a1a2e] font-semibold font-variant-tabular">
-                        ${Number(product.cj_price || 0).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500 font-variant-tabular">
-                        + ${Number(product.shipping_cost || 0).toFixed(2)} ship
-                      </p>
-                      <p className="text-xs text-gray-400 font-variant-tabular">
-                        = ${(Number(product.cj_price || 0) + Number(product.shipping_cost || 0)).toFixed(2)}
-                      </p>
-                    </div>
+                    {isDigital(product) ? (
+                      <span className="text-xs text-gray-400">N/A</span>
+                    ) : (
+                      <div className="text-sm">
+                        <p className="text-[#1a1a2e] font-semibold font-variant-tabular">
+                          ${Number(product.cj_price || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 font-variant-tabular">
+                          + ${Number(product.shipping_cost || 0).toFixed(2)} ship
+                        </p>
+                        <p className="text-xs text-gray-400 font-variant-tabular">
+                          = ${(Number(product.cj_price || 0) + Number(product.shipping_cost || 0)).toFixed(2)}
+                        </p>
+                      </div>
+                    )}
                   </td>
                   <td className="py-4 px-4">
                     {editingPriceId === product.id ? (
@@ -774,7 +798,11 @@ export default function ProductsPage() {
                     )}
                   </td>
                   <td className="py-4 px-4">
-                    {product.warehouse === 'US' ? (
+                    {isDigital(product) ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-100 text-violet-700 border border-violet-200 rounded-md text-xs font-semibold">
+                        Digital
+                      </span>
+                    ) : product.warehouse === 'US' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-success/10 text-success border border-success/30 rounded-md text-xs font-semibold">
                         🇺🇸 US
                       </span>
@@ -810,7 +838,9 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-4 px-4">
                     <span className="text-xs text-gray-500">
-                      {product.shipping_estimate || product.shipping_days || '—'}
+                      {isDigital(product)
+                        ? 'Instant'
+                        : product.shipping_estimate || product.shipping_days || '—'}
                     </span>
                   </td>
                   <td className="py-4 px-4">
@@ -839,12 +869,13 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleStartEditPrice(product)}
+                      <Link
+                        href={`/admin/products/edit/${product.id}`}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Edit product"
                       >
                         <Edit2 className="w-4 h-4 text-gray-400" />
-                      </button>
+                      </Link>
                       <button
                         onClick={() => handleDelete(product.id, product.name)}
                         className="p-2 hover:bg-danger/10 rounded-lg transition-colors"
@@ -999,52 +1030,83 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-500">CJ Wholesale Price</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      ${Number(preview.cj_price || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Shipping Cost</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      ${Number(preview.shipping_cost || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Retail Price</p>
-                    <p className="text-gold-400 font-semibold">
-                      ${Number(preview.retail_price || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Margin</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      {Number(preview.margin_percent || 0).toFixed(0)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Warehouse</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      {preview.warehouse || 'CN'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Variants</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      {preview.mi_product_variants?.[0]?.count ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Stock</p>
-                    <p className="text-[#1a1a2e] font-semibold">
-                      {Number(preview.stock_count || 0)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Status</p>
-                    <p className="text-[#1a1a2e] font-semibold">{preview.status}</p>
-                  </div>
+                  {isDigital(preview) ? (
+                    <>
+                      <div>
+                        <p className="text-gray-500">Type</p>
+                        <p className="text-violet-600 font-semibold">Digital Download</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Retail Price</p>
+                        <p className="text-gold-400 font-semibold">
+                          ${Number(preview.retail_price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Margin</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          {Number(preview.margin_percent || 0).toFixed(0)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Delivery</p>
+                        <p className="text-[#1a1a2e] font-semibold">Instant</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Status</p>
+                        <p className="text-[#1a1a2e] font-semibold">{preview.status}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-gray-500">CJ Wholesale Price</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          ${Number(preview.cj_price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Shipping Cost</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          ${Number(preview.shipping_cost || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Retail Price</p>
+                        <p className="text-gold-400 font-semibold">
+                          ${Number(preview.retail_price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Margin</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          {Number(preview.margin_percent || 0).toFixed(0)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Warehouse</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          {preview.warehouse || 'CN'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Variants</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          {preview.mi_product_variants?.[0]?.count ?? 0}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Stock</p>
+                        <p className="text-[#1a1a2e] font-semibold">
+                          {Number(preview.stock_count || 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Status</p>
+                        <p className="text-[#1a1a2e] font-semibold">{preview.status}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap gap-3 pt-2">
@@ -1073,12 +1135,14 @@ export default function ProductsPage() {
                   >
                     {preview.status === 'active' ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button
-                    onClick={() => handleVerifyOnCJ(preview.cj_pid)}
-                    className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    Verify on CJ
-                  </button>
+                  {preview.cj_pid && (
+                    <button
+                      onClick={() => handleVerifyOnCJ(preview.cj_pid)}
+                      className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      Verify on CJ
+                    </button>
+                  )}
                   <button
                     onClick={() => handleGenerateReviews(preview.id)}
                     disabled={generatingReviews === preview.id}

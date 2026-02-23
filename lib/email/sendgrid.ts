@@ -68,6 +68,7 @@ export interface OrderItem {
   price: number;         // unit price in dollars
   image_url?: string;
   variant_info?: string; // e.g. "Size: L / Color: Blue"
+  is_digital?: boolean;
 }
 
 export interface OrderConfirmationData {
@@ -80,7 +81,7 @@ export interface OrderConfirmationData {
   discount?: number;
   discountCode?: string;
   total: number;
-  shippingAddress: {
+  shippingAddress?: {
     line1: string;
     line2?: string;
     city: string;
@@ -89,6 +90,8 @@ export interface OrderConfirmationData {
     country: string;
   };
   estimatedDelivery?: string; // e.g. "2-5 business days"
+  downloadLinks?: Array<{ itemName: string; downloadUrl: string }>;
+  isAllDigital?: boolean;
 }
 
 export async function sendOrderConfirmation(data: OrderConfirmationData) {

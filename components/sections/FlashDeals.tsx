@@ -217,6 +217,7 @@ export function FlashDeals() {
                           image: product.images[0],
                           variantId: null,
                           warehouse: product.warehouse,
+                          isDigital: product.isDigital,
                         })
                       }
                     >
