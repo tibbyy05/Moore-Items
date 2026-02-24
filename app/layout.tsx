@@ -25,6 +25,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.mooreitems.com'),
   title: 'MooreItems.com - More Items, Moore Value',
   description: 'Discover curated products across fashion, home, beauty, electronics and more at unbeatable prices. Free shipping on orders over $50.',
   keywords: 'online shopping, e-commerce, fashion, home goods, electronics, beauty products',
