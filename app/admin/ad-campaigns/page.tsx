@@ -87,9 +87,9 @@ export default function AdCampaignsPage() {
       <div className="mb-8">
         <div className="flex items-end justify-between mb-2">
           <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Ad Campaigns</h1>
-          <button className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2">
+          <button disabled className="px-4 py-2 bg-gold-500 text-[#1a1a2e] text-sm font-semibold rounded-lg flex items-center gap-2 opacity-50 cursor-not-allowed">
             <Plus className="w-4 h-4" />
-            New Campaign
+            New Campaign (Coming Soon)
           </button>
         </div>
         <p className="text-sm text-gray-500">Track and optimize advertising performance</p>

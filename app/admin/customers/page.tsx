@@ -75,7 +75,7 @@ export default function CustomersPage() {
         const diffDays = (now.getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24);
         return {
           ...customer,
-          status: diffDays <= 30 ? 'active' : 'inactive',
+          status: (diffDays <= 30 ? 'active' : 'inactive') as 'active' | 'inactive',
         };
       });
 

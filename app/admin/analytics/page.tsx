@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/StatCard';
 import { BarChart } from '@/components/admin/BarChart';
-import { TrendingUp, ShoppingCart, DollarSign, Users } from 'lucide-react';
+import { TrendingUp, ShoppingCart, DollarSign } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface PageViewRow {
@@ -112,49 +112,27 @@ export default function AnalyticsPage() {
         <p className="text-sm text-gray-500">Track performance metrics and insights</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <StatCard
           icon={DollarSign}
           label="Total Revenue"
           value={`$${totalRevenue.toFixed(2)}`}
-          change={{ value: 12.5, isPositive: true }}
         />
         <StatCard
           icon={ShoppingCart}
           label="Total Orders"
           value={totalOrders.toString()}
-          change={{ value: 8.2, isPositive: true }}
         />
         <StatCard
           icon={TrendingUp}
           label="Avg Order Value"
           value={`$${avgOrderValue.toFixed(2)}`}
-          change={{ value: 5.1, isPositive: true }}
-        />
-        <StatCard
-          icon={Users}
-          label="Conversion Rate"
-          value="3.2%"
-          change={{ value: 0.8, isPositive: false }}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-[#1a1a2e]">Weekly Revenue</h3>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 bg-gold-500 text-[#1a1a2e] text-xs font-semibold rounded-lg">
-                1W
-              </button>
-              <button className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                1M
-              </button>
-              <button className="px-3 py-1 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                3M
-              </button>
-            </div>
-          </div>
+          <h3 className="text-lg font-semibold text-[#1a1a2e] mb-6">Weekly Revenue</h3>
           <BarChart data={chartData} />
         </div>
 
@@ -199,21 +177,12 @@ export default function AnalyticsPage() {
                 <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
                   Views
                 </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
-                  Unique
-                </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
-                  Avg Time
-                </th>
-                <th className="text-right py-3 px-4 text-xs font-semibold text-gray-500 uppercase">
-                  Bounce Rate
-                </th>
               </tr>
             </thead>
             <tbody>
               {topPages.length === 0 ? (
                 <tr>
-                  <td className="py-6 px-4 text-sm text-gray-500" colSpan={5}>
+                  <td className="py-6 px-4 text-sm text-gray-500" colSpan={2}>
                     No page view data yet.
                   </td>
                 </tr>
@@ -223,15 +192,6 @@ export default function AnalyticsPage() {
                     <td className="py-3 px-4 text-sm text-[#1a1a2e] font-medium">{item.page}</td>
                     <td className="py-3 px-4 text-sm text-gray-700 text-right font-variant-tabular">
                       {item.views.toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700 text-right font-variant-tabular">
-                      —
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700 text-right font-variant-tabular">
-                      —
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-700 text-right font-variant-tabular">
-                      —
                     </td>
                   </tr>
                 ))

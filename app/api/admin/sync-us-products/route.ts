@@ -11,6 +11,10 @@ import { calculatePricing } from '@/lib/pricing';
 const DEFAULT_MAX_PAGES = 10;
 const PAGE_SIZE = 100;
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
   const {

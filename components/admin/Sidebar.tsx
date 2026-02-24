@@ -13,20 +13,63 @@ import {
   Layers,
   Zap,
   MapPin,
-  Settings,
+  Plus,
+  DollarSign,
   RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const NAV_ITEMS = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, count: null },
-  { href: '/admin/products', label: 'Products', icon: Package, count: null },
-  { href: '/admin/us-stock', label: 'US Stock', icon: MapPin, count: null },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, count: null },
-  { href: '/admin/customers', label: 'Customers', icon: Users, count: null },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3, count: null },
-  { href: '/admin/landing-pages', label: 'Landing Pages', icon: Layers, count: null },
-  { href: '/admin/ad-campaigns', label: 'Ad Campaigns', icon: Zap, count: null },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: any;
+  count: number | null;
+}
+
+interface ComingSoonItem {
+  label: string;
+  icon: any;
+  badge: string;
+}
+
+interface NavSection {
+  heading: string;
+  items: NavItem[];
+  comingSoon?: ComingSoonItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    heading: 'STORE',
+    items: [
+      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, count: null },
+      { href: '/admin/products', label: 'Products', icon: Package, count: null },
+      { href: '/admin/products/add', label: 'Add Product', icon: Plus, count: null },
+      { href: '/admin/pricing', label: 'Pricing', icon: DollarSign, count: null },
+    ],
+  },
+  {
+    heading: 'OPERATIONS',
+    items: [
+      { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, count: null },
+      { href: '/admin/customers', label: 'Customers', icon: Users, count: null },
+    ],
+  },
+  {
+    heading: 'TOOLS',
+    items: [
+      { href: '/admin/us-stock', label: 'US Stock', icon: MapPin, count: null },
+    ],
+  },
+  {
+    heading: 'COMING SOON',
+    items: [],
+    comingSoon: [
+      { label: 'Analytics', icon: BarChart3, badge: 'Beta' },
+      { label: 'Landing Pages', icon: Layers, badge: 'Coming Soon' },
+      { label: 'Ad Campaigns', icon: Zap, badge: 'Coming Soon' },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -48,20 +91,23 @@ export function Sidebar() {
   const [usSyncMessage, setUsSyncMessage] = useState('');
   const [usSyncError, setUsSyncError] = useState('');
 
-  const navItems = useMemo(
+  const navSections = useMemo(
     () =>
-      NAV_ITEMS.map((item) => {
-        if (item.href === '/admin/products') {
-          return { ...item, count: productsCount };
-        }
-        if (item.href === '/admin/orders') {
-          return { ...item, count: openOrdersCount };
-        }
-        if (item.href === '/admin/customers') {
-          return { ...item, count: customersCount };
-        }
-        return item;
-      }),
+      NAV_SECTIONS.map((section) => ({
+        ...section,
+        items: section.items.map((item) => {
+          if (item.href === '/admin/products') {
+            return { ...item, count: productsCount };
+          }
+          if (item.href === '/admin/orders') {
+            return { ...item, count: openOrdersCount };
+          }
+          if (item.href === '/admin/customers') {
+            return { ...item, count: customersCount };
+          }
+          return item;
+        }),
+      })),
     [productsCount, openOrdersCount, customersCount]
   );
 
@@ -291,58 +337,72 @@ export function Sidebar() {
         </Link>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
+      <nav className="flex-1 p-4">
+        {navSections.map((section, sectionIndex) => (
+          <div key={section.heading} className={sectionIndex === 0 ? 'mt-0' : 'mt-6'}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">
+              {section.heading}
+            </p>
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive =
+                  item.href === '/admin' || item.href === '/admin/products'
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(item.href + '/');
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group',
-                isActive
-                  ? 'bg-gold-500/10 text-gold-500'
-                  : 'text-[#1a1a2e] hover:bg-gray-100'
-              )}
-            >
-              <Icon
-                className={cn(
-                  'w-[18px] h-[18px] flex-shrink-0',
-                  isActive ? 'text-gold-500' : 'text-gray-400 group-hover:text-gold-500'
-                )}
-                strokeWidth={2}
-              />
-              <span className="flex-1 text-sm font-medium">{item.label}</span>
-              {item.count !== null && (
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-semibold rounded">
-                  {item.count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group',
+                      isActive
+                        ? 'bg-gold-500/10 text-gold-500'
+                        : 'text-[#1a1a2e] hover:bg-gray-100'
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        'w-[18px] h-[18px] flex-shrink-0',
+                        isActive ? 'text-gold-500' : 'text-gray-400 group-hover:text-gold-500'
+                      )}
+                      strokeWidth={2}
+                    />
+                    <span className="flex-1 text-sm font-medium">{item.label}</span>
+                    {item.count !== null && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[11px] font-semibold rounded">
+                        {item.count}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+              {section.comingSoon?.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 cursor-not-allowed"
+                  >
+                    <Icon
+                      className="w-[18px] h-[18px] flex-shrink-0 text-gray-300"
+                      strokeWidth={2}
+                    />
+                    <span className="flex-1 text-sm font-medium">{item.label}</span>
+                    <span className="px-1.5 py-0.5 bg-gray-100 text-gray-400 text-[10px] font-medium rounded">
+                      {item.badge}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       <div className="p-4 border-t border-gray-200">
-        <Link
-          href="/admin/settings"
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group',
-            pathname === '/admin/settings'
-              ? 'bg-gold-500/10 text-gold-500'
-              : 'text-[#1a1a2e] hover:bg-gray-100'
-          )}
-        >
-          <Settings
-            className="w-[18px] h-[18px] flex-shrink-0 text-gray-400 group-hover:text-gold-500"
-            strokeWidth={2}
-          />
-          <span className="flex-1 text-sm font-medium">Settings</span>
-        </Link>
-
-        <div className="mt-4 p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-xs font-semibold text-[#1a1a2e]">CJ API Connected</span>

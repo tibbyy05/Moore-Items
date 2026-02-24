@@ -48,8 +48,8 @@ export async function syncShippingForAll() {
       size,
       features: 'enable_description',
     });
-    const items = response?.list || response?.data?.list || [];
-    total = response?.total || response?.data?.total || items.length;
+    const items = response?.list || [];
+    total = response?.total || items.length;
     items.forEach((item: any) => {
       if (item?.pid) {
         deliveryCycleMap.set(item.pid, item.deliveryCycle || item.delivery_cycle || null);
@@ -133,8 +133,8 @@ export async function syncShippingForProduct(productId: string, cjPid: string) {
         size,
         features: 'enable_description',
       });
-      const items = response?.list || response?.data?.list || [];
-      total = response?.total || response?.data?.total || items.length;
+      const items = response?.list || [];
+      total = response?.total || items.length;
       const match = items.find((item: any) => item?.pid === cjPid);
       if (match) {
         deliveryCycle = match.deliveryCycle || match.delivery_cycle || null;

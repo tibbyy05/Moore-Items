@@ -3,8 +3,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/StatCard';
 import { BarChart } from '@/components/admin/BarChart';
-import { DollarSign, ShoppingCart, Package, TrendingUp } from 'lucide-react';
+import {
+  DollarSign,
+  ShoppingCart,
+  Package,
+  TrendingUp,
+  Sparkles,
+  Plus,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 
 interface RecentOrder {
@@ -56,10 +66,12 @@ export default function AdminDashboard() {
   const [todayOrders, setTodayOrders] = useState(0);
   const [activeProducts, setActiveProducts] = useState(0);
   const [conversionRate, setConversionRate] = useState(0);
+  const [needsPolish, setNeedsPolish] = useState(0);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [chartData, setChartData] = useState(buildEmptyChart());
   const [loading, setLoading] = useState(true);
+  const [repricing, setRepricing] = useState(false);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -85,6 +97,13 @@ export default function AdminDashboard() {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'active');
       setActiveProducts(activeProductsCount || 0);
+
+      const { count: needsPolishCount } = await supabase
+        .from('mi_products')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .or('review_count.eq.0,review_count.is.null');
+      setNeedsPolish(needsPolishCount || 0);
 
       const { data: recentOrdersData } = await supabase
         .from('mi_orders')
@@ -194,53 +213,95 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-5 gap-6 mb-8">
         <StatCard
           label="Revenue Today"
           value={`$${todayRevenue.toFixed(2)}`}
-          change={{ value: 12.5, isPositive: true }}
           icon={DollarSign}
         />
         <StatCard
           label="Orders Today"
           value={todayOrders.toString()}
-          change={{ value: 8.2, isPositive: true }}
           icon={ShoppingCart}
         />
         <StatCard
           label="Products Active"
           value={activeProducts.toString()}
-          change={{ value: 124, isPositive: true }}
           icon={Package}
         />
         <StatCard
           label="Conversion Rate"
           value={`${conversionRate.toFixed(1)}%`}
-          change={{ value: 0.3, isPositive: false }}
           icon={TrendingUp}
         />
+        <StatCard
+          label="Needs Polish"
+          value={needsPolish.toString()}
+          icon={Sparkles}
+          iconBgClassName="bg-violet-50"
+          iconClassName="text-violet-500"
+        />
+      </div>
+
+      <div className="flex gap-4 mb-8">
+        <Link
+          href="/admin/products/add"
+          className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-3.5 hover:shadow-md transition-shadow group"
+        >
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
+            <Plus className="w-4 h-4 text-indigo-600" />
+          </div>
+          <span className="text-sm font-semibold text-[#1a1a2e] group-hover:text-indigo-600 transition-colors">
+            Add Product
+          </span>
+        </Link>
+        <button
+          onClick={async () => {
+            if (!window.confirm('Reprice all products using current pricing config?')) return;
+            setRepricing(true);
+            try {
+              const res = await fetch('/api/admin/reprice', { method: 'POST' });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data?.error || 'Reprice failed');
+              toast.success(`Repriced ${data.updated} products`);
+            } catch (err: any) {
+              toast.error(err?.message || 'Reprice failed');
+            } finally {
+              setRepricing(false);
+            }
+          }}
+          disabled={repricing}
+          className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-3.5 hover:shadow-md transition-shadow group disabled:opacity-60"
+        >
+          <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+            <RefreshCw className={`w-4 h-4 text-amber-600 ${repricing ? 'animate-spin' : ''}`} />
+          </div>
+          <span className="text-sm font-semibold text-[#1a1a2e] group-hover:text-amber-600 transition-colors">
+            {repricing ? 'Repricing...' : 'Reprice All'}
+          </span>
+        </button>
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-3.5 hover:shadow-md transition-shadow group"
+        >
+          <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
+            <ExternalLink className="w-4 h-4 text-gray-500" />
+          </div>
+          <span className="text-sm font-semibold text-[#1a1a2e] group-hover:text-gray-600 transition-colors">
+            View Store
+          </span>
+        </a>
       </div>
 
       <div className="grid grid-cols-3 gap-6 mb-8">
         <div className="col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Revenue This Week</h2>
-              <p className="text-2xl font-bold text-gold-500 font-variant-tabular">
-                ${weekTotal.toFixed(2)}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button className="px-3 py-1.5 bg-gold-500 text-[#1a1a2e] text-xs font-semibold rounded-lg">
-                1W
-              </button>
-              <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                1M
-              </button>
-              <button className="px-3 py-1.5 bg-white border border-gray-200 text-gray-600 text-xs font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                3M
-              </button>
-            </div>
+          <div className="mb-6">
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Revenue This Week</h2>
+            <p className="text-2xl font-bold text-gold-500 font-variant-tabular">
+              ${weekTotal.toFixed(2)}
+            </p>
           </div>
           <BarChart data={chartData} height={240} />
         </div>

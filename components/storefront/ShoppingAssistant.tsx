@@ -96,7 +96,7 @@ export function ShoppingAssistant() {
     const trimmed = (override ?? input).trim();
     if (!trimmed || loading) return;
 
-    const nextMessages = [...messages, { role: 'user', content: trimmed }].slice(-10);
+    const nextMessages = [...messages, { role: 'user' as const, content: trimmed }].slice(-10);
     setMessages(nextMessages);
     setInput('');
     setLoading(true);
@@ -123,7 +123,7 @@ export function ShoppingAssistant() {
         [
           ...current,
           {
-            role: 'assistant',
+            role: 'assistant' as const,
             content:
               'Sorry — I had trouble finding products just now. Try another request or different keywords.',
           },
@@ -321,7 +321,7 @@ export function ShoppingAssistant() {
             />
             <button
               type="button"
-              onClick={sendMessage}
+              onClick={() => sendMessage()}
               className={cn(
                 'w-10 h-10 rounded-full flex items-center justify-center text-white',
                 'bg-[#c8a45e] hover:bg-gold-600 transition-colors',

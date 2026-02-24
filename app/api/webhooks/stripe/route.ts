@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       const discountCode = session.metadata?.discount_code || null;
       const isAllDigital = session.metadata?.is_all_digital === 'true';
 
-      const shippingDetails = session.shipping_details || session.customer_details;
+      const shippingDetails = (session as any).shipping_details || session.customer_details;
       const shippingAddress = shippingDetails?.address
         ? {
             name: shippingDetails?.name || null,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
         const digitalProductIds: string[] = [];
         if (orderProducts && orderProducts.length > 0) {
-          const pIds = [...new Set(orderProducts.map((op) => op.product_id))];
+          const pIds = Array.from(new Set(orderProducts.map((op) => op.product_id)));
           const { data: products } = await supabase
             .from('mi_products')
             .select('id, digital_file_path')
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
                   if (digitalProductIds.includes(item.product_id)) {
                     const token = generateDownloadToken(orderId, item.id);
                     downloadLinks.push({
-                      itemName: item.product_name || item.name || 'Digital Product',
+                      itemName: item.product_name || 'Digital Product',
                       downloadUrl: `${siteUrl}/api/downloads/${orderId}/${item.id}?token=${token}`,
                     });
                   }

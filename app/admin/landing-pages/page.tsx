@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { ExternalLink, Eye, Edit2, Copy, Trash2, Plus } from 'lucide-react';
+import { ExternalLink, Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface LandingPageRow {
@@ -52,9 +52,9 @@ export default function LandingPagesPage() {
       <div className="mb-8">
         <div className="flex items-end justify-between mb-2">
           <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Landing Pages</h1>
-          <button className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2">
+          <button disabled className="px-4 py-2 bg-gold-500 text-[#1a1a2e] text-sm font-semibold rounded-lg flex items-center gap-2 opacity-50 cursor-not-allowed">
             <Plus className="w-4 h-4" />
-            New Landing Page
+            New Landing Page (Coming Soon)
           </button>
         </div>
         <p className="text-sm text-gray-500">
@@ -108,9 +108,6 @@ export default function LandingPagesPage() {
                 </th>
                 <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Created
-                </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Actions
                 </th>
               </tr>
             </thead>
@@ -167,22 +164,6 @@ export default function LandingPagesPage() {
                   </td>
                   <td className="py-4 px-4 text-sm text-gray-600">
                     {new Date(page.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-1">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Eye className="w-4 h-4 text-gray-400" />
-                      </button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Edit2 className="w-4 h-4 text-gray-400" />
-                      </button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <Copy className="w-4 h-4 text-gray-400" />
-                      </button>
-                      <button className="p-2 hover:bg-danger/10 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4 text-danger" />
-                      </button>
-                    </div>
                   </td>
                   </tr>
                 );

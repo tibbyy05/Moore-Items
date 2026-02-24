@@ -498,7 +498,7 @@ async function run() {
               Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ images, description, category_id: categoryId }),
+            body: JSON.stringify({ images, description, category_id: categoryId, cj_raw_data: detailPayload }),
           }
         );
 

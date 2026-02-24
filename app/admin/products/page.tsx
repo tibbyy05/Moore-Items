@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import {
-  Upload,
   RefreshCw,
   Plus,
   Eye,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { StarRating } from '@/components/ui/star-rating';
 import { toast } from 'sonner';
+import { PolishModal } from '@/components/admin/PolishModal';
 
 interface AdminProductRow {
   id: string;
@@ -86,6 +86,9 @@ export default function ProductsPage() {
   const [copiedPid, setCopiedPid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 25;
   const [syncing, setSyncing] = useState(false);
   const [resyncing, setResyncing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -99,6 +102,7 @@ export default function ProductsPage() {
   const [previewProduct, setPreviewProduct] = useState<AdminProductRow | null>(null);
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [generatingReviews, setGeneratingReviews] = useState<string | null>(null);
+  const [polishProduct, setPolishProduct] = useState<any>(null);
   const handleSync = async () => {
     setSyncing(true);
     await fetch('/api/admin/sync', {
@@ -135,6 +139,8 @@ export default function ProductsPage() {
       setLoading(true);
       try {
         const params = new URLSearchParams();
+        params.set('page', page.toString());
+        params.set('limit', pageSize.toString());
         if (searchQuery) params.set('search', searchQuery);
         if (warehouseFilter !== 'all') params.set('warehouse', warehouseFilter);
         if (categoryFilter !== 'all') params.set('category', categoryFilter);
@@ -148,6 +154,7 @@ export default function ProductsPage() {
         if (response.ok) {
           setProducts(data.products || []);
           setTotal(data.total || 0);
+          setTotalPages(data.totalPages || 1);
         }
       } catch (error: any) {
         if (error?.name === 'AbortError') return;
@@ -161,7 +168,11 @@ export default function ProductsPage() {
     return () => {
       controller.abort();
     };
-  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, refreshKey]);
+  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, page, refreshKey]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter]);
 
   useEffect(() => {
     const handleRefresh = () => setRefreshKey((key) => key + 1);
@@ -497,27 +508,21 @@ export default function ProductsPage() {
         <div className="flex items-end justify-between mb-2">
           <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Products</h1>
           <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Import CSV
+            <button
+              onClick={handleSync}
+              disabled={syncing || resyncing}
+              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync CJ'}
             </button>
-            <div className="flex gap-3">
-              <button
-                onClick={handleSync}
-                disabled={syncing || resyncing}
-                className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60"
-              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync CJ'}
-              </button>
-              <button
-                onClick={handleResync}
-                disabled={syncing || resyncing}
-                className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
-              >
-                {resyncing ? 'Re-syncing...' : 'Re-sync All'}
-              </button>
-            </div>
+            <button
+              onClick={handleResync}
+              disabled={syncing || resyncing}
+              className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
+            >
+              {resyncing ? 'Re-syncing...' : 'Re-sync All'}
+            </button>
             <Link
               href="/admin/products/add"
               className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
@@ -676,6 +681,9 @@ export default function ProductsPage() {
                         >
                           {product.name}
                         </Link>
+                        {!product.review_count && product.cj_pid && (
+                          <span className="text-[11px] text-amber-500 font-medium">Needs polish</span>
+                        )}
                         {product.cj_pid ? (
                           <div className="mt-1 inline-flex items-center gap-2 text-xs text-gray-500">
                             <button
@@ -869,6 +877,24 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
+                      {product.cj_pid && (
+                        <button
+                          onClick={() => setPolishProduct({
+                            id: product.id,
+                            name: product.name,
+                            description: product.description || '',
+                            category_id: categories.find(c => c.slug === (product.mi_categories?.slug || ''))?.id || '',
+                            category_slug: product.mi_categories?.slug || '',
+                            retail_price: Number(product.retail_price || 0),
+                            images: product.images || [],
+                            review_count: product.review_count || 0,
+                          })}
+                          className="p-2 hover:bg-violet-50 rounded-lg transition-colors"
+                          title="Polish with AI"
+                        >
+                          <Sparkles className="w-4 h-4 text-violet-500" />
+                        </button>
+                      )}
                       <Link
                         href={`/admin/products/edit/${product.id}`}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -894,19 +920,29 @@ export default function ProductsPage() {
           <p className="text-sm text-gray-500">
             {loading
               ? 'Loading products...'
-              : `Showing 1-${filteredProducts.length} of ${total} products`}
+              : `Showing ${total === 0 ? 0 : (page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total} products`}
           </p>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 bg-gold-500 text-[#1a1a2e] text-sm font-semibold rounded-lg">
-              1
-            </button>
-            <button className="px-3 py-1.5 bg-transparent text-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-100">
-              2
-            </button>
-            <button className="px-3 py-1.5 bg-transparent text-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-100">
-              3
-            </button>
-          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-500 px-2">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || loading}
+                className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1153,12 +1189,41 @@ export default function ProductsPage() {
                     />
                     {generatingReviews === preview.id ? 'Generating...' : 'Generate Reviews'}
                   </button>
+                  {preview.cj_pid && (
+                    <button
+                      onClick={() => {
+                        setPreviewProduct(null);
+                        setPolishProduct({
+                          id: preview.id,
+                          name: preview.name,
+                          description: preview.description || '',
+                          category_id: categories.find(c => c.slug === (preview.mi_categories?.slug || ''))?.id || '',
+                          category_slug: preview.mi_categories?.slug || '',
+                          retail_price: Number(preview.retail_price || 0),
+                          images: preview.images || [],
+                          review_count: preview.review_count || 0,
+                        });
+                      }}
+                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Polish This Product
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
       ) : null}
+
+      <PolishModal
+        product={polishProduct}
+        categories={categories}
+        isOpen={!!polishProduct}
+        onClose={() => setPolishProduct(null)}
+        onPolished={() => { setPolishProduct(null); setRefreshKey((key) => key + 1); }}
+      />
     </>
   );
 }

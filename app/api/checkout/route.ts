@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateShipping } from '@/lib/shipping';
@@ -230,17 +231,7 @@ export async function POST(request: NextRequest) {
 
     // Build shipping options only for carts with physical items
     let shippingLabel = 'Standard Shipping';
-    let shippingOptions: Array<{
-      shipping_rate_data: {
-        type: string;
-        fixed_amount: { amount: number; currency: string };
-        display_name: string;
-        delivery_estimate: {
-          minimum: { unit: string; value: number };
-          maximum: { unit: string; value: number };
-        };
-      };
-    }> = [];
+    let shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [];
 
     if (!allDigital) {
       shippingLabel =
@@ -257,8 +248,8 @@ export async function POST(request: NextRequest) {
             fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
             display_name: shippingLabel,
             delivery_estimate: {
-              minimum: { unit: 'business_day', value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 3 },
-              maximum: { unit: 'business_day', value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 7 },
+              minimum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 3 },
+              maximum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 7 },
             },
           },
         },

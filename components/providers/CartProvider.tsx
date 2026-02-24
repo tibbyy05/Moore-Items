@@ -7,8 +7,8 @@ import { CartItem } from '@/lib/types';
 interface CartContextType {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (productId: string, variantId?: string) => void;
-  updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
+  removeItem: (productId: string, variantId?: string | null) => void;
+  updateQuantity: (productId: string, quantity: number, variantId?: string | null) => void;
   clearCart: () => void;
   itemCount: number;
   subtotal: number;
@@ -53,6 +53,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addItem = useCallback((newItem: CartItem) => {
+    let toastMessage: { title: string; description: string } | null = null;
+
     setItems((currentItems) => {
       const existingItemIndex = currentItems.findIndex(
         (item) =>
@@ -62,47 +64,67 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingItemIndex > -1) {
         const updatedItems = [...currentItems];
-        updatedItems[existingItemIndex].quantity += newItem.quantity;
-        pushToast('Cart updated', {
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + newItem.quantity,
+        };
+        toastMessage = {
+          title: 'Cart updated',
           description: `${newItem.name} quantity increased to ${updatedItems[existingItemIndex].quantity}`,
-          type: 'success',
-        });
+        };
         return updatedItems;
       }
 
-      pushToast('Added to cart', {
+      toastMessage = {
+        title: 'Added to cart',
         description: `${newItem.name} has been added to your cart`,
-        type: 'success',
-      });
-
+      };
       return [...currentItems, newItem];
     });
+
+    // Toast outside the updater to avoid StrictMode double-fire
+    setTimeout(() => {
+      if (toastMessage) {
+        pushToast(toastMessage.title, {
+          description: toastMessage.description,
+          type: 'success',
+        });
+      }
+    }, 0);
   }, [pushToast]);
 
-  const removeItem = useCallback((productId: string, variantId?: string) => {
+  const removeItem = useCallback((productId: string, variantId?: string | null) => {
+    let removedName: string | null = null;
+
     setItems((currentItems) => {
       const item = currentItems.find(
-        (item) =>
-          item.productId === productId &&
-          (item.variantId ?? null) === (variantId ?? null)
+        (i) =>
+          i.productId === productId &&
+          (i.variantId ?? null) === (variantId ?? null)
       );
 
       if (item) {
-        pushToast('Removed from cart', {
-          description: `${item.name} has been removed from your cart`,
-          type: 'info',
-        });
+        removedName = item.name;
       }
 
       return currentItems.filter(
-        (item) =>
-          !(item.productId === productId && (item.variantId ?? null) === (variantId ?? null))
+        (i) =>
+          !(i.productId === productId && (i.variantId ?? null) === (variantId ?? null))
       );
     });
+
+    setTimeout(() => {
+      if (removedName) {
+        pushToast('Removed from cart', {
+          description: `${removedName} has been removed from your cart`,
+          type: 'info',
+        });
+      }
+    }, 0);
   }, [pushToast]);
 
   const updateQuantity = useCallback(
-    (productId: string, quantity: number, variantId?: string) => {
+    (productId: string, quantity: number, variantId?: string | null) => {
       if (quantity <= 0) {
         removeItem(productId, variantId);
         return;

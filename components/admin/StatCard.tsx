@@ -10,10 +10,12 @@ interface StatCardProps {
     isPositive: boolean;
   };
   icon: LucideIcon;
+  iconBgClassName?: string;
+  iconClassName?: string;
   className?: string;
 }
 
-export function StatCard({ label, value, change, icon: Icon, className }: StatCardProps) {
+export function StatCard({ label, value, change, icon: Icon, iconBgClassName, iconClassName, className }: StatCardProps) {
   return (
     <div
       className={cn(
@@ -21,8 +23,8 @@ export function StatCard({ label, value, change, icon: Icon, className }: StatCa
         className
       )}
     >
-      <div className="absolute top-5 right-5 w-10 h-10 rounded-lg bg-gold-50 flex items-center justify-center">
-        <Icon className="w-5 h-5 text-gold-500" strokeWidth={2} />
+      <div className={cn("absolute top-5 right-5 w-10 h-10 rounded-lg flex items-center justify-center", iconBgClassName || "bg-gold-50")}>
+        <Icon className={cn("w-5 h-5", iconClassName || "text-gold-500")} strokeWidth={2} />
       </div>
 
       <p className="text-sm font-medium text-gray-500 mb-2">{label}</p>
