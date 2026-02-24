@@ -248,8 +248,8 @@ export async function POST(request: NextRequest) {
             fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
             display_name: shippingLabel,
             delivery_estimate: {
-              minimum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 3 },
-              maximum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 7 },
+              minimum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 2 },
+              maximum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 5 },
             },
           },
         },
