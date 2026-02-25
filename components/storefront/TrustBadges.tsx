@@ -36,24 +36,31 @@ interface TrustBadgesProps {
 }
 
 export function TrustBadges({ variant = 'compact' }: TrustBadgesProps) {
+  if (variant === 'compact') {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-4 text-xs text-warm-600">
+        {TRUST_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.title} className="flex items-center gap-1.5">
+              <Icon className="w-3.5 h-3.5 text-gold-500 flex-shrink-0" />
+              <span className="font-medium whitespace-nowrap">{item.compactLabel}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("grid grid-cols-2 gap-3 text-warm-700", variant === 'detailed' ? 'sm:grid-cols-4 gap-4 text-sm' : 'sm:grid-cols-4 gap-3 text-xs')}>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-warm-700">
       {TRUST_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
-          <div key={item.title} className={cn("bg-warm-50 border border-warm-100 rounded-xl flex items-start gap-2", variant === 'detailed' ? 'px-4 py-4 flex-col' : 'px-3 py-3')}>
-            <Icon
-              className={cn(
-                'text-gold-500 flex-shrink-0',
-                variant === 'detailed' ? 'w-10 h-10 mb-1' : 'w-4 h-4 mt-0.5'
-              )}
-            />
-            <p className={cn("font-semibold text-warm-900", variant === 'compact' && 'leading-tight')}>
-              {variant === 'compact' ? item.compactLabel : item.title}
-            </p>
-            {variant === 'detailed' && (
-              <p className="text-sm text-warm-600 mt-1">{item.description}</p>
-            )}
+          <div key={item.title} className="bg-warm-50 border border-warm-100 rounded-xl px-4 py-4">
+            <Icon className="text-gold-500 w-10 h-10 mb-3" />
+            <p className="font-semibold text-warm-900">{item.title}</p>
+            <p className="text-sm text-warm-600 mt-1">{item.description}</p>
           </div>
         );
       })}
