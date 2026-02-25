@@ -282,7 +282,6 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
             )
           )
         );
-        console.log('[product images]', uniqueImages);
 
         const mappedProduct: Product = {
           id: data.product.id,
