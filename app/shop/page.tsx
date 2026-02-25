@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, SlidersHorizontal, Grid3x3, List, Search } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -29,7 +30,13 @@ function matchesKeyword(name: string, keyword: string) {
 
 const LIMIT = 24;
 
+const VALID_SORTS: SortOption[] = ['featured', 'price-low', 'price-high', 'newest', 'best-selling', 'top-rated'];
+
 export default function ShopPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const isInitialMount = useRef(true);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -54,11 +61,28 @@ export default function ShopPage() {
       setIsFetchingMore(true);
     }
 
-    const totalParam =
-      pageToLoad > 1 && totalProducts ? `&total=${totalProducts}` : '';
-    const response = await fetch(
-      `/api/products?limit=${LIMIT}&page=${pageToLoad}${totalParam}`
-    );
+    const params = new URLSearchParams();
+    params.set('limit', String(LIMIT));
+    params.set('page', String(pageToLoad));
+    if (pageToLoad > 1 && totalProducts) params.set('total', String(totalProducts));
+
+    // Map client sort names to API sort names
+    const sortMap: Record<string, string> = {
+      'price-low': 'price-asc',
+      'price-high': 'price-desc',
+      'newest': 'newest',
+      'best-selling': 'sales',
+      'top-rated': 'rating',
+      'featured': 'featured',
+    };
+    params.set('sort', sortMap[sortBy] || 'featured');
+
+    if (selectedCategorySlug) params.set('category', selectedCategorySlug);
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (usWarehouseOnly) params.set('warehouse', 'US');
+
+    const response = await fetch(`/api/products?${params.toString()}`);
     const data = await response.json();
 
     if (response.ok) {
@@ -113,15 +137,40 @@ export default function ShopPage() {
     setIsFetchingMore(false);
   };
 
-  const [sortBy, setSortBy] = useState<SortOption>('featured');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [usWarehouseOnly, setUsWarehouseOnly] = useState(false);
-  const [minRating, setMinRating] = useState<number | null>(null);
-  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(null);
-  const [subcategoryTags, setSubcategoryTags] = useState<Set<string>>(new Set());
+  // Read initial state from URL params
+  const initSort = searchParams.get('sort') as SortOption | null;
+  const [sortBy, setSortBy] = useState<SortOption>(initSort && VALID_SORTS.includes(initSort) ? initSort : 'featured');
+  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
+  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+  const [usWarehouseOnly, setUsWarehouseOnly] = useState(searchParams.get('warehouse') === 'US');
+  const initRating = Number(searchParams.get('rating'));
+  const [minRating, setMinRating] = useState<number | null>(initRating === 3 || initRating === 4 ? initRating : null);
+  const [selectedCategorySlug, setSelectedCategorySlug] = useState<string | null>(searchParams.get('category') || null);
+  const initSub = searchParams.get('subcategory');
+  const [subcategoryTags, setSubcategoryTags] = useState<Set<string>>(initSub ? new Set(initSub.split(',').filter(Boolean)) : new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync state to URL params
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (sortBy !== 'featured') params.set('sort', sortBy);
+    if (selectedCategorySlug) params.set('category', selectedCategorySlug);
+    if (subcategoryTags.size > 0) params.set('subcategory', Array.from(subcategoryTags).join(','));
+    if (minPrice) params.set('minPrice', minPrice);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (usWarehouseOnly) params.set('warehouse', 'US');
+    if (minRating) params.set('rating', String(minRating));
+
+    const qs = params.toString();
+    const url = qs ? `/shop?${qs}` : '/shop';
+    router.push(url, { scroll: false });
+  }, [sortBy, minPrice, maxPrice, usWarehouseOnly, minRating, selectedCategorySlug, subcategoryTags, router]);
 
   useEffect(() => {
     setPage(1);
@@ -151,20 +200,9 @@ export default function ShopPage() {
   const filteredAndSortedProducts = useMemo(() => {
     let filtered = [...products];
 
-    if (minPrice) {
-      filtered = filtered.filter((p) => p.price >= parseFloat(minPrice));
-    }
-    if (maxPrice) {
-      filtered = filtered.filter((p) => p.price <= parseFloat(maxPrice));
-    }
-    if (usWarehouseOnly) {
-      filtered = filtered.filter((p) => p.warehouse === 'US');
-    }
+    // Client-side filters for things the API doesn't handle
     if (minRating) {
       filtered = filtered.filter((p) => p.rating >= minRating);
-    }
-    if (selectedCategorySlug) {
-      filtered = filtered.filter((p) => p.category === selectedCategorySlug);
     }
     if (subcategoryTags.size > 0) {
       filtered = filtered.filter((product) => {
@@ -191,32 +229,11 @@ export default function ShopPage() {
       });
     }
 
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'newest':
-          return 0;
-        case 'best-selling':
-          return b.reviewCount - a.reviewCount;
-        case 'top-rated':
-          return b.rating - a.rating;
-        default:
-          return 0;
-      }
-    });
-
+    // Sort, price, warehouse, and category are handled server-side
     return filtered;
   }, [
     products,
-    sortBy,
-    minPrice,
-    maxPrice,
-    usWarehouseOnly,
     minRating,
-    selectedCategorySlug,
     subcategoryTags,
   ]);
 
