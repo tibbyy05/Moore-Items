@@ -303,16 +303,20 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               size: variant.size || undefined,
               price: variant.retail_price || data.product.retail_price,
               inStock:
-                variant.stock_count === null || variant.stock_count === undefined
-                  ? true
-                  : variant.stock_count > 0,
+                data.product.cj_pid
+                  ? variant.is_active !== false
+                  : variant.stock_count === null || variant.stock_count === undefined
+                    ? true
+                    : variant.stock_count > 0,
               imageUrl: variant.image_url || undefined,
             })) || [],
           description: data.product.description || '',
           shippingDays: data.product.shipping_estimate || data.product.shipping_days || '7-12 days',
           warehouse: data.product.warehouse || 'CN',
           isDigital: !!(data.product.digital_file_path || data.product.mi_categories?.slug === 'digital-downloads'),
-          inStock: data.product.stock_count > 0,
+          inStock: data.product.cj_pid
+            ? data.product.status === 'active'
+            : data.product.stock_count > 0,
           stockCount: data.product.stock_count || 0,
         };
 
