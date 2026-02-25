@@ -229,8 +229,9 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
-  const [galleryIndex, setGalleryIndex] = useState<number | undefined>(undefined);
+  const [galleryIndex, setGalleryIndex] = useState<number>(0);
   const [hasUserSelectedVariant, setHasUserSelectedVariant] = useState(false);
+  const hasInitialized = useRef(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [addedState, setAddedState] = useState(false);
 
@@ -239,6 +240,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const addToCartRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!hasInitialized.current) return;
     if (!hasUserSelectedVariant) return;
     if (selectedVariant?.imageUrl && product?.images) {
       const idx = product.images.indexOf(selectedVariant.imageUrl);
@@ -275,10 +277,9 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       const data = await response.json();
 
       if (response.ok) {
-        console.log('DB images order:', data.product?.images?.slice(0, 3));
         const rawImages = data.product.images || [];
         const seenImages = new Set<string>();
-        const uniqueImages: string[] = rawImages.filter(
+        const productImages: string[] = rawImages.filter(
           (image: any): image is string => {
             if (typeof image !== 'string' || image.trim().length === 0) return false;
             if (seenImages.has(image)) return false;
@@ -287,6 +288,12 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
           }
         );
 
+        const variantImages = (data.product.mi_product_variants || [])
+          .map((variant: any) => variant?.image_url)
+          .filter((image: any): image is string => typeof image === 'string' && image.trim());
+        const variantOnlyImages = variantImages.filter((image: string) => !productImages.includes(image));
+        const allImages = [...productImages, ...variantOnlyImages];
+
         const mappedProduct: Product = {
           id: data.product.id,
           name: data.product.name,
@@ -294,7 +301,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
           price: data.product.retail_price,
           compareAtPrice: data.product.compare_at_price || null,
           createdAt: data.product.created_at || undefined,
-          images: uniqueImages,
+          images: allImages,
           rating: data.product.average_rating || data.product.rating || 0,
           reviewCount: data.product.review_count || 0,
           category: data.product.mi_categories?.slug || '',
@@ -328,7 +335,11 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
         setProduct(mappedProduct);
         setSelectedVariant(mappedProduct.variants[0]);
         setHasUserSelectedVariant(false);
-        setGalleryIndex(undefined);
+        setGalleryIndex(0);
+        hasInitialized.current = false;
+        window.setTimeout(() => {
+          hasInitialized.current = true;
+        }, 500);
 
         setReviewPage(1);
         await loadReviews(mappedProduct.id, 1);

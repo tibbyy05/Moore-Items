@@ -64,12 +64,18 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
 
   const handleNext = () => {
     if (galleryImages.length === 0) return;
-    setActiveIndex((prev) => (prev + 1) % galleryImages.length);
+    setActiveIndex((prev) => {
+      const next = (prev + 1) % galleryImages.length;
+      return next;
+    });
   };
 
   const handlePrev = () => {
     if (galleryImages.length === 0) return;
-    setActiveIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+    setActiveIndex((prev) => {
+      const next = (prev - 1 + galleryImages.length) % galleryImages.length;
+      return next;
+    });
   };
 
   const handleTouchStart = (event: React.TouchEvent) => {
@@ -147,7 +153,9 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
                 ? 'border-gold-500'
                 : 'border-transparent hover:border-warm-300'
             )}
-            onClick={() => setActiveIndex(index)}
+            onClick={() => {
+              setActiveIndex(index);
+            }}
             aria-label={`View image ${index + 1}`}
           >
             <Image

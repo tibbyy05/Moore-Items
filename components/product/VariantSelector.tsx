@@ -15,14 +15,9 @@ export function VariantSelector({
   selectedVariantId,
   onSelect,
 }: VariantSelectorProps) {
+  const colors = Array.from(new Set(variants.filter((v) => v.color).map((v) => v.color)));
+  const sizes = Array.from(new Set(variants.filter((v) => v.size).map((v) => v.size)));
   if (variants.length === 0) return null;
-
-  const colors = Array.from(
-    new Set(variants.filter((v) => v.color).map((v) => v.color))
-  );
-  const sizes = Array.from(
-    new Set(variants.filter((v) => v.size).map((v) => v.size))
-  );
 
   const [selectedColor, setSelectedColor] = React.useState(
     variants.find((variant) => variant.id === selectedVariantId)?.color ||

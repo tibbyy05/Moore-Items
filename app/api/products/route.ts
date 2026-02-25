@@ -84,6 +84,10 @@ export async function GET(request: NextRequest) {
     ...product,
     images: Array.isArray(product.images) ? product.images.slice(0, 1) : product.images,
   }));
+  console.log(
+    '[products API] first images:',
+    (trimmedProducts || []).slice(0, 3).map((p: any) => p.images?.[0])
+  );
 
   return NextResponse.json({
     products: trimmedProducts,
