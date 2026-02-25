@@ -12,6 +12,9 @@ import {
   X,
   FileUp,
   FileCheck,
+  Star,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -108,7 +111,30 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   };
 
   const removeImageField = (index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+    setImageUrls((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length > 0 ? next : [''];
+    });
+  };
+
+  const moveImage = (index: number, direction: -1 | 1) => {
+    setImageUrls((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const setAsMain = (index: number) => {
+    if (index === 0) return;
+    setImageUrls((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.unshift(item);
+      return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -349,22 +375,87 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
         {/* Images */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Images</h2>
+          <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Images</h2>
+          <p className="text-xs text-gray-400 mb-4">First image is the main product image shown on cards and product pages.</p>
+
+          {/* Thumbnail grid */}
+          {imageUrls.some((u) => u.trim()) && (
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {imageUrls.map((url, index) => {
+                if (!url.trim()) return null;
+                const isMain = index === 0;
+                return (
+                  <div
+                    key={index}
+                    className={`relative group rounded-xl overflow-hidden border-2 ${isMain ? 'border-gold-500' : 'border-gray-200'}`}
+                  >
+                    <div className="aspect-square bg-gray-100">
+                      <img
+                        src={url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '';
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+
+                    {/* Position badge */}
+                    <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isMain ? 'bg-gold-500 text-white' : 'bg-black/50 text-white'}`}>
+                      {isMain ? 'Main' : index + 1}
+                    </span>
+
+                    {/* Controls overlay */}
+                    <div className="absolute inset-x-0 bottom-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 py-1.5">
+                      {!isMain && (
+                        <button
+                          type="button"
+                          onClick={() => setAsMain(index)}
+                          title="Set as main image"
+                          className="p-1 text-gold-400 hover:text-gold-300 transition-colors"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, -1)}
+                        disabled={index === 0}
+                        title="Move left"
+                        className="p-1 text-white hover:text-gray-300 transition-colors disabled:opacity-30"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveImage(index, 1)}
+                        disabled={index === imageUrls.length - 1}
+                        title="Move right"
+                        className="p-1 text-white hover:text-gray-300 transition-colors disabled:opacity-30"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeImageField(index)}
+                        title="Remove image"
+                        className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add image URL input */}
           <div className="space-y-3">
             {imageUrls.map((url, index) => (
               <div key={index} className="flex items-center gap-2">
-                {url && (
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
-                    <img
-                      src={url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
+                <span className="text-xs text-gray-400 w-5 text-right flex-shrink-0">{index + 1}</span>
                 <input
                   type="url"
                   value={url}
