@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -20,6 +20,9 @@ import { toast } from 'sonner';
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const hasFetched = useRef(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>(
@@ -40,6 +43,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   });
 
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
     const fetchData = async () => {
       try {
         const [productRes, catRes] = await Promise.all([
@@ -67,7 +73,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           setExistingFilePath(product.digital_file_path || null);
         } else {
           toast.error('Product not found');
-          router.push('/admin/products');
+          routerRef.current.push('/admin/products');
           return;
         }
 
@@ -82,7 +88,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       }
     };
     fetchData();
-  }, [params.id, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
