@@ -337,7 +337,7 @@ export default function CartPage() {
                   )}
                 </CustomButton>
 
-                <div className="mt-6">
+                <div className="mt-8 pt-6 border-t border-warm-200">
                   <TrustBadges variant="compact" />
                 </div>
               </aside>
