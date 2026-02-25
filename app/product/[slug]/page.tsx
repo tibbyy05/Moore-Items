@@ -230,6 +230,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [galleryIndex, setGalleryIndex] = useState<number | undefined>(undefined);
+  const [hasUserSelectedVariant, setHasUserSelectedVariant] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [addedState, setAddedState] = useState(false);
 
@@ -238,13 +239,14 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const addToCartRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!hasUserSelectedVariant) return;
     if (selectedVariant?.imageUrl && product?.images) {
       const idx = product.images.indexOf(selectedVariant.imageUrl);
       if (idx !== -1) {
         setGalleryIndex(idx);
       }
     }
-  }, [selectedVariant, product?.images]);
+  }, [selectedVariant, product?.images, hasUserSelectedVariant]);
 
   const loadReviews = async (productId: string, page: number) => {
     setReviewLoading(true);
@@ -323,6 +325,8 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
         setProduct(mappedProduct);
         setSelectedVariant(mappedProduct.variants[0]);
+        setHasUserSelectedVariant(false);
+        setGalleryIndex(undefined);
 
         setReviewPage(1);
         await loadReviews(mappedProduct.id, 1);
@@ -580,7 +584,10 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
                   <VariantSelector
                     variants={product.variants}
                     selectedVariantId={selectedVariant?.id}
-                    onSelect={setSelectedVariant}
+                    onSelect={(variant) => {
+                      setSelectedVariant(variant);
+                      setHasUserSelectedVariant(true);
+                    }}
                   />
                 </div>
               )}
