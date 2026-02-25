@@ -67,6 +67,9 @@ export async function GET(request: NextRequest) {
       query = query.order('sales_count', { ascending: false });
   }
 
+  // Tiebreaker sort for deterministic pagination
+  query = query.order('id');
+
   query = query.range((page - 1) * limit, page * limit - 1);
 
   const { data, error, count } = await query;
