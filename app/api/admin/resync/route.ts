@@ -1,8 +1,29 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { syncCJProducts } from '@/lib/cj/sync';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function POST(request: Request) {
+async function requireAdmin() {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  }
+  const { data: adminProfile } = await supabase
+    .from('mi_admin_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (!adminProfile) {
+    return { error: NextResponse.json({ error: 'Not an admin' }, { status: 403 }) };
+  }
+  return { error: null };
+}
+
+export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
+
   const supabase = createAdminClient();
 
   try {

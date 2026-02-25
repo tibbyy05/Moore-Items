@@ -2,14 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
 
-export async function POST(request: NextRequest) {
+async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
+  const { data: adminProfile } = await supabase
+    .from('mi_admin_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (!adminProfile) {
+    return { error: NextResponse.json({ error: 'Not an admin' }, { status: 403 }) };
+  }
+  return { error: null };
+}
+
+export async function POST(request: NextRequest) {
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
   const body = await request.json();
   const { mode } = body;
@@ -75,13 +87,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const { error: authError } = await requireAdmin();
+  if (authError) return authError;
 
   const body = await request.json();
   const { productId, warehouse, shippingDays } = body;
