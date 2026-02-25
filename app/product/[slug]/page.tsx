@@ -275,14 +275,16 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
       const data = await response.json();
 
       if (response.ok) {
+        console.log('DB images order:', data.product?.images?.slice(0, 3));
         const rawImages = data.product.images || [];
-        const uniqueImages: string[] = Array.from(
-          new Set(
-            rawImages.filter(
-              (image: any): image is string =>
-                typeof image === 'string' && image.trim().length > 0
-            )
-          )
+        const seenImages = new Set<string>();
+        const uniqueImages: string[] = rawImages.filter(
+          (image: any): image is string => {
+            if (typeof image !== 'string' || image.trim().length === 0) return false;
+            if (seenImages.has(image)) return false;
+            seenImages.add(image);
+            return true;
+          }
         );
 
         const mappedProduct: Product = {
