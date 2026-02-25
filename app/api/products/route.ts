@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('mi_products')
     .select(
-      'id, name, slug, retail_price, compare_at_price, images, average_rating, review_count, status, shipping_estimate, mi_categories(name, slug)',
+      'id, name, slug, retail_price, compare_at_price, images, average_rating, review_count, shipping_estimate, warehouse, mi_categories(name, slug)',
       { count: page > 1 && clientTotal ? 'planned' : 'exact' }
     )
     .eq('status', 'active');
