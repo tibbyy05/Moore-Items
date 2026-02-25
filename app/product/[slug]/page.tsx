@@ -21,6 +21,8 @@ import { ProductCard } from '@/components/storefront/ProductCard';
 import { Product, ProductVariant } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+export const dynamic = 'force-dynamic';
+
 function timeAgo(dateString: string): string {
   const now = new Date();
   const date = new Date(dateString);

@@ -12,6 +12,8 @@ import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { CategoryShowcase } from '@/components/storefront/CategoryShowcase';
 
+export const dynamic = 'force-dynamic';
+
 function mapProduct(product: any): Product {
   return {
     id: product.id,

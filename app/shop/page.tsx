@@ -14,6 +14,8 @@ import { Product } from '@/lib/types';
 import { SUBCATEGORY_TAGS, TAG_KEYWORDS } from '@/lib/config/subcategory-tags';
 import { useCategories } from '@/components/providers/CategoriesProvider';
 
+export const dynamic = 'force-dynamic';
+
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'best-selling' | 'top-rated';
 const formatCount = (value: number) => value.toLocaleString('en-US');
 

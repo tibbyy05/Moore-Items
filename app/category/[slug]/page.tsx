@@ -16,6 +16,8 @@ import Image from 'next/image';
 import { SUBCATEGORY_TAGS, TAG_KEYWORDS } from '@/lib/config/subcategory-tags';
 import { useCategories } from '@/components/providers/CategoriesProvider';
 
+export const dynamic = 'force-dynamic';
+
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'best-selling' | 'top-rated';
 const LIMIT = 24;
 const formatCount = (value: number) => value.toLocaleString('en-US');

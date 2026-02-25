@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { Category, Product } from '@/lib/types';
 import { useCategories } from '@/components/providers/CategoriesProvider';
 
+export const dynamic = 'force-dynamic';
+
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';

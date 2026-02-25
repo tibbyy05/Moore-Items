@@ -12,6 +12,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { cn } from '@/lib/utils';
 import { Product } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'best-selling' | 'top-rated';
 const LIMIT = 24;
 
