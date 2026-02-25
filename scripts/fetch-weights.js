@@ -28,6 +28,10 @@ function hasWeight(product) {
   }
 }
 
+let currentToken = null;
+let tokenAcquiredAt = 0;
+const TOKEN_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
 async function getToken() {
   const res = await fetch(`${CJ_BASE_URL}/authentication/getAccessToken`, {
     method: 'POST',
@@ -36,10 +40,22 @@ async function getToken() {
   });
   const data = await res.json();
   if (!data.result) throw new Error('CJ Auth failed: ' + data.message);
-  return data.data.accessToken;
+  currentToken = data.data.accessToken;
+  tokenAcquiredAt = Date.now();
+  return currentToken;
 }
 
-async function fetchDetail(token, pid) {
+async function ensureFreshToken() {
+  if (!currentToken || Date.now() - tokenAcquiredAt >= TOKEN_MAX_AGE_MS) {
+    console.log('  Refreshing CJ access token...');
+    await getToken();
+    console.log('  Token refreshed');
+  }
+  return currentToken;
+}
+
+async function fetchDetail(pid) {
+  const token = await ensureFreshToken();
   const res = await fetch(`${CJ_BASE_URL}/product/query?pid=${pid}`, {
     headers: { 'Content-Type': 'application/json', 'CJ-Access-Token': token },
   });
@@ -48,8 +64,9 @@ async function fetchDetail(token, pid) {
   if (data.code === 1600200) {
     console.log('  Rate limit hit, waiting 10s...');
     await delay(10000);
+    const freshToken = await ensureFreshToken();
     const retry = await fetch(`${CJ_BASE_URL}/product/query?pid=${pid}`, {
-      headers: { 'Content-Type': 'application/json', 'CJ-Access-Token': token },
+      headers: { 'Content-Type': 'application/json', 'CJ-Access-Token': freshToken },
     });
     return retry.json();
   }
@@ -64,7 +81,7 @@ async function run() {
   }
 
   console.log('Getting CJ auth token...');
-  const token = await getToken();
+  await getToken();
   console.log('Token acquired\n');
 
   // Fetch all active products with cj_pid in batches
@@ -119,7 +136,7 @@ async function run() {
 
     try {
       await delay(3100);
-      const response = await fetchDetail(token, product.cj_pid);
+      const response = await fetchDetail(product.cj_pid);
 
       if (response.code !== 200 && response.code !== 0) {
         throw new Error(response.message || 'CJ detail failed');
