@@ -19,9 +19,13 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
-  const galleryImages = Array.from(
-    new Set(images.filter((image) => typeof image === 'string' && image.trim().length > 0))
-  );
+  const seen = new Set<string>();
+  const galleryImages = images.filter((image) => {
+    if (typeof image !== 'string' || image.trim().length === 0) return false;
+    if (seen.has(image)) return false;
+    seen.add(image);
+    return true;
+  });
 
   useEffect(() => {
     if (
