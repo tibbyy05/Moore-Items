@@ -1,4 +1,5 @@
 import { orderConfirmationTemplate } from './templates/order-confirmation';
+import { abandonedCartTemplate, type AbandonedCartData } from './templates/abandoned-cart';
 import { shippingUpdateTemplate } from './templates/shipping-update';
 
 // ============================================================
@@ -101,6 +102,19 @@ export async function sendOrderConfirmation(data: OrderConfirmationData) {
     subject: `Order Confirmed! 🎉 #${data.orderNumber}`,
     html,
   });
+}
+
+// ============================================================
+// Abandoned Cart Email
+// ============================================================
+
+export async function sendAbandonedCartEmail(to: string, subject: string, html: string) {
+  return sendEmail({ to, subject, html });
+}
+
+export async function sendAbandonedCart(data: AbandonedCartData) {
+  const html = abandonedCartTemplate(data);
+  return sendAbandonedCartEmail(data.email, 'You left something behind! 🛒', html);
 }
 
 // ============================================================

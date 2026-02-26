@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { fulfillCJOrder } from '@/lib/cj/fulfill-order';
-import { sendOrderConfirmation } from '@/lib/email/sendgrid';
+import { sendAbandonedCart, sendOrderConfirmation } from '@/lib/email/sendgrid';
 import { generateDownloadToken } from '@/lib/download-token';
 
 export const runtime = 'nodejs';
@@ -227,12 +227,61 @@ export async function POST(request: NextRequest) {
 
     if (event.type === 'checkout.session.expired') {
       const session = event.data.object as Stripe.Checkout.Session;
-      const orderId = session.metadata?.supabase_order_id;
-      if (orderId) {
+
+      const { data: order, error: orderError } = await supabase
+        .from('mi_orders')
+        .select('id, email, notes, payment_status, fulfillment_status')
+        .eq('stripe_session_id', session.id)
+        .maybeSingle();
+
+      if (orderError) {
+        console.error('[Webhook] Abandoned cart lookup failed:', orderError);
+      }
+
+      if (order && order.payment_status === 'pending') {
+        const noteFlag = 'abandoned cart email sent';
+        const alreadySent = String(order.notes || '').includes(noteFlag);
+
+        if (!alreadySent) {
+          const { data: orderItems, error: itemsError } = await supabase
+            .from('mi_order_items')
+            .select('name, image_url, quantity, unit_price, product_name, product_image')
+            .eq('order_id', order.id);
+
+          if (itemsError) {
+            console.error('[Webhook] Abandoned cart items lookup failed:', itemsError);
+          } else {
+            const customerName = session.customer_details?.name || 'Customer';
+            const email = session.customer_details?.email || session.customer_email || order.email || '';
+
+            if (email) {
+              await sendAbandonedCart({
+                customerName,
+                email,
+                cartUrl: 'https://www.mooreitems.com/cart',
+                orderItems: (orderItems || []).map((item) => ({
+                  name: item.product_name || item.name || 'Item',
+                  image_url: item.product_image || item.image_url || undefined,
+                  quantity: Number(item.quantity || 1),
+                  unit_price: Number(item.unit_price || 0),
+                })),
+              });
+
+              const noteEntry = `[abandoned] ${new Date().toISOString()} abandoned cart email sent`;
+              await supabase
+                .from('mi_orders')
+                .update({
+                  notes: order.notes ? `${order.notes}\n${noteEntry}` : noteEntry,
+                })
+                .eq('id', order.id);
+            }
+          }
+        }
+
         await supabase
           .from('mi_orders')
           .update({ fulfillment_status: 'cancelled', payment_status: 'expired' })
-          .eq('id', orderId);
+          .eq('id', order.id);
       }
     }
 
