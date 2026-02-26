@@ -290,7 +290,9 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
 
         const variantImages = (data.product.mi_product_variants || [])
           .map((variant: any) => variant?.image_url)
-          .filter((image: any): image is string => typeof image === 'string' && image.trim());
+          .filter(
+            (image: any): image is string => typeof image === 'string' && image.trim() !== ''
+          );
         const variantOnlyImages = variantImages.filter((image: string) => !productImages.includes(image));
         const allImages = [...productImages, ...variantOnlyImages];
 
