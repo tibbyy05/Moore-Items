@@ -147,7 +147,7 @@ export function VariantSelector({
             Size: <span className="font-normal text-warm-600">{selectedSize}</span>
           </label>
           <div className="flex flex-wrap gap-3">
-            {sortSizes(sizes).map((size) => {
+            {sortSizes(sizes.filter((s): s is string => !!s)).map((size) => {
               const variant = variants.find((v) => v.size === size);
               if (!variant) return null;
 
