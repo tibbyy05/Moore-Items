@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       const discountCode = session.metadata?.discount_code || null;
       const isAllDigital = session.metadata?.is_all_digital === 'true';
 
+      const customerPhone = session.customer_details?.phone || '';
       const shippingDetails = (session as any).shipping_details || session.customer_details;
       const shippingAddress = shippingDetails?.address
         ? {
@@ -48,6 +49,7 @@ export async function POST(request: NextRequest) {
             state: shippingDetails.address.state || null,
             postal_code: shippingDetails.address.postal_code || null,
             country: shippingDetails.address.country || null,
+            phone: customerPhone || null,
           }
         : null;
 

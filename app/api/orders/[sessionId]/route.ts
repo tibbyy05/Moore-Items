@@ -34,6 +34,7 @@ export async function GET(
       order.payment_status === 'pending' &&
       session.payment_status === 'paid'
     ) {
+      const customerPhone = session.customer_details?.phone || '';
       const shippingDetails = (session as any).shipping_details || session.customer_details;
       const shippingAddress = shippingDetails?.address
         ? {
@@ -44,6 +45,7 @@ export async function GET(
             state: shippingDetails.address.state || null,
             postal_code: shippingDetails.address.postal_code || null,
             country: shippingDetails.address.country || null,
+            phone: customerPhone || null,
           }
         : null;
 

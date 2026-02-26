@@ -284,6 +284,7 @@ export async function POST(request: NextRequest) {
       success_url: `${origin}/order/confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
       customer_email: email || undefined,
+      phone_number_collection: { enabled: true },
       metadata: {
         discount_code: appliedDiscountCode || '',
         discount_amount: discountAmount.toFixed(2),

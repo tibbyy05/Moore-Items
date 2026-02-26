@@ -94,7 +94,10 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
   }));
 
   const shipping = order.shipping_address || {};
-  const shippingPhone = normalizeText(shipping.phone, '0000000000');
+  const shippingPhone = normalizeText(
+    shipping.phone,
+    normalizeText(shipping.phone_number, '0000000000')
+  );
 
   const countryCode = normalizeText(shipping.country, 'US');
   const shippingPayload = {
