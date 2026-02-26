@@ -10,6 +10,7 @@ import { ShoppingAssistantWrapper } from '@/components/storefront/ShoppingAssist
 import { AbortErrorSuppressor } from '@/components/system/AbortErrorSuppressor';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { CategoriesProvider } from '@/components/providers/CategoriesProvider';
+import { EmailPopup } from '@/components/storefront/EmailPopup';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -77,6 +78,7 @@ export default function RootLayout({
           `}
         </Script>
         <MetaPixel />
+        <EmailPopup />
         <ToastProvider>
           <AuthProvider>
             <CategoriesProvider>
