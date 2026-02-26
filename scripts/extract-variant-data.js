@@ -79,6 +79,8 @@ const SIZE_PATTERNS = [
   { regex: /\b(?<![A-Za-z])M(?![A-Za-z])\b/, size: 'M' },
   { regex: /\b(?<![A-Za-z])L(?![A-Za-z])\b/, size: 'L' },
   // Ring/shoe numeric sizes (only at end of string or after color)
+  { regex: /\b(\d{1,2})(?:st|nd|rd|th)\.?\s*$/, size: null, extract: true },
+  { regex: /\b(\d{1,2})\.\s*$/, size: null, extract: true },
   { regex: /\b(\d{1,2}(?:\.\d)?)\s*$/, size: null, extract: true },
   // Descriptive sizes
   { regex: /\bOne Size\b/i, size: 'One Size' },
