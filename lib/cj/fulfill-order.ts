@@ -118,6 +118,7 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
   };
 
   try {
+    console.log('[cj fulfill] Sending to CJ:', JSON.stringify(shippingPayload, null, 2));
     const response = await cjClient.createOrder(shippingPayload);
     const { cjOrderId, cjOrderNumber } = extractCjOrderFields(response);
 
