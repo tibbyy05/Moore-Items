@@ -1,7 +1,10 @@
 // Run with: node scripts/enrich-us-products.js
 // Enriches US warehouse products with full CJ details
 
+require('ts-node/register/transpile-only');
+
 const fs = require('fs');
+const { parseVariantColorSize } = require('../lib/utils/variant-parser');
 
 const BASE_URL = 'https://developers.cjdropshipping.com/api2.0/v1';
 
@@ -512,7 +515,11 @@ async function run() {
           const variantPayloads = variants.map((variant, index) => {
             const cjPrice = Number.parseFloat(String(variant.variantSellPrice || 0)) || 0;
             const retailPrice = calculateRetailPrice(cjPrice, 3.0);
-            const { color, size } = parseVariantKey(variant.variantKey);
+            const variantLabel = variant.variantNameEn || variant.variantName || variant.variantSku || '';
+            const { color, size } = parseVariantColorSize(
+              variantLabel,
+              detailPayload?.productNameEn || name
+            );
             return {
               product_id: product.id,
               cj_vid: variant.vid,

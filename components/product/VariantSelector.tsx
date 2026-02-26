@@ -17,6 +17,38 @@ export function VariantSelector({
 }: VariantSelectorProps) {
   const colors = Array.from(new Set(variants.filter((v) => v.color).map((v) => v.color)));
   const sizes = Array.from(new Set(variants.filter((v) => v.size).map((v) => v.size)));
+
+  const sortSizes = (values: string[]) => {
+    const clothingOrder = [
+      'XXS',
+      'XS',
+      'S',
+      'M',
+      'L',
+      'XL',
+      '2XL',
+      'XXL',
+      '3XL',
+      'XXXL',
+      '4XL',
+      'XXXXL',
+    ];
+
+    const allNumeric = values.every((size) => !Number.isNaN(parseFloat(size)));
+    if (allNumeric) {
+      return [...values].sort((a, b) => parseFloat(a) - parseFloat(b));
+    }
+
+    const upperSizes = values.map((size) => size.toUpperCase());
+    const allClothing = upperSizes.every((size) => clothingOrder.includes(size));
+    if (allClothing) {
+      return [...values].sort(
+        (a, b) => clothingOrder.indexOf(a.toUpperCase()) - clothingOrder.indexOf(b.toUpperCase())
+      );
+    }
+
+    return [...values].sort((a, b) => a.localeCompare(b));
+  };
   if (variants.length === 0) return null;
 
   const [selectedColor, setSelectedColor] = React.useState(
@@ -115,7 +147,7 @@ export function VariantSelector({
             Size: <span className="font-normal text-warm-600">{selectedSize}</span>
           </label>
           <div className="flex flex-wrap gap-3">
-            {sizes.map((size) => {
+            {sortSizes(sizes).map((size) => {
               const variant = variants.find((v) => v.size === size);
               if (!variant) return null;
 

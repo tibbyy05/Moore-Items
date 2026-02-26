@@ -435,6 +435,18 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   }, [product]);
 
   useEffect(() => {
+    if (product && typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'ViewContent', {
+        content_ids: [product.id],
+        content_type: 'product',
+        content_name: product.name,
+        value: product.price,
+        currency: 'USD',
+      });
+    }
+  }, [product?.id]);
+
+  useEffect(() => {
     if (!addToCartRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyBar(!entry.isIntersecting),

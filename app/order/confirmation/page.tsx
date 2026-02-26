@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -12,6 +12,7 @@ import { useCart } from '@/components/providers/CartProvider';
 
 interface OrderItem {
   id: string;
+  product_id?: string | null;
   name: string;
   image_url: string | null;
   quantity: number;
@@ -48,6 +49,7 @@ export default function OrderConfirmationPage() {
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const hasTrackedPurchase = useRef(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -60,6 +62,22 @@ export default function OrderConfirmationPage() {
         setOrder(data.order || null);
         setSession(data.session || null);
         clearCart();
+        if (
+          !hasTrackedPurchase.current &&
+          typeof window !== 'undefined' &&
+          window.fbq &&
+          data.order
+        ) {
+          hasTrackedPurchase.current = true;
+          window.fbq('track', 'Purchase', {
+            value: data.order.total ?? 0,
+            currency: 'USD',
+            content_ids: (data.items || []).map(
+              (item: OrderItem) => item.product_id || item.id
+            ),
+            content_type: 'product',
+          });
+        }
       }
       setLoading(false);
     };

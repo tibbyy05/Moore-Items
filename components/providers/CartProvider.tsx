@@ -82,6 +82,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...currentItems, newItem];
     });
 
+    if (typeof window !== 'undefined' && window.fbq) {
+      window.fbq('track', 'AddToCart', {
+        value: newItem.price,
+        currency: 'USD',
+        content_ids: [newItem.productId],
+        content_type: 'product',
+      });
+    }
+
     // Toast outside the updater to avoid StrictMode double-fire
     setTimeout(() => {
       if (toastMessage) {

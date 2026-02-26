@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
 import { calculatePricing } from '@/lib/pricing';
+import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import {
   parsePriceValue,
   detectUSWarehouse,
@@ -199,6 +200,8 @@ export async function POST(request: NextRequest) {
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
         const variantPricing = calculatePricing(variantPrice, shipCost);
+        const variantLabel = variant.variantNameEn || variant.variantName || variant.variantSku || '';
+        const { color, size } = parseVariantColorSize(variantLabel, productName);
         await supabase.from('mi_product_variants').upsert(
           {
             product_id: inserted.id,
@@ -207,6 +210,8 @@ export async function POST(request: NextRequest) {
             cj_price: variantPrice,
             retail_price: variantPricing.retailPrice,
             image_url: variant.variantImage,
+            color: color || null,
+            size: size || null,
             is_active: true,
           },
           { onConflict: 'cj_vid' }
