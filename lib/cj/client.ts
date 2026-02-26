@@ -137,6 +137,7 @@ class CJClient {
     const data = await response.json();
 
     if (data.code !== 200 && data.code !== 0) {
+      console.error('[cj] API FAILURE — full response:', JSON.stringify(data, null, 2));
       throw new Error(`CJ API error: ${data.message} (code: ${data.code})`);
     }
 
@@ -218,9 +219,11 @@ class CJClient {
     logisticName?: string;
     [key: string]: any;
   }) {
+    const payload = { ...params, payType: params.payType || 2 };
+    console.log('[cj] createOrder payload:', JSON.stringify(payload, null, 2));
     return this.apiCall('/shopping/order/createOrderV2', {
       method: 'POST',
-      body: JSON.stringify({ ...params, payType: params.payType || 2 }),
+      body: JSON.stringify(payload),
     });
   }
 
