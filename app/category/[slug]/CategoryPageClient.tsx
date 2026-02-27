@@ -9,6 +9,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { ProductGrid } from '@/components/product/ProductGrid';
 import { CustomButton } from '@/components/ui/custom-button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { CategoryIcon } from '@/components/ui/category-icon';
 import { cn } from '@/lib/utils';
 import { Product } from '@/lib/types';
@@ -29,7 +30,18 @@ function matchesKeyword(name: string, keyword: string) {
   return pattern.test(name);
 }
 
-export function CategoryPageClient({ params }: { params: { slug: string } }) {
+interface CategoryFaqItem {
+  question: string;
+  answer: string;
+}
+
+interface CategoryPageClientProps {
+  params: { slug: string };
+  categoryDescription?: string | null;
+  categoryFaqs?: CategoryFaqItem[] | null;
+}
+
+export function CategoryPageClient({ params, categoryDescription, categoryFaqs }: CategoryPageClientProps) {
   const { categories, loading: categoriesLoading } = useCategories();
   const activeCategory = categories.find((item) => item.slug === params.slug);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
@@ -525,6 +537,14 @@ export function CategoryPageClient({ params }: { params: { slug: string } }) {
           </div>
         </div>
 
+        {categoryDescription && (
+          <div className="max-w-[1600px] mx-auto px-4 pt-6">
+            <p className="text-warm-600 leading-relaxed max-w-4xl">
+              {categoryDescription}
+            </p>
+          </div>
+        )}
+
         <div className="max-w-[1600px] mx-auto px-4 py-8">
           {categoryTags.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-2 mb-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -649,6 +669,22 @@ export function CategoryPageClient({ params }: { params: { slug: string } }) {
             </div>
           </div>
         </div>
+
+        {categoryFaqs && categoryFaqs.length > 0 && (
+          <div className="max-w-[1600px] mx-auto px-4 pb-12">
+            <h2 className="text-2xl font-playfair font-semibold text-warm-900 mb-6">
+              Frequently Asked Questions
+            </h2>
+            <Accordion type="single" collapsible className="bg-warm-50/40 rounded-2xl border border-warm-200">
+              {categoryFaqs.map((faq, index) => (
+                <AccordionItem key={index} value={`faq-${index}`}>
+                  <AccordionTrigger>{faq.question}</AccordionTrigger>
+                  <AccordionContent>{faq.answer}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        )}
       </main>
 
       <Footer />

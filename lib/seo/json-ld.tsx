@@ -122,3 +122,55 @@ export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
     />
   );
 }
+
+interface CollectionPageJsonLdProps {
+  name: string;
+  description: string;
+  url: string;
+  productCount: number;
+}
+
+export function CollectionPageJsonLd(props: CollectionPageJsonLdProps) {
+  return (
+    <JsonLdScript
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: props.name,
+        description: props.description,
+        url: props.url,
+        numberOfItems: props.productCount,
+        provider: {
+          '@type': 'Organization',
+          name: SITE_NAME,
+          url: SITE_URL,
+        },
+      }}
+    />
+  );
+}
+
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export function FAQPageJsonLd({ faqs }: { faqs: FaqItem[] }) {
+  if (faqs.length === 0) return null;
+  return (
+    <JsonLdScript
+      data={{
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer,
+          },
+        })),
+      }}
+    />
+  );
+}

@@ -32,10 +32,17 @@ export interface ProductPageData {
   }>;
 }
 
+export interface CategoryFaqItem {
+  question: string;
+  answer: string;
+}
+
 export interface CategoryPageData {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
+  faq_json: CategoryFaqItem[] | null;
 }
 
 export const fetchProductBySlug = cache(
@@ -58,7 +65,7 @@ export const fetchCategoryBySlug = cache(
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from('mi_categories')
-      .select('id, name, slug')
+      .select('id, name, slug, description, faq_json')
       .eq('slug', slug)
       .maybeSingle();
 
