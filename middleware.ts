@@ -3,11 +3,15 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Noindex for shop pages with filter/sort/pagination query params
+  // Noindex for shop pages with filter/sort query params (allow ?page=N for pagination)
   if (request.nextUrl.pathname === '/shop' && request.nextUrl.search) {
-    const response = NextResponse.next({ request });
-    response.headers.set('X-Robots-Tag', 'noindex, follow');
-    return response;
+    const params = request.nextUrl.searchParams;
+    const hasOnlyPage = params.has('page') && Array.from(params.keys()).length === 1;
+    if (!hasOnlyPage) {
+      const response = NextResponse.next({ request });
+      response.headers.set('X-Robots-Tag', 'noindex, follow');
+      return response;
+    }
   }
 
   let response = NextResponse.next({ request });

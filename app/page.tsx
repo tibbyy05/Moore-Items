@@ -155,6 +155,7 @@ export default async function Home() {
                       className="object-cover"
                       sizes="(max-width: 1024px) 50vw, 25vw"
                       unoptimized
+                      priority
                     />
                   </Link>
                 ))}

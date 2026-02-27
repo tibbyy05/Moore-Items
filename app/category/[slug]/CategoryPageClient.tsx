@@ -16,6 +16,7 @@ import { Product } from '@/lib/types';
 import Image from 'next/image';
 import { SUBCATEGORY_TAGS, TAG_KEYWORDS } from '@/lib/config/subcategory-tags';
 import { useCategories } from '@/components/providers/CategoriesProvider';
+import { PaginationHead } from '@/components/seo/PaginationHead';
 
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'best-selling' | 'top-rated';
 const LIMIT = 24;
@@ -39,9 +40,10 @@ interface CategoryPageClientProps {
   params: { slug: string };
   categoryDescription?: string | null;
   categoryFaqs?: CategoryFaqItem[] | null;
+  initialPage?: number;
 }
 
-export function CategoryPageClient({ params, categoryDescription, categoryFaqs }: CategoryPageClientProps) {
+export function CategoryPageClient({ params, categoryDescription, categoryFaqs, initialPage = 1 }: CategoryPageClientProps) {
   const { categories, loading: categoriesLoading } = useCategories();
   const activeCategory = categories.find((item) => item.slug === params.slug);
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
@@ -49,7 +51,7 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs }
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -495,6 +497,7 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs }
 
   return (
     <>
+      <PaginationHead currentPage={page} totalPages={totalPages} basePath={`/category/${params.slug}`} />
       <Header />
       <CartDrawer />
 

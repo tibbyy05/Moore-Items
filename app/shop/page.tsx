@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Product } from '@/lib/types';
 import { SUBCATEGORY_TAGS, TAG_KEYWORDS } from '@/lib/config/subcategory-tags';
 import { useCategories } from '@/components/providers/CategoriesProvider';
+import { PaginationHead } from '@/components/seo/PaginationHead';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,8 @@ export default function ShopPage() {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
+  const initPage = parseInt(searchParams.get('page') || '1', 10);
+  const [page, setPage] = useState(Math.max(1, initPage));
   const [hasMore, setHasMore] = useState(true);
   const { categories } = useCategories();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -373,6 +375,7 @@ export default function ShopPage() {
 
   return (
     <>
+      <PaginationHead currentPage={page} totalPages={totalPages} basePath="/shop" />
       <Header />
       <CartDrawer />
 

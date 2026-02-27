@@ -11,6 +11,8 @@ import { CustomButton } from '@/components/ui/custom-button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { Product } from '@/lib/types';
+import { useSearchParams } from 'next/navigation';
+import { PaginationHead } from '@/components/seo/PaginationHead';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,12 +20,14 @@ type SortOption = 'featured' | 'price-low' | 'price-high' | 'newest' | 'best-sel
 const LIMIT = 24;
 
 export default function TrendingPage() {
+  const searchParams = useSearchParams();
+  const initPage = parseInt(searchParams.get('page') || '1', 10);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(Math.max(1, initPage));
   const [hasMore, setHasMore] = useState(true);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('best-selling');
@@ -245,6 +249,7 @@ export default function TrendingPage() {
 
   return (
     <>
+      <PaginationHead currentPage={page} totalPages={totalPages} basePath="/trending" />
       <Header />
       <CartDrawer />
 

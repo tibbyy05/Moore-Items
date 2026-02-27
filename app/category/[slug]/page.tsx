@@ -18,23 +18,32 @@ function truncateAtWord(text: string, maxLength: number): string {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string };
 }): Promise<Metadata> {
   const category = await fetchCategoryBySlug(params.slug);
   if (!category) {
     return { title: `Category Not Found | ${SITE_NAME}` };
   }
 
-  const title = `Shop ${category.name} Online - Free Shipping Over $50 | ${SITE_NAME}`;
+  const page = parseInt(searchParams.page || '1', 10);
+  const pageSuffix = page > 1 ? ` - Page ${page}` : '';
+
+  const title = `Shop ${category.name} Online - Free Shipping Over $50${pageSuffix} | ${SITE_NAME}`;
   const description = category.description
     ? truncateAtWord(category.description, 155)
     : `Browse our curated selection of ${category.name.toLowerCase()} products. Free shipping on orders over $50.`;
 
+  const canonicalPath = page > 1
+    ? `/category/${params.slug}?page=${page}`
+    : `/category/${params.slug}`;
+
   return {
     title,
     description,
-    alternates: { canonical: `/category/${params.slug}` },
+    alternates: { canonical: canonicalPath },
     openGraph: {
       title,
       description,
@@ -53,10 +62,13 @@ export const dynamic = 'force-dynamic';
 
 export default async function CategoryPage({
   params,
+  searchParams,
 }: {
   params: { slug: string };
+  searchParams: { page?: string };
 }) {
   const category = await fetchCategoryBySlug(params.slug);
+  const initialPage = Math.max(1, parseInt(searchParams.page || '1', 10));
 
   return (
     <>
@@ -89,6 +101,7 @@ export default async function CategoryPage({
         params={params}
         categoryDescription={category?.description || null}
         categoryFaqs={category?.faq_json || null}
+        initialPage={initialPage}
       />
     </>
   );
