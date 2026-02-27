@@ -8,6 +8,14 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function truncateAtWord(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  const truncated = text.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace === -1) return truncated + '...';
+  return truncated.slice(0, lastSpace) + '...';
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -18,9 +26,10 @@ export async function generateMetadata({
     return { title: `Product Not Found | ${SITE_NAME}` };
   }
 
-  const plainDescription =
-    stripHtml(product.description).slice(0, 160) ||
-    `Shop ${product.name} at ${SITE_NAME}. Free shipping on orders over $50.`;
+  const stripped = stripHtml(product.description);
+  const plainDescription = stripped
+    ? truncateAtWord(stripped, 160)
+    : `Shop ${product.name} at ${SITE_NAME}. Free shipping on orders over $50.`;
   const title = `${product.name} | ${SITE_NAME}`;
   const image = product.images?.[0] || `${SITE_URL}/TransparentLogo.png`;
 
@@ -34,7 +43,6 @@ export async function generateMetadata({
       title,
       description: plainDescription,
       url: `/product/${product.slug}`,
-      type: 'website',
       images: [{ url: image, width: 800, height: 800, alt: product.name }],
       siteName: SITE_NAME,
     },

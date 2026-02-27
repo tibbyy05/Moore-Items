@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame } from 'lucide-react';
+import { Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -573,19 +573,19 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
 
       <main className="bg-white">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <nav className="flex items-center gap-2 text-sm mb-8">
-            <Link href="/" className="text-warm-600 hover:text-warm-900">
+          <nav className="flex items-center gap-1.5 text-sm mb-8">
+            <Link href="/" className="text-warm-500 hover:text-gold-600 transition-colors">
               Home
             </Link>
-            <ChevronRight className="w-4 h-4 text-warm-400" />
+            <span className="text-warm-400">&gt;</span>
             <Link
               href={`/category/${product.category}`}
-              className="text-warm-600 hover:text-warm-900"
+              className="text-warm-500 hover:text-gold-600 transition-colors"
             >
               {product.categoryLabel}
             </Link>
-            <ChevronRight className="w-4 h-4 text-warm-400" />
-            <span className="text-warm-900 font-medium break-words">{product.name}</span>
+            <span className="text-warm-400">&gt;</span>
+            <span className="text-warm-700 break-words">{product.name}</span>
           </nav>
 
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 mb-16">

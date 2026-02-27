@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, SlidersHorizontal, Grid3x3, List, Search } from 'lucide-react';
+import { SlidersHorizontal, Grid3x3, List, Search } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -278,7 +278,7 @@ export function CategoryPageClient({ params }: { params: { slug: string } }) {
   const filtersContent = (
     <div className="bg-warm-50 border border-warm-200 rounded-2xl p-6 lg:sticky lg:top-24">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="font-semibold text-warm-900">Filters</h3>
+        <h2 className="font-semibold text-warm-900">Filters</h2>
         <button
           onClick={clearFilters}
           className="text-sm text-gold-600 hover:text-gold-700"
@@ -489,12 +489,12 @@ export function CategoryPageClient({ params }: { params: { slug: string } }) {
       <main className="bg-white min-h-screen">
         <div className="bg-warm-50 border-b border-warm-200 py-6">
           <div className="max-w-[1600px] mx-auto px-4">
-            <nav className="flex items-center gap-2 text-sm mb-4">
-              <Link href="/" className="text-warm-600 hover:text-warm-900">
+            <nav className="flex items-center gap-1.5 text-sm mb-4">
+              <Link href="/" className="text-warm-500 hover:text-gold-600 transition-colors">
                 Home
               </Link>
-              <ChevronRight className="w-4 h-4 text-warm-400" />
-              <span className="text-warm-900 font-medium">{resolvedCategory?.name}</span>
+              <span className="text-warm-400">&gt;</span>
+              <span className="text-warm-700">{resolvedCategory?.name}</span>
             </nav>
 
             <div className="flex items-center gap-4">
@@ -608,9 +608,9 @@ export function CategoryPageClient({ params }: { params: { slug: string } }) {
                   <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-warm-50 flex items-center justify-center">
                     <Search className="w-10 h-10 text-warm-400" />
                   </div>
-                  <h3 className="text-xl font-playfair font-semibold text-warm-900 mb-2">
+                  <h2 className="text-xl font-playfair font-semibold text-warm-900 mb-2">
                     No products found
-                  </h3>
+                  </h2>
                   <p className="text-warm-600 mb-6">
                     Try adjusting your filters or browse our categories.
                   </p>

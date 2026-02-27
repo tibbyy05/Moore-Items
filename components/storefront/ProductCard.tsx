@@ -58,7 +58,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
         <div className="relative aspect-square bg-warm-50 overflow-hidden">
           <Image
             src={product.images?.[0] || '/placeholder.svg'}
-            alt={product.name}
+            alt={`${product.name} - Image 1 of ${product.images?.length || 1}`}
             width={600}
             height={600}
             className={cn(
@@ -73,7 +73,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           {secondaryImage && (
             <Image
               src={secondaryImage}
-              alt={`${product.name} alternate`}
+              alt={`${product.name} - Image 2 of ${product.images?.length || 1}`}
               width={600}
               height={600}
               className="object-cover w-full h-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"

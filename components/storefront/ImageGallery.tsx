@@ -120,7 +120,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
       >
         <Image
           src={activeImage}
-          alt={productName}
+          alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
           fill
           className="object-cover"
           sizes="(max-width: 1024px) 100vw, 50vw"
@@ -160,7 +160,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
           >
             <Image
               src={image}
-              alt={`${productName} thumbnail ${index + 1}`}
+              alt={`${productName} - Image ${index + 1} of ${galleryImages.length}`}
               width={64}
               height={64}
               className="object-cover w-full h-full"
@@ -235,7 +235,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
               <div className="relative w-full h-full bg-black">
                 <Image
                   src={activeImage}
-                  alt={productName}
+                  alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
                   fill
                   className="object-contain"
                   sizes="(max-width: 1024px) 100vw, 80vw"

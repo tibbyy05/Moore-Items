@@ -3,6 +3,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Noindex for shop pages with filter/sort/pagination query params
+  if (request.nextUrl.pathname === '/shop' && request.nextUrl.search) {
+    const response = NextResponse.next({ request });
+    response.headers.set('X-Robots-Tag', 'noindex, follow');
+    return response;
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -56,5 +63,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/account/:path*'],
+  matcher: ['/admin/:path*', '/account/:path*', '/shop'],
 };
