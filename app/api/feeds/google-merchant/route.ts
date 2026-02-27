@@ -10,6 +10,7 @@ const BATCH_SIZE = 1000;
 
 function escapeXml(str: string): string {
   return str
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
