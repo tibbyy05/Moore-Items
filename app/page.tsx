@@ -47,35 +47,24 @@ function mapProduct(product: any): Product {
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
-  const heroCategorySlugs = ['fashion', 'home-furniture', 'electronics', 'health-beauty'];
-  const { data: heroCategories } = await supabase
-    .from('mi_categories')
-    .select('id, slug')
-    .in('slug', heroCategorySlugs);
+  const { data: heroPool } = await supabase
+    .from('mi_products')
+    .select('*, mi_categories(name, slug), mi_product_variants(*)')
+    .eq('status', 'active')
+    .is('digital_file_path', null)
+    .not('images', 'is', null)
+    .order('sales_count', { ascending: false })
+    .limit(24);
 
-  const heroCategoryMap = new Map(
-    (heroCategories || []).map((category) => [category.slug, category.id])
+  const heroWithImages = (heroPool || []).filter(
+    (p) => Array.isArray(p.images) && p.images.length > 0
   );
-
-  const heroProducts = await Promise.all(
-    heroCategorySlugs.map(async (slug) => {
-      const categoryId = heroCategoryMap.get(slug);
-      if (!categoryId) return null;
-      const { data } = await supabase
-        .from('mi_products')
-        .select('*, mi_categories(name, slug), mi_product_variants(*)')
-        .eq('status', 'active')
-        .eq('category_id', categoryId)
-        .gt('retail_price', 20)
-        .not('images', 'is', null)
-        .order('review_count', { ascending: false })
-        .limit(5);
-      const candidate = (data || []).find(
-        (product) => Array.isArray(product.images) && product.images.length > 0
-      );
-      return candidate || null;
-    })
-  );
+  // Fisher-Yates shuffle, then take 4
+  for (let i = heroWithImages.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [heroWithImages[i], heroWithImages[j]] = [heroWithImages[j], heroWithImages[i]];
+  }
+  const heroProducts = heroWithImages.slice(0, 4);
 
   const { data: bestSellers } = await supabase
     .from('mi_products')
@@ -99,7 +88,7 @@ export default async function Home() {
     .order('compare_at_price', { ascending: false })
     .limit(20);
 
-  const mappedTopRated = heroProducts.filter(Boolean).map(mapProduct);
+  const mappedHero = heroProducts.map(mapProduct);
   const mappedBestSellers = (bestSellers || []).map(mapProduct);
   const mappedNewArrivals = (newArrivals || []).map(mapProduct);
 
@@ -142,7 +131,7 @@ export default async function Home() {
                 </div>
               </div>
               <div className="grid grid-cols-2 max-[360px]:grid-cols-1 gap-4">
-                {mappedTopRated.map((product) => (
+                {mappedHero.map((product) => (
                   <Link
                     key={product.id}
                     href={`/product/${product.slug}`}
