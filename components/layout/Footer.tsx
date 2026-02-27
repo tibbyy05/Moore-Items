@@ -56,7 +56,7 @@ export function Footer() {
                 <FaInstagram className="w-5 h-5" />
               </a>
               <a
-                href="https://www.facebook.com/profile.php?id=61575170498498"
+                href="https://www.facebook.com/profile.php?id=61588518505684"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-gold-500 hover:text-gold-500 transition-all"
