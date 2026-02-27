@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Contact Us | MooreItems',
+  description: 'Get in touch with the MooreItems team. We respond within 24 hours to all inquiries.',
+  alternates: { canonical: '/contact' },
+};
 
 export default function ContactPage() {
   return (

@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Terms & Conditions | MooreItems',
+  description: 'Read the terms and conditions for using MooreItems.com.',
+  alternates: { canonical: '/terms' },
+};
 
 export default function TermsPage() {
   return (

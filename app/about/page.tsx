@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'About Us | MooreItems',
+  description: 'MooreItems is a curated online marketplace offering 3,000+ quality products with free US shipping. Learn about our mission and values.',
+  alternates: { canonical: '/about' },
+};
 
 export default function AboutPage() {
   return (

@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
+export const metadata: Metadata = {
+  title: 'FAQ | MooreItems',
+  description: 'Frequently asked questions about shipping, returns, payments, and more at MooreItems.',
+  alternates: { canonical: '/faq' },
+};
 
 export default function FaqPage() {
   return (

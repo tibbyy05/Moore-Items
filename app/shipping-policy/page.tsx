@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Shipping Policy | MooreItems',
+  description: 'Free shipping on orders over $50. US warehouse orders ship in 2-5 business days. Learn about our shipping options.',
+  alternates: { canonical: '/shipping-policy' },
+};
 
 export default function ShippingPolicyPage() {
   return (

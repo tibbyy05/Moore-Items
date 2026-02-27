@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Returns & Refunds | MooreItems',
+  description: '30-day return policy on all items. Refunds processed within 5-7 business days. Damaged items replaced at no charge.',
+  alternates: { canonical: '/returns' },
+};
 
 export default function ReturnsPage() {
   return (

@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/api', '/auth', '/account'],
     },
-    sitemap: 'https://mooreitems.com/sitemap.xml',
+    sitemap: 'https://www.mooreitems.com/sitemap.xml',
   };
 }

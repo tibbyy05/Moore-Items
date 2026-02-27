@@ -11,6 +11,7 @@ import { AbortErrorSuppressor } from '@/components/system/AbortErrorSuppressor';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { CategoriesProvider } from '@/components/providers/CategoriesProvider';
 import { EmailPopup } from '@/components/storefront/EmailPopup';
+import { WebSiteJsonLd, OrganizationJsonLd } from '@/lib/seo/json-ld';
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -38,9 +39,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'MooreItems.com - More Items, Moore Value',
     description: 'Discover curated products at unbeatable prices. Free shipping on orders over $50.',
+    siteName: 'MooreItems',
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: '/TransparentLogo.png',
       },
     ],
   },
@@ -48,7 +50,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: '/TransparentLogo.png',
       },
     ],
   },
@@ -65,6 +67,8 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body className="font-sans antialiased">
+        <WebSiteJsonLd />
+        <OrganizationJsonLd />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-23H54T894J"
           strategy="afterInteractive"

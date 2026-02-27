@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | MooreItems',
+  description: 'Learn how MooreItems collects, uses, and protects your personal information.',
+  alternates: { canonical: '/privacy-policy' },
+};
 
 export default function PrivacyPolicyPage() {
   return (
