@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Instagram, Facebook, Music2 } from 'lucide-react';
+import { FaInstagram, FaFacebookF, FaTiktok, FaLinkedin } from 'react-icons/fa';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCategories } from '@/components/providers/CategoriesProvider';
 
@@ -47,31 +47,40 @@ export function Footer() {
             </p>
             <div className="flex items-center gap-3 justify-center lg:justify-start">
               <a
-                href="https://instagram.com"
+                href="https://www.instagram.com/mooreitems"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-gold-500 hover:text-gold-500 transition-all"
                 aria-label="Instagram"
               >
-                <Instagram className="w-5 h-5" />
+                <FaInstagram className="w-5 h-5" />
               </a>
               <a
-                href="https://facebook.com"
+                href="https://www.facebook.com/profile.php?id=61575170498498"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-gold-500 hover:text-gold-500 transition-all"
                 aria-label="Facebook"
               >
-                <Facebook className="w-5 h-5" />
+                <FaFacebookF className="w-5 h-5" />
               </a>
               <a
-                href="https://tiktok.com"
+                href="https://www.tiktok.com/@mooreitems"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-gold-500 hover:text-gold-500 transition-all"
                 aria-label="TikTok"
               >
-                <Music2 className="w-5 h-5" />
+                <FaTiktok className="w-5 h-5" />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/mooreitems"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-gold-500 hover:text-gold-500 transition-all"
+                aria-label="LinkedIn"
+              >
+                <FaLinkedin className="w-5 h-5" />
               </a>
             </div>
           </div>
