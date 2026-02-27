@@ -16,7 +16,7 @@ import { useCart } from '@/components/providers/CartProvider';
 import { useWishlist } from '@/components/providers/WishlistProvider';
 import { ImageGallery } from '@/components/storefront/ImageGallery';
 import { TrustBadges } from '@/components/storefront/TrustBadges';
-import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
+import { RecentlyViewed, addRecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { Product, ProductVariant } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -435,16 +435,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
 
   useEffect(() => {
     if (!product) return;
-    try {
-      const key = 'mi_recently_viewed_v1';
-      const stored = localStorage.getItem(key);
-      const current = stored ? (JSON.parse(stored) as Product[]) : [];
-      const filtered = current.filter((item) => item.id !== product.id);
-      const next = [product, ...filtered].slice(0, 10);
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch {
-      // Ignore storage errors
-    }
+    addRecentlyViewed(product.id);
   }, [product]);
 
   useEffect(() => {
