@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { createClient } from '@/lib/supabase/client';
 
 interface RecentOrder {
   id: string;
@@ -54,7 +53,6 @@ function buildEmptyChart() {
 }
 
 export default function AdminDashboard() {
-  const supabase = createClient();
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -76,128 +74,28 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchDashboardStats = async () => {
       setLoading(true);
-      const todayDate = new Date();
-      const todayStart = new Date(todayDate.toISOString().split('T')[0] + 'T00:00:00Z');
-      const weekStart = new Date(todayStart);
-      weekStart.setDate(weekStart.getDate() - 6);
+      try {
+        const res = await fetch('/api/admin/dashboard');
+        if (!res.ok) throw new Error('Failed to fetch dashboard');
+        const data = await res.json();
 
-      const { data: todayOrdersData } = await supabase
-        .from('mi_orders')
-        .select('total, created_at')
-        .eq('payment_status', 'paid')
-        .gte('created_at', todayStart.toISOString());
-
-      const revenueTodayValue =
-        todayOrdersData?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
-      setTodayRevenue(revenueTodayValue);
-      setTodayOrders(todayOrdersData?.length || 0);
-
-      const { count: activeProductsCount } = await supabase
-        .from('mi_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-      setActiveProducts(activeProductsCount || 0);
-
-      const { count: needsPolishCount } = await supabase
-        .from('mi_products')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active')
-        .or('review_count.eq.0,review_count.is.null');
-      setNeedsPolish(needsPolishCount || 0);
-
-      const { data: recentOrdersData } = await supabase
-        .from('mi_orders')
-        .select(
-          `
-          id,
-          order_number,
-          created_at,
-          email,
-          total,
-          payment_status,
-          fulfillment_status,
-          mi_order_items (
-            name,
-            image_url,
-            quantity
-          )
-        `
-        )
-        .order('created_at', { ascending: false })
-        .limit(5);
-      setRecentOrders((recentOrdersData as RecentOrder[]) || []);
-
-      const { data: topSellers } = await supabase
-        .from('mi_order_items')
-        .select('product_id, name, image_url, quantity');
-
-      const productSales: Record<
-        string,
-        { name: string; image_url: string | null; totalQty: number; totalOrders: number }
-      > = {};
-
-      (topSellers || []).forEach((item: any) => {
-        const key = item.product_id || item.name;
-        if (!productSales[key]) {
-          productSales[key] = {
-            name: item.name,
-            image_url: item.image_url,
-            totalQty: 0,
-            totalOrders: 0,
-          };
-        }
-        productSales[key].totalQty += item.quantity || 1;
-        productSales[key].totalOrders += 1;
-      });
-
-      const topSellingProducts = Object.values(productSales)
-        .sort((a, b) => b.totalQty - a.totalQty)
-        .slice(0, 5);
-
-      setTopProducts(topSellingProducts);
-
-      const { data: weekOrdersData } = await supabase
-        .from('mi_orders')
-        .select('total, created_at')
-        .eq('payment_status', 'paid')
-        .gte('created_at', weekStart.toISOString());
-
-      const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weeklyChart = Array.from({ length: 7 }).map((_, index) => {
-        const day = new Date(weekStart);
-        day.setDate(weekStart.getDate() + index);
-        const dayKey = day.toISOString().split('T')[0];
-        const dayRevenue =
-          weekOrdersData
-            ?.filter((order) => String(order.created_at).startsWith(dayKey))
-            .reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
-
-        return {
-          label: dayLabels[day.getDay()],
-          value: dayRevenue,
-          isToday: dayKey === todayStart.toISOString().split('T')[0],
-        };
-      });
-      setChartData(weeklyChart);
-
-      const { count: pageViews } = await supabase
-        .from('mi_analytics_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_type', 'page_view');
-      const { count: purchases } = await supabase
-        .from('mi_analytics_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_type', 'purchase');
-
-      const conversionValue =
-        pageViews && pageViews > 0 ? ((purchases || 0) / pageViews) * 100 : 0;
-      setConversionRate(conversionValue);
-
-      setLoading(false);
+        setTodayRevenue(data.todayRevenue);
+        setTodayOrders(data.todayOrders);
+        setActiveProducts(data.activeProducts);
+        setNeedsPolish(data.needsPolish);
+        setConversionRate(data.conversionRate);
+        setRecentOrders(data.recentOrders);
+        setTopProducts(data.topProducts);
+        setChartData(data.chartData);
+      } catch {
+        // Keep default empty state
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchDashboardStats();
-  }, [supabase]);
+  }, []);
 
   const weekTotal = useMemo(
     () => chartData.reduce((sum, day) => sum + day.value, 0),

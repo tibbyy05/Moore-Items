@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const authClient = await createServerSupabaseClient();
 
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await authClient.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: adminProfile } = await supabase
+    const { data: adminProfile } = await authClient
       .from('mi_admin_profiles')
       .select('role')
       .eq('id', user.id)
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 });
     }
 
+    const supabase = createAdminClient();
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
