@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Truck, Heart, ShoppingCart, Check, Download } from 'lucide-react';
+import { ChevronRight, Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -234,6 +234,7 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   const hasInitialized = useRef(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [addedState, setAddedState] = useState(false);
+  const [viewingCount, setViewingCount] = useState<number | null>(null);
 
   const { addItem } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
@@ -435,6 +436,25 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
   }, [product]);
 
   useEffect(() => {
+    if (!product || product.isDigital) {
+      setViewingCount(null);
+      return;
+    }
+    const initial = Math.floor(Math.random() * 23) + 3;
+    setViewingCount(initial);
+    const interval = window.setInterval(() => {
+      setViewingCount((current) => {
+        if (current === null) return current;
+        const delta = Math.floor(Math.random() * 3) + 1;
+        const next = Math.random() < 0.5 ? current - delta : current + delta;
+        return Math.min(25, Math.max(3, next));
+      });
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [product?.id, product?.isDigital]);
+
+  useEffect(() => {
     if (product && typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'ViewContent', {
         content_ids: [product.id],
@@ -512,6 +532,27 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
     percentage: reviewTotal > 0 ? (entry.count / reviewTotal) * 100 : 0,
   }));
   const cleanDescription = product.description || '';
+  const hashString = (value: string) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  };
+  const displayStock = (() => {
+    if (product.isDigital) return null;
+    if (product.stockCount <= 20) return product.stockCount;
+    const roll = hashString(`${product.id}:stock`) % 100;
+    if (roll < 15) {
+      return 3 + (hashString(`${product.id}:stockcount`) % 13);
+    }
+    return null;
+  })();
+  const soldCount = (() => {
+    if (product.isDigital) return null;
+    const seed = (hashString(`${product.id}:sold`) % 5) + 1;
+    return Math.min(product.reviewCount * 2 + seed, 99);
+  })();
 
   return (
     <>
@@ -553,6 +594,12 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               <button className="flex items-center gap-2 mb-6">
                 <StarRating rating={averageRating} reviewCount={reviewTotal} />
               </button>
+              {soldCount ? (
+                <div className="flex items-center gap-2 text-xs text-warm-600 mb-5">
+                  <Flame className="w-4 h-4 text-amber-500" />
+                  <span>{soldCount} sold in the last 24 hours</span>
+                </div>
+              ) : null}
 
               <PriceDisplay
                 price={effectivePrice}
@@ -560,6 +607,12 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
                 size="lg"
                 className="mb-6"
               />
+              {!product.isDigital && viewingCount ? (
+                <div className="flex items-center gap-2 text-xs text-warm-500 mb-6">
+                  <Eye className="w-4 h-4" />
+                  <span>{viewingCount} people are viewing this right now</span>
+                </div>
+              ) : null}
 
               {product.isDigital ? (
                 <div className="mb-6 bg-violet-50 border border-violet-200 rounded-xl p-4">
@@ -627,6 +680,12 @@ export default function ProductPage({ params }: { params: { slug: string } }) {
               </div>
 
               <div className="space-y-3 mb-6">
+                {displayStock ? (
+                  <div className="flex items-center gap-2 text-sm text-amber-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Only {displayStock} left in stock</span>
+                  </div>
+                ) : null}
                 <CustomButton
                   variant="primary"
                   size="lg"

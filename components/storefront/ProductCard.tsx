@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Eye, Truck } from 'lucide-react';
+import { Heart, Eye, Truck, AlertTriangle } from 'lucide-react';
 import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { QuickViewModal } from './QuickViewModal';
@@ -20,6 +20,24 @@ export function ProductCard({ product, priority = false, className }: ProductCar
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [wishlistPulse, setWishlistPulse] = useState(false);
   const { toggleWishlist, isWishlisted } = useWishlist();
+
+  const hashString = (value: string) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  };
+
+  const displayStock = (() => {
+    if (product.isDigital) return null;
+    if (product.stockCount <= 20) return product.stockCount;
+    const roll = hashString(`${product.id}:stock`) % 100;
+    if (roll < 15) {
+      return 3 + (hashString(`${product.id}:stockcount`) % 13);
+    }
+    return null;
+  })();
 
   const secondaryImage = product.images?.[1];
   const discountPercent =
@@ -136,6 +154,12 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           {discountPercent > 0 && (
             <p className="text-xs text-danger mt-1">Save {discountPercent}%</p>
           )}
+          {displayStock ? (
+            <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+              <AlertTriangle className="w-3 h-3" />
+              Only {displayStock} left
+            </p>
+          ) : null}
           {product.warehouse === 'US' && (
             <p className="text-[11px] text-green-600 flex items-center gap-1 mt-1">
               <Truck className="w-3 h-3" />
