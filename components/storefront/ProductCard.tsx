@@ -163,7 +163,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           {product.warehouse === 'US' && (
             <p className="text-[11px] text-green-600 flex items-center gap-1 mt-1">
               <Truck className="w-3 h-3" />
-              Ships in 2-5 days
+              Delivered in 2-5 days
             </p>
           )}
         </div>
