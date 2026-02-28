@@ -1,6 +1,7 @@
 import { orderConfirmationTemplate } from './templates/order-confirmation';
 import { abandonedCartTemplate, type AbandonedCartData } from './templates/abandoned-cart';
 import { shippingUpdateTemplate } from './templates/shipping-update';
+import { healthCheckTemplate } from './templates/health-check';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -142,6 +143,28 @@ export async function sendShippingUpdate(data: ShippingUpdateData) {
   return sendEmail({
     to: data.customerEmail,
     subject: `Your Order #${data.orderNumber} Has Shipped! 📦`,
+    html,
+  });
+}
+
+// ============================================================
+// Health Check Alert Email
+// ============================================================
+
+export interface HealthCheckAlertData {
+  healthScore: number;
+  totalIssues: number;
+  totalAutoFixed: number;
+  needsAttention: number;
+  checks: { name: string; severity: string; found: number; autoFixed: number; items: { id: string; name: string }[] }[];
+  timestamp: string;
+}
+
+export async function sendHealthCheckAlert(data: HealthCheckAlertData) {
+  const html = healthCheckTemplate(data);
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `MooreItems Health Check — ${data.needsAttention} issue${data.needsAttention !== 1 ? 's' : ''} need attention`,
     html,
   });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sendHealthCheckAlert } from '@/lib/email/sendgrid';
 
 interface CheckResult {
   name: string;
@@ -336,8 +337,22 @@ export async function POST(request: NextRequest) {
     ? Math.min(100, Math.max(0, Math.round((1 - needsAttention / totalActiveProducts) * 100)))
     : 100;
 
+  const timestamp = new Date().toISOString();
+
+  // Send alert email if there are unresolved issues (fire-and-forget)
+  if (needsAttention > 0) {
+    sendHealthCheckAlert({
+      healthScore,
+      totalIssues,
+      totalAutoFixed,
+      needsAttention,
+      checks,
+      timestamp,
+    }).catch((err) => console.error('[HealthCheck] Failed to send alert email:', err));
+  }
+
   return NextResponse.json({
-    timestamp: new Date().toISOString(),
+    timestamp,
     total_active_products: totalActiveProducts,
     checks,
     summary: {
