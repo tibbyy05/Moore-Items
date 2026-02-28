@@ -209,18 +209,12 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (discountCode) {
-        const { data: discount } = await supabase
-          .from('mi_discount_codes')
-          .select('id, used_count')
-          .eq('code', discountCode)
-          .maybeSingle();
-
-        if (discount) {
-          await supabase
-            .from('mi_discount_codes')
-            .update({ used_count: Number(discount.used_count || 0) + 1 })
-            .eq('id', discount.id);
+      // Track promo code usage (never breaks order flow)
+      if (discountCode && orderId) {
+        try {
+          await trackPromoCodeUsage(supabase, discountCode, orderId);
+        } catch (trackError) {
+          console.error('[Webhook] Promo code tracking failed (non-fatal):', trackError);
         }
       }
     }
@@ -290,4 +284,73 @@ export async function POST(request: NextRequest) {
     console.error('Stripe webhook handler error', error);
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
+}
+
+async function trackPromoCodeUsage(
+  supabase: ReturnType<typeof createAdminClient>,
+  discountCode: string,
+  orderId: string
+) {
+  // Look up the discount code with all fields
+  const { data: discount } = await supabase
+    .from('mi_discount_codes')
+    .select('*')
+    .eq('code', discountCode)
+    .maybeSingle();
+
+  if (!discount) return;
+
+  // Prevent duplicate tracking — check if usage already exists for this order
+  const { data: existingUsage } = await supabase
+    .from('mi_discount_code_usage')
+    .select('id')
+    .eq('discount_code_id', discount.id)
+    .eq('order_id', orderId)
+    .maybeSingle();
+
+  if (existingUsage) return;
+
+  // Get order details for revenue tracking
+  const { data: order } = await supabase
+    .from('mi_orders')
+    .select('order_number, email, subtotal, total, discount_amount')
+    .eq('id', orderId)
+    .single();
+
+  if (!order) return;
+
+  const orderSubtotal = Number(order.subtotal || 0);
+  const orderTotal = Number(order.total || 0);
+  const discountAmount = Number(order.discount_amount || 0);
+
+  // Calculate influencer payout (flat $ takes priority over %)
+  let influencerPayout = 0;
+  if (discount.code_type === 'influencer') {
+    if (discount.payout_per_use && Number(discount.payout_per_use) > 0) {
+      influencerPayout = Number(discount.payout_per_use);
+    } else if (discount.payout_percent && Number(discount.payout_percent) > 0) {
+      influencerPayout = (orderSubtotal * Number(discount.payout_percent)) / 100;
+    }
+  }
+
+  // Insert usage record
+  await supabase.from('mi_discount_code_usage').insert({
+    discount_code_id: discount.id,
+    code: discountCode,
+    order_id: orderId,
+    order_number: order.order_number || null,
+    customer_email: order.email || null,
+    discount_amount: discountAmount,
+    order_subtotal: orderSubtotal,
+    order_total: orderTotal,
+    influencer_payout: influencerPayout,
+    payout_status: discount.code_type === 'influencer' ? 'pending' : 'paid',
+  });
+
+  // Atomically increment stats via RPC
+  await supabase.rpc('increment_discount_code_stats', {
+    p_code_id: discount.id,
+    p_revenue: orderTotal,
+    p_discount: discountAmount,
+  });
 }
