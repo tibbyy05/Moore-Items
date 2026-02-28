@@ -142,6 +142,9 @@ export default function AdminOrdersPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [fulfillLoading, setFulfillLoading] = useState<Record<string, boolean>>({});
   const [trackingLoading, setTrackingLoading] = useState<Record<string, boolean>>({});
+  const [editStatus, setEditStatus] = useState<Record<string, string>>({});
+  const [editTracking, setEditTracking] = useState<Record<string, string>>({});
+  const [updateLoading, setUpdateLoading] = useState<Record<string, boolean>>({});
   const limit = 20;
 
   const fetchOrders = useCallback(async () => {
@@ -254,6 +257,58 @@ export default function AdminOrdersPage() {
       toast.error(error?.message || 'Unable to check tracking');
     } finally {
       setTrackingLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleManualUpdate = async (orderId: string) => {
+    setUpdateLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const body: Record<string, string | undefined> = { orderId };
+      if (editStatus[orderId]) body.fulfillment_status = editStatus[orderId];
+      if (editTracking[orderId] !== undefined) body.tracking_number = editTracking[orderId];
+
+      const res = await fetch('/api/admin/orders/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Update failed');
+      toast.success('Order updated');
+      setEditStatus((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      setEditTracking((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to update order');
+    } finally {
+      setUpdateLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleClearNotes = async (orderId: string) => {
+    setUpdateLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await fetch('/api/admin/orders/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, notes: null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to clear notes');
+      toast.success('Notes cleared');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to clear notes');
+    } finally {
+      setUpdateLoading((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -671,6 +726,77 @@ export default function AdminOrdersPage() {
                                     {order.notes}
                                   </div>
                                 )}
+
+                                <div>
+                                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                                    Manual Controls
+                                  </h4>
+                                  <div className="bg-white border border-gray-200 rounded-lg px-3 py-3 space-y-3">
+                                    <div>
+                                      <label className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">
+                                        Fulfillment Status
+                                      </label>
+                                      <select
+                                        value={editStatus[order.id] ?? order.fulfillment_status}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          setEditStatus((prev) => ({ ...prev, [order.id]: e.target.value }));
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#c8a45e]/30 focus:border-[#c8a45e]"
+                                      >
+                                        <option value="unfulfilled">Unfulfilled</option>
+                                        <option value="processing">Processing</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="delivered">Delivered</option>
+                                        <option value="cancelled">Cancelled</option>
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label className="block text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1">
+                                        Tracking Number
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editTracking[order.id] ?? order.tracking_number ?? ''}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          setEditTracking((prev) => ({ ...prev, [order.id]: e.target.value }));
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        placeholder="Enter tracking number"
+                                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#c8a45e]/30 focus:border-[#c8a45e]"
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleManualUpdate(order.id);
+                                        }}
+                                        disabled={Boolean(updateLoading[order.id])}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#c8a45e] hover:bg-[#b89345] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {updateLoading[order.id] ? (
+                                          <RefreshCw className="w-3 h-3 animate-spin" />
+                                        ) : null}
+                                        Save Changes
+                                      </button>
+                                      {order.notes && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleClearNotes(order.id);
+                                          }}
+                                          disabled={Boolean(updateLoading[order.id])}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                          Clear Notes
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
 
                                 <div className="flex flex-wrap gap-2">
                                   {order.fulfillment_status === 'unfulfilled' &&

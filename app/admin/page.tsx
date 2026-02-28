@@ -33,24 +33,15 @@ interface TopProduct {
   totalOrders: number;
 }
 
-function buildEmptyChart() {
-  const today = new Date();
-  const todayKey = today.toISOString().split('T')[0];
-  const weekStart = new Date(todayKey + 'T00:00:00Z');
-  weekStart.setDate(weekStart.getDate() - 6);
-  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  return Array.from({ length: 7 }).map((_, index) => {
-    const day = new Date(weekStart);
-    day.setDate(weekStart.getDate() + index);
-    const dayKey = day.toISOString().split('T')[0];
-    return {
-      label: labels[day.getDay()],
-      value: 0,
-      isToday: dayKey === todayKey,
-    };
-  });
-}
+const PERIOD_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'last_week', label: 'Last Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'last_month', label: 'Last Month' },
+  { value: 'this_quarter', label: 'This Quarter' },
+  { value: 'all_time', label: 'All Time' },
+] as const;
 
 export default function AdminDashboard() {
   const today = new Date().toLocaleDateString('en-US', {
@@ -60,27 +51,30 @@ export default function AdminDashboard() {
     day: 'numeric',
   });
 
-  const [todayRevenue, setTodayRevenue] = useState(0);
-  const [todayOrders, setTodayOrders] = useState(0);
+  const [period, setPeriod] = useState('today');
+  const [revenue, setRevenue] = useState(0);
+  const [orders, setOrders] = useState(0);
   const [activeProducts, setActiveProducts] = useState(0);
   const [conversionRate, setConversionRate] = useState(0);
   const [needsPolish, setNeedsPolish] = useState(0);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [chartData, setChartData] = useState(buildEmptyChart());
+  const [chartData, setChartData] = useState<Array<{ label: string; value: number; isToday: boolean }>>([]);
   const [loading, setLoading] = useState(true);
   const [repricing, setRepricing] = useState(false);
+
+  const periodLabel = PERIOD_OPTIONS.find((o) => o.value === period)?.label || 'Today';
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/admin/dashboard');
+        const res = await fetch(`/api/admin/dashboard?period=${period}`);
         if (!res.ok) throw new Error('Failed to fetch dashboard');
         const data = await res.json();
 
-        setTodayRevenue(data.todayRevenue);
-        setTodayOrders(data.todayOrders);
+        setRevenue(data.revenue);
+        setOrders(data.orders);
         setActiveProducts(data.activeProducts);
         setNeedsPolish(data.needsPolish);
         setConversionRate(data.conversionRate);
@@ -95,31 +89,44 @@ export default function AdminDashboard() {
     };
 
     fetchDashboardStats();
-  }, []);
+  }, [period]);
 
-  const weekTotal = useMemo(
+  const chartTotal = useMemo(
     () => chartData.reduce((sum, day) => sum + day.value, 0),
     [chartData]
   );
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e] mb-2">Dashboard</h1>
-        <p className="text-sm text-gray-500">
-          {today} — Welcome back, Danny
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e] mb-2">Dashboard</h1>
+          <p className="text-sm text-gray-500">
+            {today} — Welcome back, Danny
+          </p>
+        </div>
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#c8a45e]/30 focus:border-[#c8a45e] cursor-pointer"
+        >
+          {PERIOD_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-5 gap-6 mb-8">
         <StatCard
-          label="Revenue Today"
-          value={`$${todayRevenue.toFixed(2)}`}
+          label={`Revenue ${periodLabel}`}
+          value={`$${revenue.toFixed(2)}`}
           icon={DollarSign}
         />
         <StatCard
-          label="Orders Today"
-          value={todayOrders.toString()}
+          label={`Orders ${periodLabel}`}
+          value={orders.toString()}
           icon={ShoppingCart}
         />
         <StatCard
@@ -196,9 +203,9 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-3 gap-6 mb-8">
         <div className="col-span-2 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Revenue This Week</h2>
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Revenue {periodLabel}</h2>
             <p className="text-2xl font-bold text-gold-500 font-variant-tabular">
-              ${weekTotal.toFixed(2)}
+              ${chartTotal.toFixed(2)}
             </p>
           </div>
           <BarChart data={chartData} height={240} />

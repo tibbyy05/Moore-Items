@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { Mail, Phone, MapPin, Calendar, DollarSign } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface CustomerRow {
   id: string;
@@ -18,72 +17,22 @@ interface CustomerRow {
 }
 
 export default function CustomersPage() {
-  const supabase = createClient();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
 
   useEffect(() => {
     const fetchCustomers = async () => {
-      const { data } = await supabase
-        .from('mi_orders')
-        .select('email, created_at, total, shipping_address');
-
-      const grouped = new Map<string, CustomerRow & { lastOrderAt: string }>();
-
-      (data || []).forEach((order) => {
-        const email = order.email || 'unknown';
-        const address = (order.shipping_address || {}) as {
-          name?: string;
-          phone?: string;
-          city?: string;
-          state?: string;
-        };
-        const name = address.name || email;
-        const location = [address.city, address.state].filter(Boolean).join(', ') || '—';
-        const total = Number(order.total || 0);
-
-        const existing = grouped.get(email);
-        if (existing) {
-          existing.orderCount += 1;
-          existing.totalSpent += total;
-          existing.joinedAt =
-            new Date(existing.joinedAt) < new Date(order.created_at)
-              ? existing.joinedAt
-              : order.created_at;
-          existing.lastOrderAt =
-            new Date(existing.lastOrderAt) > new Date(order.created_at)
-              ? existing.lastOrderAt
-              : order.created_at;
-        } else {
-          grouped.set(email, {
-            id: email,
-            name,
-            email,
-            phone: address.phone || '—',
-            location,
-            orderCount: 1,
-            totalSpent: total,
-            status: 'active',
-            joinedAt: order.created_at,
-            lastOrderAt: order.created_at,
-          });
-        }
-      });
-
-      const now = new Date();
-      const rows = Array.from(grouped.values()).map((customer) => {
-        const lastOrder = new Date(customer.lastOrderAt);
-        const diffDays = (now.getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24);
-        return {
-          ...customer,
-          status: (diffDays <= 30 ? 'active' : 'inactive') as 'active' | 'inactive',
-        };
-      });
-
-      setCustomers(rows);
+      try {
+        const res = await fetch('/api/admin/customers');
+        if (!res.ok) throw new Error('Failed to fetch customers');
+        const data = await res.json();
+        setCustomers(data.customers || []);
+      } catch {
+        // Keep default empty state
+      }
     };
 
     fetchCustomers();
-  }, [supabase]);
+  }, []);
 
   const totalLtv = useMemo(
     () => customers.reduce((sum, customer) => sum + customer.totalSpent, 0),
