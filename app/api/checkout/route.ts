@@ -4,6 +4,7 @@ import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { calculateShippingCost, calculateFlatRateShipping, ShippingItem } from '@/lib/shipping';
 import { getShippingConfig } from '@/lib/config/shipping';
+import { cjClient } from '@/lib/cj/client';
 
 interface CheckoutItemInput {
   productId: string;
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productsError } = await supabase
       .from('mi_products')
-      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path, cj_raw_data')
+      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path, cj_raw_data, cj_pid')
       .in('id', productIds);
 
     if (productsError || !products) {
@@ -158,6 +159,44 @@ export async function POST(request: NextRequest) {
         cjVid,
         productWeightGrams,
       });
+    }
+
+    // ─── CJ Stock Validation ──────────────────────────────────────
+    // Check if CJ products are still available before creating Stripe session
+    const cjItems = validatedItems
+      .map((item) => {
+        const product = productMap.get(item.productId);
+        return product?.cj_pid ? { id: item.productId, name: item.name, cjPid: product.cj_pid as string } : null;
+      })
+      .filter((item): item is { id: string; name: string; cjPid: string } => item !== null);
+
+    if (cjItems.length > 0) {
+      const unavailableProducts: { id: string; name: string }[] = [];
+
+      for (const cjItem of cjItems) {
+        try {
+          await cjClient.getProduct(cjItem.cjPid);
+        } catch (error: any) {
+          const msg = error?.message || '';
+          // If CJ says product is removed/not found, mark it unavailable
+          // But if the CJ API itself is down/timing out, let checkout proceed
+          if (msg.includes('CJ API error')) {
+            console.warn(`[checkout] CJ product unavailable: ${cjItem.name} (pid=${cjItem.cjPid}): ${msg}`);
+            unavailableProducts.push({ id: cjItem.id, name: cjItem.name });
+          } else {
+            // Network error, timeout, auth failure — don't block the sale
+            console.warn(`[checkout] CJ API unreachable for ${cjItem.name} (pid=${cjItem.cjPid}), skipping check: ${msg}`);
+          }
+        }
+      }
+
+      if (unavailableProducts.length > 0) {
+        console.warn('[checkout] Blocking checkout — unavailable CJ products:', unavailableProducts);
+        return NextResponse.json(
+          { error: 'products_unavailable', unavailableProducts },
+          { status: 400 }
+        );
+      }
     }
 
     const subtotal = validatedItems.reduce(

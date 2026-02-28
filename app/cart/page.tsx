@@ -29,6 +29,8 @@ export default function CartPage() {
   const [discountError, setDiscountError] = useState('');
   const [isApplying, setIsApplying] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [unavailableProducts, setUnavailableProducts] = useState<{ id: string; name: string }[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
 
   useEffect(() => {
@@ -123,6 +125,8 @@ export default function CartPage() {
   const handleCheckout = async () => {
     if (!items.length) return;
     setIsCheckingOut(true);
+    setCheckoutError('');
+    setUnavailableProducts([]);
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -135,15 +139,28 @@ export default function CartPage() {
       });
       const data = await response.json();
       if (!response.ok) {
+        if (data?.error === 'products_unavailable' && data?.unavailableProducts?.length) {
+          setUnavailableProducts(data.unavailableProducts);
+          setIsCheckingOut(false);
+          return;
+        }
         throw new Error(data?.error || 'Checkout failed');
       }
       if (data?.url) {
         window.location.href = data.url;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      setCheckoutError(error?.message || 'Checkout failed. Please try again.');
       setIsCheckingOut(false);
     }
+  };
+
+  const handleRemoveUnavailable = () => {
+    for (const product of unavailableProducts) {
+      removeItem(product.id);
+    }
+    setUnavailableProducts([]);
   };
 
   useEffect(() => {
@@ -319,6 +336,31 @@ export default function CartPage() {
                     <p className="text-xs text-danger mt-2">{discountError}</p>
                   )}
                 </div>
+
+                {unavailableProducts.length > 0 && (
+                  <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm font-semibold text-red-800 mb-2">
+                      Sorry, the following items are no longer available:
+                    </p>
+                    <ul className="text-sm text-red-700 list-disc list-inside mb-3">
+                      {unavailableProducts.map((p) => (
+                        <li key={p.id}>{p.name}</li>
+                      ))}
+                    </ul>
+                    <CustomButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleRemoveUnavailable}
+                      className="w-full"
+                    >
+                      Remove unavailable items
+                    </CustomButton>
+                  </div>
+                )}
+
+                {checkoutError && !unavailableProducts.length && (
+                  <p className="mt-4 text-sm text-red-600 text-center">{checkoutError}</p>
+                )}
 
                 <CustomButton
                   variant="primary"
