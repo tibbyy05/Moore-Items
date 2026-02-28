@@ -14,6 +14,7 @@ import {
   AlertCircle,
   XCircle,
   RefreshCw,
+  Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -145,6 +146,7 @@ export default function AdminOrdersPage() {
   const [editStatus, setEditStatus] = useState<Record<string, string>>({});
   const [editTracking, setEditTracking] = useState<Record<string, string>>({});
   const [updateLoading, setUpdateLoading] = useState<Record<string, boolean>>({});
+  const [syncLoading, setSyncLoading] = useState(false);
   const limit = 20;
 
   const fetchOrders = useCallback(async () => {
@@ -293,6 +295,22 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handleSyncTracking = async () => {
+    setSyncLoading(true);
+    try {
+      const res = await fetch('/api/admin/orders/sync-tracking', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Sync failed');
+      const msg = `Checked ${data.checked} orders: ${data.updated} updated, ${data.emailed} emailed`;
+      toast.success(msg);
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || 'Tracking sync failed');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   const handleClearNotes = async (orderId: string) => {
     setUpdateLoading((prev) => ({ ...prev, [orderId]: true }));
     try {
@@ -324,13 +342,23 @@ export default function AdminOrdersPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Manage and fulfill customer orders</p>
         </div>
-        <button
-          onClick={fetchOrders}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncTracking}
+            disabled={syncLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#c8a45e] text-white rounded-lg text-sm font-medium hover:bg-[#b89345] disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm"
+          >
+            <Truck className={`w-4 h-4 ${syncLoading ? 'animate-pulse' : ''}`} />
+            {syncLoading ? 'Syncing...' : 'Sync Tracking'}
+          </button>
+          <button
+            onClick={fetchOrders}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
