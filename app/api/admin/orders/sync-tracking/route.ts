@@ -189,5 +189,31 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked: orders.length, updated, emailed, results });
+  // --- Clean up stale pending orders (older than 48 hours, never paid) ---
+  let staleCleaned = 0;
+  try {
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const { data: staleOrders } = await supabase
+      .from('mi_orders')
+      .select('id')
+      .eq('payment_status', 'pending')
+      .lt('created_at', cutoff);
+
+    if (staleOrders && staleOrders.length > 0) {
+      const staleIds = staleOrders.map((o) => o.id);
+
+      // Delete order items first (foreign key constraint)
+      await supabase.from('mi_order_items').delete().in('order_id', staleIds);
+
+      // Delete the stale orders
+      await supabase.from('mi_orders').delete().in('id', staleIds);
+
+      staleCleaned = staleIds.length;
+      console.log(`[sync-tracking] Cleaned up ${staleCleaned} stale pending orders (>48h)`);
+    }
+  } catch (cleanupError: any) {
+    console.error('[sync-tracking] Stale order cleanup error:', cleanupError?.message);
+  }
+
+  return NextResponse.json({ checked: orders.length, updated, emailed, staleCleaned, results });
 }

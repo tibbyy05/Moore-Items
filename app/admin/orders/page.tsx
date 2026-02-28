@@ -65,6 +65,7 @@ interface OrdersResponse {
     unfulfilled: number;
     processing: number;
     shipped: number;
+    delivered: number;
   };
 }
 
@@ -135,10 +136,11 @@ export default function AdminOrdersPage() {
     unfulfilled: 0,
     processing: 0,
     shipped: 0,
+    delivered: 0,
   });
   const [page, setPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [activeFilter, setActiveFilter] = useState('all');
+  const [activeFilter, setActiveFilter] = useState('paid');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [fulfillLoading, setFulfillLoading] = useState<Record<string, boolean>>({});
@@ -180,6 +182,7 @@ export default function AdminOrdersPage() {
           unfulfilled: 0,
           processing: 0,
           shipped: 0,
+          delivered: 0,
         }
       );
     } catch (error) {
@@ -203,12 +206,13 @@ export default function AdminOrdersPage() {
   const totalPages = Math.ceil(totalOrders / limit);
 
   const filterTabs = [
-    { key: 'all', label: 'All Orders', count: summary.total },
     { key: 'paid', label: 'Paid', count: summary.paid },
-    { key: 'pending', label: 'Pending', count: summary.pending },
-    { key: 'unfulfilled', label: 'Unfulfilled', count: summary.unfulfilled },
     { key: 'processing', label: 'Processing', count: summary.processing },
     { key: 'shipped', label: 'Shipped', count: summary.shipped },
+    { key: 'delivered', label: 'Delivered', count: summary.delivered },
+    { key: 'all', label: 'All Orders', count: summary.total },
+    { key: 'pending', label: 'Pending', count: summary.pending },
+    { key: 'unfulfilled', label: 'Unfulfilled', count: summary.unfulfilled },
   ];
 
   const parseShippingAddress = (address: any) => {
@@ -301,7 +305,8 @@ export default function AdminOrdersPage() {
       const res = await fetch('/api/admin/orders/sync-tracking', { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Sync failed');
-      const msg = `Checked ${data.checked} orders: ${data.updated} updated, ${data.emailed} emailed`;
+      let msg = `Checked ${data.checked} orders: ${data.updated} updated, ${data.emailed} emailed`;
+      if (data.staleCleaned > 0) msg += `, ${data.staleCleaned} stale pending cleaned up`;
       toast.success(msg);
       await fetchOrders();
     } catch (error: any) {

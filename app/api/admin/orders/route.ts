@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       unfulfilled: summarySource.filter((order) => order.fulfillment_status === 'unfulfilled').length,
       processing: summarySource.filter((order) => order.fulfillment_status === 'processing').length,
       shipped: summarySource.filter((order) => order.fulfillment_status === 'shipped').length,
+      delivered: summarySource.filter((order) => order.fulfillment_status === 'delivered').length,
       customers: new Set(summarySource.map((order) => order.email).filter(Boolean)).size,
     };
 
