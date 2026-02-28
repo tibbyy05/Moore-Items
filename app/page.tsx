@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Truck, Flag, RotateCcw, Shield } from 'lucide-react';
+import { Truck, Flag, RotateCcw, Shield, Package, Star, ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -184,37 +184,28 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="bg-[#f7f6f3] py-12">
+        <section className="bg-[#f7f6f3] py-14 sm:py-16">
           <div className="max-w-[1600px] mx-auto px-4">
-            <div className="grid gap-6 grid-cols-2 max-[360px]:grid-cols-1 lg:grid-cols-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                  <Truck className="w-5 h-5 text-gold-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-warm-900">Fast US Shipping</p>
-                  <p className="text-xs text-warm-600">
-                    Free delivery in 2-5 business days on orders over $50
-                  </p>
-                </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
+              <div className="text-center">
+                <Package className="w-6 h-6 text-gold-600 mx-auto mb-3" />
+                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">3,000+</p>
+                <p className="text-sm text-warm-500 mt-1">Curated Products</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                  <Flag className="w-5 h-5 text-gold-600" />
-                </div>
-                <p className="text-sm text-warm-700 font-semibold">Ships from USA</p>
+              <div className="text-center">
+                <Star className="w-6 h-6 text-gold-600 mx-auto mb-3" />
+                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">39,000+</p>
+                <p className="text-sm text-warm-500 mt-1">5-Star Reviews</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                  <RotateCcw className="w-5 h-5 text-gold-600" />
-                </div>
-                <p className="text-sm text-warm-700 font-semibold">Easy Returns</p>
+              <div className="text-center">
+                <Truck className="w-6 h-6 text-gold-600 mx-auto mb-3" />
+                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">2-5 Days</p>
+                <p className="text-sm text-warm-500 mt-1">Fast US Delivery</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm">
-                  <Shield className="w-5 h-5 text-gold-600" />
-                </div>
-                <p className="text-sm text-warm-700 font-semibold">Secure Checkout</p>
+              <div className="text-center">
+                <ShieldCheck className="w-6 h-6 text-gold-600 mx-auto mb-3" />
+                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">100%</p>
+                <p className="text-sm text-warm-500 mt-1">Secure Checkout</p>
               </div>
             </div>
           </div>
