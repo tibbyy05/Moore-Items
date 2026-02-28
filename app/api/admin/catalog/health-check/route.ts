@@ -208,7 +208,10 @@ export async function POST(request: NextRequest) {
     const items = data
       .filter((p) => {
         if (!p.cj_raw_data || typeof p.cj_raw_data !== 'object') return true;
-        const weight = Number((p.cj_raw_data as any).productWeight);
+        const raw = String((p.cj_raw_data as any).productWeight ?? '');
+        if (!raw) return true;
+        // productWeight can be a single value "350" or a range "1.00-912.00"
+        const weight = parseFloat(raw);
         return !Number.isFinite(weight) || weight <= 0;
       })
       .map((p) => ({ id: p.id, name: p.name }));
