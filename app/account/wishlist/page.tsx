@@ -40,6 +40,7 @@ export default function WishlistPage() {
           description: '',
           shippingDays: item.shipping_estimate || '2-5 business days',
           warehouse: item.warehouse || 'US',
+          isDigital: !!(item.digital_file_path || item.mi_categories?.slug === 'digital-downloads' || item.stock_count >= 9999),
           inStock: item.stock_count > 0,
           stockCount: item.stock_count || 0,
         }));

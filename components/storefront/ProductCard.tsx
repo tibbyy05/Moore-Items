@@ -30,7 +30,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
   };
 
   const displayStock = (() => {
-    if (product.isDigital) return null;
+    if (product.isDigital || product.stockCount >= 9999) return null;
     if (product.stockCount <= 20) return product.stockCount;
     const roll = hashString(`${product.id}:stock`) % 100;
     if (roll < 15) {

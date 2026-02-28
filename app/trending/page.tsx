@@ -76,6 +76,7 @@ export default function TrendingPage() {
         description: product.description || '',
         shippingDays: product.shipping_estimate || '7-12 days',
         warehouse: product.warehouse || 'CN',
+        isDigital: !!(product.digital_file_path || product.mi_categories?.slug === 'digital-downloads' || product.stock_count >= 9999),
         inStock: product.stock_count > 0,
         stockCount: product.stock_count || 0,
       }));
