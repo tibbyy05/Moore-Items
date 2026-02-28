@@ -37,6 +37,31 @@ async function checkAuth(request: NextRequest): Promise<{ authorized: boolean }>
   }
 }
 
+// Paginated fetch to avoid Supabase's default 1000-row limit
+async function fetchAll<T>(
+  supabase: ReturnType<typeof createAdminClient>,
+  table: string,
+  select: string,
+  filters: (query: any) => any
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  let all: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    let query = supabase.from(table).select(select).range(offset, offset + PAGE_SIZE - 1);
+    query = filters(query);
+    const { data, error } = await query;
+    if (error) throw error;
+    const rows = (data || []) as T[];
+    all = all.concat(rows);
+    if (rows.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+
+  return all;
+}
+
 export async function POST(request: NextRequest) {
   const { authorized } = await checkAuth(request);
   if (!authorized) {
@@ -56,14 +81,12 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 1: Zero-stock variants (HIGH) ─── AUTO-FIX ───
   {
-    const { data: zeroStockVariants } = await supabase
-      .from('mi_product_variants')
-      .select('id, product_id, mi_products!inner(id, name, status)')
-      .eq('is_active', true)
-      .eq('stock_count', 0)
-      .eq('mi_products.status', 'active');
-
-    const affected = (zeroStockVariants || []) as any[];
+    const affected = await fetchAll<any>(
+      supabase,
+      'mi_product_variants',
+      'id, product_id, mi_products!inner(id, name, status)',
+      (q: any) => q.eq('is_active', true).eq('stock_count', 0).eq('mi_products.status', 'active')
+    );
     let autoFixed = 0;
 
     if (affected.length > 0) {
@@ -94,13 +117,11 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 2: Missing reviews (MEDIUM) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name')
-      .eq('status', 'active')
-      .or('review_count.is.null,review_count.eq.0');
+    const data = await fetchAll<any>(supabase, 'mi_products', 'id, name', (q: any) =>
+      q.eq('status', 'active').or('review_count.is.null,review_count.eq.0')
+    );
 
-    const items = (data || []).map((p) => ({ id: p.id, name: p.name }));
+    const items = data.map((p: any) => ({ id: p.id, name: p.name }));
     checks.push({
       name: 'Missing reviews',
       severity: 'MEDIUM',
@@ -112,12 +133,11 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 3: Missing images (HIGH) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name, images')
-      .eq('status', 'active');
+    const data = await fetchAll<any>(supabase, 'mi_products', 'id, name, images', (q: any) =>
+      q.eq('status', 'active')
+    );
 
-    const items = (data || [])
+    const items = data
       .filter((p) => {
         if (!p.images) return true;
         if (Array.isArray(p.images) && p.images.length === 0) return true;
@@ -136,13 +156,11 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 4: Missing category (HIGH) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name')
-      .eq('status', 'active')
-      .is('category_id', null);
+    const data = await fetchAll<any>(supabase, 'mi_products', 'id, name', (q: any) =>
+      q.eq('status', 'active').is('category_id', null)
+    );
 
-    const items = (data || []).map((p) => ({ id: p.id, name: p.name }));
+    const items = data.map((p: any) => ({ id: p.id, name: p.name }));
     checks.push({
       name: 'Missing category',
       severity: 'HIGH',
@@ -154,13 +172,12 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 5: Pricing issues (HIGH) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name, retail_price, cj_price, margin_percent')
-      .eq('status', 'active')
-      .not('cj_pid', 'is', null);
+    const data = await fetchAll<any>(
+      supabase, 'mi_products', 'id, name, retail_price, cj_price, margin_percent',
+      (q: any) => q.eq('status', 'active').not('cj_pid', 'is', null)
+    );
 
-    const items = (data || [])
+    const items = data
       .filter((p) => {
         const retail = Number(p.retail_price || 0);
         const cj = Number(p.cj_price || 0);
@@ -183,13 +200,12 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 6: Missing weight (LOW) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name, cj_raw_data')
-      .eq('status', 'active')
-      .not('cj_pid', 'is', null);
+    const data = await fetchAll<any>(
+      supabase, 'mi_products', 'id, name, cj_raw_data',
+      (q: any) => q.eq('status', 'active').not('cj_pid', 'is', null)
+    );
 
-    const items = (data || [])
+    const items = data
       .filter((p) => {
         if (!p.cj_raw_data || typeof p.cj_raw_data !== 'object') return true;
         const weight = Number((p.cj_raw_data as any).productWeight);
@@ -208,12 +224,11 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 7: Missing description (MEDIUM) ───
   {
-    const { data } = await supabase
-      .from('mi_products')
-      .select('id, name, description')
-      .eq('status', 'active');
+    const data = await fetchAll<any>(supabase, 'mi_products', 'id, name, description', (q: any) =>
+      q.eq('status', 'active')
+    );
 
-    const items = (data || [])
+    const items = data
       .filter((p) => !p.description || String(p.description).trim() === '')
       .map((p) => ({ id: p.id, name: p.name }));
 
@@ -228,34 +243,20 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 8: Orphaned products (HIGH) ───
   {
-    const { data: activeProducts } = await supabase
-      .from('mi_products')
-      .select('id, name')
-      .eq('status', 'active');
+    const activeProducts = await fetchAll<any>(supabase, 'mi_products', 'id, name', (q: any) =>
+      q.eq('status', 'active')
+    );
 
-    const items: { id: string; name: string }[] = [];
+    // Build set of all product_ids that have at least one active variant
+    const variantRows = await fetchAll<any>(
+      supabase, 'mi_product_variants', 'product_id',
+      (q: any) => q.eq('is_active', true)
+    );
+    const productsWithVariants = new Set(variantRows.map((v: any) => v.product_id));
 
-    if (activeProducts && activeProducts.length > 0) {
-      // Get counts of active variants per product
-      const { data: variantCounts } = await supabase
-        .from('mi_product_variants')
-        .select('product_id')
-        .eq('is_active', true)
-        .in(
-          'product_id',
-          activeProducts.map((p) => p.id)
-        );
-
-      const productsWithVariants = new Set(
-        (variantCounts || []).map((v) => v.product_id)
-      );
-
-      for (const p of activeProducts) {
-        if (!productsWithVariants.has(p.id)) {
-          items.push({ id: p.id, name: p.name });
-        }
-      }
-    }
+    const items = activeProducts
+      .filter((p: any) => !productsWithVariants.has(p.id))
+      .map((p: any) => ({ id: p.id, name: p.name }));
 
     checks.push({
       name: 'Orphaned products',
@@ -268,18 +269,15 @@ export async function POST(request: NextRequest) {
 
   // ─── CHECK 9: Category count drift (LOW) ─── AUTO-FIX ───
   {
-    const { data: categories } = await supabase
-      .from('mi_categories')
-      .select('id, name, product_count');
+    const categories = await fetchAll<any>(supabase, 'mi_categories', 'id, name, product_count', (q: any) => q);
 
-    const { data: productsByCategory } = await supabase
-      .from('mi_products')
-      .select('category_id')
-      .eq('status', 'active')
-      .not('category_id', 'is', null);
+    const productsByCategory = await fetchAll<any>(
+      supabase, 'mi_products', 'category_id',
+      (q: any) => q.eq('status', 'active').not('category_id', 'is', null)
+    );
 
     const actualCounts = new Map<string, number>();
-    for (const p of productsByCategory || []) {
+    for (const p of productsByCategory) {
       actualCounts.set(p.category_id, (actualCounts.get(p.category_id) || 0) + 1);
     }
 
