@@ -280,6 +280,7 @@ export async function syncCJProducts(
                   cj_price: variantPrice,
                   retail_price: variantPricing.retailPrice,
                   image_url: variant.variantImage,
+                  stock_count: 100,
                   is_active: true,
                 },
                 {

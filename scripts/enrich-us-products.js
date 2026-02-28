@@ -531,6 +531,7 @@ async function run() {
               retail_price: Number.isFinite(retailPrice) ? retailPrice : null,
               image_url: variant.variantImage || null,
               sort_order: index,
+              stock_count: 100,
               is_active: true,
             };
           });

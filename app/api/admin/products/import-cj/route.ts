@@ -212,6 +212,7 @@ export async function POST(request: NextRequest) {
             image_url: variant.variantImage,
             color: color || null,
             size: size || null,
+            stock_count: 100,
             is_active: true,
           },
           { onConflict: 'cj_vid' }
