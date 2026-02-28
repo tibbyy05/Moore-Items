@@ -1,4 +1,7 @@
-require('ts-node/register/transpile-only');
+require('ts-node').register({
+  transpileOnly: true,
+  compilerOptions: { module: 'commonjs', moduleResolution: 'node' },
+});
 
 const fs = require('fs');
 const path = require('path');

@@ -1,4 +1,4 @@
-import { PRICING_CONFIG } from '@/lib/config/pricing';
+import { PRICING_CONFIG } from './config/pricing';
 
 const STRIPE_PERCENT_FEE = PRICING_CONFIG.stripeFeePercent;
 const STRIPE_FIXED_FEE = PRICING_CONFIG.stripeFeeFixed;
