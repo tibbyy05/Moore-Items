@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { calculateShipping } from '@/lib/shipping';
-import { CartItem } from '@/lib/types';
+import { calculateShippingCost, calculateFlatRateShipping, ShippingItem } from '@/lib/shipping';
+import { getShippingConfig } from '@/lib/config/shipping';
 
 interface CheckoutItemInput {
   productId: string;
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productsError } = await supabase
       .from('mi_products')
-      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path')
+      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path, cj_raw_data')
       .in('id', productIds);
 
     if (productsError || !products) {
@@ -46,12 +46,13 @@ export async function POST(request: NextRequest) {
       retail_price: number | null;
       stock_count: number | null;
       name: string | null;
+      cj_vid: string | null;
     }> = [];
 
     if (variantIds.length > 0) {
       const { data: variantData, error: variantError } = await supabase
         .from('mi_product_variants')
-        .select('id, product_id, retail_price, stock_count, name')
+        .select('id, product_id, retail_price, stock_count, name, cj_vid')
         .in('id', variantIds);
 
       if (variantError) {
@@ -74,6 +75,8 @@ export async function POST(request: NextRequest) {
       warehouse: 'US' | 'CN';
       variantName: string | null;
       isDigital: boolean;
+      cjVid: string | null;
+      productWeightGrams: number | null;
     }> = [];
 
     for (const item of items) {
@@ -94,6 +97,7 @@ export async function POST(request: NextRequest) {
 
       let unitPrice = Number(product.retail_price || 0);
       let variantName: string | null = null;
+      let cjVid: string | null = null;
 
       if (item.variantId) {
         const variant = variantMap.get(item.variantId);
@@ -111,10 +115,32 @@ export async function POST(request: NextRequest) {
         }
         unitPrice = Number(variant.retail_price ?? unitPrice);
         variantName = variant.name || null;
+        cjVid = variant.cj_vid || null;
+      } else {
+        // No variant selected — try to get cj_vid from the product's first variant
+        // (some products have a single default variant)
+        if (!cjVid) {
+          const { data: defaultVariant } = await supabase
+            .from('mi_product_variants')
+            .select('cj_vid')
+            .eq('product_id', product.id)
+            .limit(1)
+            .maybeSingle();
+          cjVid = defaultVariant?.cj_vid || null;
+        }
       }
 
       const quantity = Math.max(1, Number(item.quantity || 1));
       const image = Array.isArray(product.images) ? product.images[0] || null : null;
+
+      // Extract product weight from cj_raw_data (in grams)
+      let productWeightGrams: number | null = null;
+      if (product.cj_raw_data && typeof product.cj_raw_data === 'object') {
+        const rawWeight = (product.cj_raw_data as any).productWeight;
+        if (typeof rawWeight === 'number' && rawWeight > 0) {
+          productWeightGrams = rawWeight;
+        }
+      }
 
       validatedItems.push({
         productId: product.id,
@@ -126,6 +152,8 @@ export async function POST(request: NextRequest) {
         warehouse: (product.warehouse || 'CN') as 'US' | 'CN',
         variantName,
         isDigital: !!product.digital_file_path,
+        cjVid,
+        productWeightGrams,
       });
     }
 
@@ -167,20 +195,29 @@ export async function POST(request: NextRequest) {
     const allDigital = validatedItems.every((item) => item.isDigital);
     const physicalItems = validatedItems.filter((item) => !item.isDigital);
 
-    // Calculate shipping only on physical items
-    const cartItems: CartItem[] = physicalItems.map((item) => ({
-      productId: item.productId,
-      slug: '',
-      variantId: item.variantId,
-      name: item.name,
-      variantName: item.variantName || undefined,
-      price: item.unitPrice,
-      quantity: item.quantity,
-      image: item.image || '',
-      warehouse: item.warehouse,
-    }));
+    // Calculate shipping with CJ real-time quotes (with fallback)
+    let shippingResult;
+    try {
+      const shippingConfig = await getShippingConfig();
+      const shippingItems: ShippingItem[] = validatedItems.map((item) => ({
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        isDigital: item.isDigital,
+        cjVid: item.cjVid,
+        productWeightGrams: item.productWeightGrams,
+      }));
+      shippingResult = await calculateShippingCost(shippingItems, subtotal, shippingConfig);
+    } catch (error) {
+      // If anything goes wrong with the new shipping system, fallback to flat rate
+      console.error('[checkout] Shipping calculation failed, using flat rate fallback:', error);
+      shippingResult = {
+        cost: allDigital ? 0 : calculateFlatRateShipping(subtotal),
+        method: allDigital ? 'free' as const : (subtotal >= 50 ? 'free' as const : 'flat_rate' as const),
+        label: allDigital ? 'Digital Delivery' : (subtotal >= 50 ? 'Free Shipping' : 'Standard Shipping'),
+      };
+    }
 
-    const shippingCost = allDigital ? 0 : calculateShipping(cartItems);
+    const shippingCost = shippingResult.cost;
     const total = Math.max(subtotal - discountAmount + shippingCost, 0);
 
     const { data: order, error: orderError } = await supabase
@@ -230,23 +267,15 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || 'http://localhost:3000';
 
     // Build shipping options only for carts with physical items
-    let shippingLabel = 'Standard Shipping';
     let shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [];
 
     if (!allDigital) {
-      shippingLabel =
-        physicalItems.some((item) => item.warehouse === 'CN')
-          ? physicalItems.some((item) => item.warehouse === 'US')
-            ? 'Mixed Shipping'
-            : 'Standard Shipping'
-          : 'Fast US Shipping';
-
       shippingOptions = [
         {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
-            display_name: shippingLabel,
+            display_name: shippingResult.label,
             delivery_estimate: {
               minimum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 2 },
               maximum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 5 },
@@ -290,6 +319,7 @@ export async function POST(request: NextRequest) {
         discount_amount: discountAmount.toFixed(2),
         supabase_order_id: order.id,
         is_all_digital: allDigital ? 'true' : 'false',
+        shipping_method: shippingResult.method,
       },
       // Only collect shipping for carts with physical items
       ...(allDigital

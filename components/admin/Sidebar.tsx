@@ -16,6 +16,8 @@ import {
   Plus,
   DollarSign,
   RefreshCw,
+  Tag,
+  Truck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +48,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/products', label: 'Products', icon: Package, count: null },
       { href: '/admin/products/add', label: 'Add Product', icon: Plus, count: null },
       { href: '/admin/pricing', label: 'Pricing', icon: DollarSign, count: null },
+      { href: '/admin/shipping', label: 'Shipping', icon: Truck, count: null },
     ],
   },
   {
@@ -53,6 +56,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, count: null },
       { href: '/admin/customers', label: 'Customers', icon: Users, count: null },
+      { href: '/admin/promo-codes', label: 'Promo Codes', icon: Tag, count: null },
     ],
   },
   {
