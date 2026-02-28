@@ -144,11 +144,11 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           <div className="flex items-center gap-2">
             {product.compareAtPrice && (
               <span className="text-sm text-warm-400 line-through">
-                ${product.compareAtPrice.toFixed(2)}
+                ${(product.compareAtPrice ?? 0).toFixed(2)}
               </span>
             )}
             <span className="text-lg font-bold text-warm-900">
-              ${product.price.toFixed(2)}
+              ${(product.price ?? 0).toFixed(2)}
             </span>
           </div>
           {discountPercent > 0 && (

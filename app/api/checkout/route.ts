@@ -134,13 +134,16 @@ export async function POST(request: NextRequest) {
       const image = Array.isArray(product.images) ? product.images[0] || null : null;
 
       // Extract product weight from cj_raw_data (in grams)
+      // CJ stores productWeight as a string (e.g. "8172"), not a number
       let productWeightGrams: number | null = null;
       if (product.cj_raw_data && typeof product.cj_raw_data === 'object') {
-        const rawWeight = (product.cj_raw_data as any).productWeight;
-        if (typeof rawWeight === 'number' && rawWeight > 0) {
+        const rawWeight = Number((product.cj_raw_data as any).productWeight);
+        if (Number.isFinite(rawWeight) && rawWeight > 0) {
           productWeightGrams = rawWeight;
         }
       }
+
+      console.log(`[checkout] Item: "${product.name}" | cjVid=${cjVid || 'NONE'} | weight=${productWeightGrams !== null ? productWeightGrams + 'g' : 'NULL (no cj_raw_data.productWeight)'} | qty=${quantity} | price=$${unitPrice.toFixed(2)} | digital=${!!product.digital_file_path}`);
 
       validatedItems.push({
         productId: product.id,

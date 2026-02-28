@@ -137,11 +137,11 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
             <div className="flex items-center gap-2 mb-4">
               {product.compareAtPrice && (
                 <span className="text-sm text-warm-400 line-through">
-                  ${product.compareAtPrice.toFixed(2)}
+                  ${(product.compareAtPrice ?? 0).toFixed(2)}
                 </span>
               )}
               <span className="text-xl font-bold text-warm-900">
-                ${effectivePrice.toFixed(2)}
+                ${(effectivePrice ?? 0).toFixed(2)}
               </span>
             </div>
 

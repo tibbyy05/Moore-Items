@@ -55,7 +55,7 @@ export function CartPreview({ open, onClose }: CartPreviewProps) {
                     {item.name}
                   </Link>
                   <p className="text-xs text-warm-500">
-                    {item.quantity} × ${item.price.toFixed(2)}
+                    {item.quantity} × ${(item.price ?? 0).toFixed(2)}
                   </p>
                 </div>
                 <button

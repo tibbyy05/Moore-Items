@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS mi_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed default shipping config
+-- Seed default shipping config (with weight-based tiers)
 INSERT INTO mi_settings (key, value)
 VALUES (
   'shipping_config',
@@ -15,8 +15,16 @@ VALUES (
     "freeShippingWeightCapGrams": 10000,
     "useCJFreightQuotes": true,
     "freightMarkupPercent": 15,
-    "flatRateShipping": 4.99,
-    "minimumShippingCharge": 2.99
+    "minimumShippingCharge": 2.99,
+    "weightTiers": [
+      { "maxGrams": 500, "price": 4.99, "label": "Light (under 1 lb)" },
+      { "maxGrams": 2000, "price": 7.99, "label": "Standard (1-4 lbs)" },
+      { "maxGrams": 5000, "price": 12.99, "label": "Medium (4-11 lbs)" },
+      { "maxGrams": 15000, "price": 19.99, "label": "Heavy (11-33 lbs)" },
+      { "maxGrams": null, "price": 29.99, "label": "Extra Heavy (33+ lbs)" }
+    ],
+    "unknownWeightRate": 7.99,
+    "flatRateShipping": 4.99
   }'::jsonb
 )
 ON CONFLICT (key) DO NOTHING;

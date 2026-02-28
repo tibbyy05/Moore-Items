@@ -1,23 +1,50 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const DEFAULT_SHIPPING_CONFIG = {
+export interface WeightTier {
+  maxGrams: number | null; // null = unlimited (highest tier)
+  price: number;
+  label: string;
+}
+
+export interface ShippingConfig {
   // Master controls
+  freeShippingEnabled: boolean;
+  freeShippingThreshold: number;
+  freeShippingWeightCapGrams: number;
+
+  // CJ real-time quotes (kept as future option)
+  useCJFreightQuotes: boolean;
+  freightMarkupPercent: number;
+  minimumShippingCharge: number;
+
+  // Weight-based tiers (primary shipping calculation)
+  weightTiers: WeightTier[];
+  unknownWeightRate: number;
+
+  // Fallback flat rate (last resort)
+  flatRateShipping: number;
+}
+
+export const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
   freeShippingEnabled: true,
   freeShippingThreshold: 50,
   freeShippingWeightCapGrams: 10000,
 
-  // CJ real-time quotes
   useCJFreightQuotes: true,
   freightMarkupPercent: 15,
-
-  // Fallback flat rate (used when CJ quotes disabled or fail)
-  flatRateShipping: 4.99,
-
-  // Minimum shipping charge (even with CJ quotes, never charge less than this)
   minimumShippingCharge: 2.99,
-};
 
-export type ShippingConfig = typeof DEFAULT_SHIPPING_CONFIG;
+  weightTiers: [
+    { maxGrams: 500, price: 4.99, label: 'Light (under 1 lb)' },
+    { maxGrams: 2000, price: 7.99, label: 'Standard (1-4 lbs)' },
+    { maxGrams: 5000, price: 12.99, label: 'Medium (4-11 lbs)' },
+    { maxGrams: 15000, price: 19.99, label: 'Heavy (11-33 lbs)' },
+    { maxGrams: null, price: 29.99, label: 'Extra Heavy (33+ lbs)' },
+  ],
+  unknownWeightRate: 7.99,
+
+  flatRateShipping: 4.99,
+};
 
 export async function getShippingConfig(): Promise<ShippingConfig> {
   try {
@@ -29,7 +56,16 @@ export async function getShippingConfig(): Promise<ShippingConfig> {
       .maybeSingle();
 
     if (data?.value && typeof data.value === 'object') {
-      return { ...DEFAULT_SHIPPING_CONFIG, ...(data.value as Partial<ShippingConfig>) };
+      const saved = data.value as Partial<ShippingConfig>;
+      return {
+        ...DEFAULT_SHIPPING_CONFIG,
+        ...saved,
+        // Ensure weightTiers is always a valid array
+        weightTiers:
+          Array.isArray(saved.weightTiers) && saved.weightTiers.length > 0
+            ? saved.weightTiers
+            : DEFAULT_SHIPPING_CONFIG.weightTiers,
+      };
     }
   } catch (error) {
     console.error('[shipping] Failed to load config from DB, using defaults:', error);

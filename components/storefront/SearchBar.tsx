@@ -145,7 +145,7 @@ export function SearchBar() {
                   <p className="text-sm font-semibold text-warm-900 truncate">
                     {result.name}
                   </p>
-                  <p className="text-sm text-warm-600">${result.price.toFixed(2)}</p>
+                  <p className="text-sm text-warm-600">${(result.price ?? 0).toFixed(2)}</p>
                 </div>
               </Link>
             ))
