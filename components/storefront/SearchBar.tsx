@@ -29,7 +29,7 @@ const CATEGORY_SUGGESTIONS = [
 
 export function SearchBar() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -38,7 +38,7 @@ export function SearchBar() {
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
+        setIsFocused(false);
       }
     };
     document.addEventListener('mousedown', handleOutside);
@@ -46,7 +46,6 @@ export function SearchBar() {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
     if (!query.trim()) {
       setResults([]);
       return;
@@ -71,51 +70,44 @@ export function SearchBar() {
     }, 300);
 
     return () => window.clearTimeout(timer);
-  }, [query, open]);
+  }, [query]);
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        onClick={() => setOpen((current) => !current)}
-        className="p-2 rounded-lg hover:bg-warm-50 transition-colors"
-        aria-label="Search"
-      >
-        <Search className="w-5 h-5 text-warm-700" />
-      </button>
+    <div ref={containerRef} className="relative w-[200px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
+      <div className="flex items-center gap-2 rounded-full border border-warm-200 bg-white px-3 py-2 shadow-sm focus-within:border-gold-400 focus-within:ring-2 focus-within:ring-gold-200/50">
+        <Search className="w-4 h-4 text-warm-400" />
+        <input
+          type="search"
+          placeholder="Search products..."
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && query.trim()) {
+              router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+              setIsFocused(false);
+            }
+          }}
+          className="w-full text-sm text-warm-800 placeholder:text-warm-400 focus:outline-none"
+          aria-label="Search products"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery('')}
+            className="p-1 rounded-full hover:bg-warm-50"
+            aria-label="Clear search"
+          >
+            <X className="w-4 h-4 text-warm-500" />
+          </button>
+        )}
+      </div>
 
       <div
         className={cn(
-          'absolute right-0 mt-3 w-[90vw] max-w-[340px] sm:w-[380px] bg-white border border-warm-200 rounded-2xl shadow-xl overflow-hidden transition-all',
-          open ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+          'absolute left-0 right-0 mt-2 bg-white border border-warm-200 rounded-2xl shadow-xl overflow-hidden transition-all',
+          isFocused || query ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
         )}
       >
-        <div className="p-4 border-b border-warm-100 flex items-center gap-2">
-          <Search className="w-4 h-4 text-warm-400" />
-          <input
-            type="search"
-            placeholder="Search products..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && query.trim()) {
-                router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-                setOpen(false);
-              }
-            }}
-            className="flex-1 text-sm text-warm-800 placeholder:text-warm-400 focus:outline-none"
-            autoFocus={open}
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="p-1 rounded-full hover:bg-warm-50"
-              aria-label="Clear search"
-            >
-              <X className="w-4 h-4 text-warm-500" />
-            </button>
-          )}
-        </div>
-
         <div className="max-h-[320px] overflow-y-auto">
           {loading ? (
             <div className="p-4 text-sm text-warm-500">Searching...</div>
@@ -129,7 +121,7 @@ export function SearchBar() {
                 key={result.id}
                 href={`/product/${result.slug}`}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-warm-50 transition-colors"
-                onClick={() => setOpen(false)}
+                onClick={() => setIsFocused(false)}
               >
                 <div className="relative w-12 h-12 rounded-lg bg-warm-50 overflow-hidden">
                   <Image
@@ -164,7 +156,7 @@ export function SearchBar() {
                     key={category.slug}
                     href={`/search?q=${encodeURIComponent(query)}&category=${category.slug}`}
                     className="text-xs font-semibold text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1 hover:border-gold-500 hover:text-gold-600 transition-colors"
-                    onClick={() => setOpen(false)}
+                    onClick={() => setIsFocused(false)}
                   >
                     Search in {category.label}
                   </Link>
@@ -176,7 +168,7 @@ export function SearchBar() {
                 <Link
                   href={`/search?q=${encodeURIComponent(query)}`}
                   className="text-sm font-semibold text-gold-600 hover:text-gold-500"
-                  onClick={() => setOpen(false)}
+                  onClick={() => setIsFocused(false)}
                 >
                   View all results
                 </Link>

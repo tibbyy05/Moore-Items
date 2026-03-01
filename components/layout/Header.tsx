@@ -81,7 +81,7 @@ export function Header() {
         )}
       >
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16 sm:h-20">
+          <div className="flex items-center justify-between h-20 sm:h-24">
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="md:hidden p-2 -ml-2"
@@ -100,7 +100,7 @@ export function Header() {
                 alt="MooreItems"
                 width={630}
                 height={216}
-                className="h-8 sm:h-10 lg:h-24 w-auto"
+                className="h-10 sm:h-14 lg:h-28 w-auto"
                 priority
               />
             </Link>
