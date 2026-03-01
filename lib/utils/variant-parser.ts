@@ -187,7 +187,7 @@ function parseVariantKeyString(variantKey: string): {
   }
   // Combined (e.g., "White2Pack")
   else {
-    for (const c of KNOWN_COLORS) {
+    for (const c of Array.from(KNOWN_COLORS)) {
       if (lower.startsWith(c) && raw.length > c.length) {
         const remainder = raw.substring(c.length);
         if (/^[\d]/.test(remainder)) {
