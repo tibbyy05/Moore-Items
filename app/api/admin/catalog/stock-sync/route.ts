@@ -4,8 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
 import { sendStockSyncAlert, type StockSyncChange } from '@/lib/email/sendgrid';
 
-const BATCH_SIZE = 10;
-const BATCH_DELAY_MS = 1000;
+const CJ_DELAY_MS = 1200;
 const STOCK_CHANGE_THRESHOLD = 5;
 
 async function checkAuth(request: NextRequest): Promise<{ authorized: boolean }> {
@@ -97,98 +96,90 @@ export async function POST(request: NextRequest) {
     (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock'])
   );
 
-  // Process in batches
-  for (let i = 0; i < products.length; i += BATCH_SIZE) {
-    const batch = products.slice(i, i + BATCH_SIZE);
+  // Process one product at a time to respect CJ rate limit (1 QPS)
+  for (let i = 0; i < products.length; i++) {
+    const product = products[i];
+    totalChecked++;
 
-    await Promise.all(
-      batch.map(async (product) => {
-        totalChecked++;
-        try {
-          const stockData = await cjClient.getProductStock(product.cj_pid);
-          const totalStock = getTotalStock(stockData);
+    try {
+      const stockData = await cjClient.getProductStock(product.cj_pid);
+      const totalStock = getTotalStock(stockData);
 
-          // ─── Case 1: Zero stock on active product → hide it ───
-          if (totalStock === 0 && product.status === 'active') {
-            const { error: updateError } = await supabase
-              .from('mi_products')
-              .update({ status: 'out_of_stock' })
-              .eq('id', product.id);
+      // ─── Case 1: Zero stock on active product → hide it ───
+      if (totalStock === 0 && product.status === 'active') {
+        const { error: updateError } = await supabase
+          .from('mi_products')
+          .update({ status: 'out_of_stock' })
+          .eq('id', product.id);
 
-            if (!updateError) {
-              hidden++;
-              if (product.category_id) changedCategoryIds.add(product.category_id);
-              changes.push({ name: product.name, action: 'hidden' });
-            }
-            return;
-          }
+        if (!updateError) {
+          hidden++;
+          if (product.category_id) changedCategoryIds.add(product.category_id);
+          changes.push({ name: product.name, action: 'hidden' });
+        }
+      }
 
-          // ─── Case 2: Stock returned on out_of_stock product → reactivate ───
-          if (totalStock > 0 && product.status === 'out_of_stock') {
-            const { error: updateError } = await supabase
-              .from('mi_products')
-              .update({ status: 'active' })
-              .eq('id', product.id);
+      // ─── Case 2: Stock returned on out_of_stock product → reactivate ───
+      else if (totalStock > 0 && product.status === 'out_of_stock') {
+        const { error: updateError } = await supabase
+          .from('mi_products')
+          .update({ status: 'active' })
+          .eq('id', product.id);
 
-            // Also update variant stock counts
-            if (!updateError) {
-              await supabase
-                .from('mi_product_variants')
-                .update({ stock_count: totalStock })
-                .eq('product_id', product.id)
-                .eq('is_active', true);
+        if (!updateError) {
+          await supabase
+            .from('mi_product_variants')
+            .update({ stock_count: totalStock })
+            .eq('product_id', product.id)
+            .eq('is_active', true);
 
-              reactivated++;
-              if (product.category_id) changedCategoryIds.add(product.category_id);
-              changes.push({ name: product.name, action: 'reactivated', newStock: totalStock });
-            }
-            return;
-          }
+          reactivated++;
+          if (product.category_id) changedCategoryIds.add(product.category_id);
+          changes.push({ name: product.name, action: 'reactivated', newStock: totalStock });
+        }
+      }
 
-          // ─── Case 3: Active product with stock change >= threshold → update counts ───
-          if (totalStock > 0 && product.status === 'active') {
-            // Get current variant stock to compare
-            const { data: variants } = await supabase
-              .from('mi_product_variants')
-              .select('id, stock_count')
-              .eq('product_id', product.id)
-              .eq('is_active', true)
-              .limit(1);
+      // ─── Case 3: Active product with stock change >= threshold → update counts ───
+      else if (totalStock > 0 && product.status === 'active') {
+        const { data: variants } = await supabase
+          .from('mi_product_variants')
+          .select('id, stock_count')
+          .eq('product_id', product.id)
+          .eq('is_active', true)
+          .limit(1);
 
-            const currentStock = variants?.[0]?.stock_count ?? 100;
-            const diff = Math.abs(totalStock - currentStock);
+        const currentStock = variants?.[0]?.stock_count ?? 100;
+        const diff = Math.abs(totalStock - currentStock);
 
-            if (diff >= STOCK_CHANGE_THRESHOLD) {
-              await supabase
-                .from('mi_product_variants')
-                .update({ stock_count: totalStock })
-                .eq('product_id', product.id)
-                .eq('is_active', true);
+        if (diff >= STOCK_CHANGE_THRESHOLD) {
+          await supabase
+            .from('mi_product_variants')
+            .update({ stock_count: totalStock })
+            .eq('product_id', product.id)
+            .eq('is_active', true);
 
-              stockUpdated++;
-              changes.push({
-                name: product.name,
-                action: 'stock_updated',
-                oldStock: currentStock,
-                newStock: totalStock,
-              });
-            }
-          }
-        } catch (err: any) {
-          errors++;
+          stockUpdated++;
           changes.push({
             name: product.name,
-            action: 'error',
-            error: err?.message || 'Unknown error',
+            action: 'stock_updated',
+            oldStock: currentStock,
+            newStock: totalStock,
           });
-          console.error(`[stock-sync] Error for ${product.name} (${product.cj_pid}):`, err?.message);
         }
-      })
-    );
+      }
+    } catch (err: any) {
+      errors++;
+      changes.push({
+        name: product.name,
+        action: 'error',
+        error: err?.message || 'Unknown error',
+      });
+      console.error(`[stock-sync] Error for ${product.name} (${product.cj_pid}):`, err?.message);
+    }
 
-    // Delay between batches (skip after last batch)
-    if (i + BATCH_SIZE < products.length) {
-      await delay(BATCH_DELAY_MS);
+    // Delay between CJ API calls (skip after last product)
+    if (i < products.length - 1) {
+      await delay(CJ_DELAY_MS);
     }
   }
 
