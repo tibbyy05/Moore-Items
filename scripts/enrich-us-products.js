@@ -515,21 +515,17 @@ async function run() {
           const variantPayloads = variants.map((variant, index) => {
             const cjPrice = Number.parseFloat(String(variant.variantSellPrice || 0)) || 0;
             const retailPrice = calculateRetailPrice(cjPrice, 3.0);
-            const variantLabel = variant.variantNameEn || variant.variantName || variant.variantSku || '';
-            const { color, size } = parseVariantColorSize(
-              variantLabel,
-              detailPayload?.productNameEn || name
-            );
+            const parsed = parseVariantColorSize(variant, detailPayload?.productNameEn || name);
             return {
               product_id: product.id,
               cj_vid: variant.vid,
-              name: variant.variantNameEn || variant.variantSku || `Variant ${index + 1}`,
+              name: parsed.name || variant.variantNameEn || variant.variantSku || `Variant ${index + 1}`,
               sku: variant.variantSku || null,
-              color: color || null,
-              size: size || null,
+              color: parsed.color || null,
+              size: parsed.size || null,
               cj_price: cjPrice || null,
               retail_price: Number.isFinite(retailPrice) ? retailPrice : null,
-              image_url: variant.variantImage || null,
+              image_url: parsed.image_url || variant.variantImage || null,
               sort_order: index,
               stock_count: 100,
               is_active: true,

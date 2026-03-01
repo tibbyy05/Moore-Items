@@ -200,18 +200,17 @@ export async function POST(request: NextRequest) {
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
         const variantPricing = calculatePricing(variantPrice, shipCost);
-        const variantLabel = variant.variantNameEn || variant.variantName || variant.variantSku || '';
-        const { color, size } = parseVariantColorSize(variantLabel, productName);
+        const parsed = parseVariantColorSize(variant, productName);
         await supabase.from('mi_product_variants').upsert(
           {
             product_id: inserted.id,
             cj_vid: variant.vid,
-            name: variant.variantNameEn,
+            name: parsed.name || variant.variantNameEn || variant.variantSku,
             cj_price: variantPrice,
             retail_price: variantPricing.retailPrice,
-            image_url: variant.variantImage,
-            color: color || null,
-            size: size || null,
+            image_url: parsed.image_url || variant.variantImage,
+            color: parsed.color || null,
+            size: parsed.size || null,
             stock_count: 100,
             is_active: true,
           },

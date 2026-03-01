@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:cf.cjdropshipping.com)",
-      "WebFetch(domain:www.mooreitems.com)"
+      "WebFetch(domain:www.mooreitems.com)",
+      "Bash(npx next:*)",
+      "Bash(git:*)",
+      "Bash(node:*)"
     ]
   }
 }
