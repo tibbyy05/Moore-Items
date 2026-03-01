@@ -9,7 +9,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { PriceDisplay } from '@/components/product/PriceDisplay';
 import { StarRating } from '@/components/ui/star-rating';
 import { QuantityStepper } from '@/components/product/QuantityStepper';
-import { VariantSelector } from '@/components/product/VariantSelector';
+import VariantSelector from '@/components/product/VariantSelector';
 import { CustomButton } from '@/components/ui/custom-button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCart } from '@/components/providers/CartProvider';
@@ -18,8 +18,9 @@ import { ImageGallery } from '@/components/storefront/ImageGallery';
 import { TrustBadges } from '@/components/storefront/TrustBadges';
 import { RecentlyViewed, addRecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
-import { Product, ProductVariant } from '@/lib/types';
+import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useVariantSelection } from '@/hooks/useVariantSelection';
 
 function timeAgo(dateString: string): string {
   const now = new Date();
@@ -231,28 +232,37 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
   const [loading, setLoading] = useState(true);
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [galleryIndex, setGalleryIndex] = useState<number>(0);
-  const [hasUserSelectedVariant, setHasUserSelectedVariant] = useState(false);
-  const hasInitialized = useRef(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [addedState, setAddedState] = useState(false);
   const [viewingCount, setViewingCount] = useState<number | null>(null);
+
+  const {
+    matrix,
+    selectedColor,
+    selectedSize,
+    selectedVariant,
+    isValidCombo,
+    canAddToCart,
+    variantImageUrl,
+    handleColorChange,
+    handleSizeChange,
+    hasInitialized,
+  } = useVariantSelection(product?.variants || []);
 
   const { addItem } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const addToCartRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!hasInitialized.current) return;
-    if (!hasUserSelectedVariant) return;
-    if (selectedVariant?.imageUrl && product?.images) {
-      const idx = product.images.indexOf(selectedVariant.imageUrl);
+    if (!hasInitialized) return;
+    if (variantImageUrl && product?.images) {
+      const idx = product.images.indexOf(variantImageUrl);
       if (idx !== -1) {
         setGalleryIndex(idx);
       }
     }
-  }, [selectedVariant, product?.images, hasUserSelectedVariant]);
+  }, [hasInitialized, variantImageUrl, product?.images]);
 
   const loadReviews = async (productId: string, page: number) => {
     setReviewLoading(true);
@@ -337,6 +347,9 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                   ? true
                   : variant.stock_count > 0,
             imageUrl: variant.image_url || undefined,
+            image_url: variant.image_url || undefined,
+            is_active: variant.is_active,
+            stock_count: variant.stock_count,
           })) || [],
         description: rawProduct.description || '',
         shippingDays: rawProduct.shipping_estimate || rawProduct.shipping_days || '7-12 days',
@@ -349,13 +362,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       };
 
       setProduct(mappedProduct);
-      setSelectedVariant(mappedProduct.variants[0]);
-      setHasUserSelectedVariant(false);
       setGalleryIndex(0);
-      hasInitialized.current = false;
-      window.setTimeout(() => {
-        hasInitialized.current = true;
-      }, 500);
 
       setReviewPage(1);
       await loadReviews(mappedProduct.id, 1);
@@ -666,12 +673,11 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
               {product.variants.length > 0 && (
                 <div className="mb-6">
                   <VariantSelector
-                    variants={product.variants}
-                    selectedVariantId={selectedVariant?.id}
-                    onSelect={(variant) => {
-                      setSelectedVariant(variant);
-                      setHasUserSelectedVariant(true);
-                    }}
+                    matrix={matrix}
+                    selectedColor={selectedColor}
+                    selectedSize={selectedSize}
+                    onColorChange={handleColorChange}
+                    onSizeChange={handleSizeChange}
                   />
                 </div>
               )}

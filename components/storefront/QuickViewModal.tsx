@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { X, Check } from 'lucide-react';
-import { Product, ProductVariant } from '@/lib/types';
+import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { QuantityStepper } from '@/components/product/QuantityStepper';
-import { VariantSelector } from '@/components/product/VariantSelector';
+import VariantSelector from '@/components/product/VariantSelector';
 import { useCart } from '@/components/providers/CartProvider';
 import { CustomButton } from '@/components/ui/custom-button';
+import { useVariantSelection } from '@/hooks/useVariantSelection';
 
 interface QuickViewModalProps {
   product: Product;
@@ -20,10 +21,16 @@ interface QuickViewModalProps {
 export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) {
   const [mounted, setMounted] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(
-    product.variants[0]
-  );
   const [addedState, setAddedState] = useState(false);
+
+  const {
+    matrix,
+    selectedColor,
+    selectedSize,
+    selectedVariant,
+    handleColorChange,
+    handleSizeChange,
+  } = useVariantSelection(product.variants || []);
   const { addItem } = useCart();
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -152,9 +159,11 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
             {product.variants.length > 0 && (
               <div className="mb-6">
                 <VariantSelector
-                  variants={product.variants}
-                  selectedVariantId={selectedVariant?.id}
-                  onSelect={setSelectedVariant}
+                  matrix={matrix}
+                  selectedColor={selectedColor}
+                  selectedSize={selectedSize}
+                  onColorChange={handleColorChange}
+                  onSizeChange={handleSizeChange}
                 />
               </div>
             )}
