@@ -41,22 +41,26 @@ async function getAccessToken() {
   return data.data.accessToken;
 }
 
-async function registerWebhook(token, type) {
-  const res = await fetch(`${BASE_URL}/information/webhook/set`, {
+async function registerWebhooks(token) {
+  const payload = {
+    stock: { type: 'ENABLE', callbackUrls: [WEBHOOK_URL] },
+    product: { type: 'ENABLE', callbackUrls: [WEBHOOK_URL] },
+    logistics: { type: 'ENABLE', callbackUrls: [WEBHOOK_URL] },
+  };
+
+  console.log('Payload:', JSON.stringify(payload, null, 2), '\n');
+
+  const res = await fetch(`${BASE_URL}/webhook/set`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'CJ-Access-Token': token,
     },
-    body: JSON.stringify({
-      type,
-      callbackUrl: WEBHOOK_URL,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json();
-  const success = data.code === 200 || data.result === true;
-  return { type, success, message: data.message, code: data.code };
+  return data;
 }
 
 async function main() {
@@ -68,22 +72,14 @@ async function main() {
   const token = await getAccessToken();
   console.log('Authenticated successfully\n');
 
-  const types = ['STOCK', 'PRODUCT', 'LOGISTICS'];
+  console.log('Registering webhooks (stock, product, logistics)...');
+  const result = await registerWebhooks(token);
 
-  for (const type of types) {
-    // Respect CJ rate limit (1 QPS)
-    if (types.indexOf(type) > 0) {
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-
-    console.log(`Registering ${type} webhook...`);
-    const result = await registerWebhook(token, type);
-
-    if (result.success) {
-      console.log(`  ${type}: OK`);
-    } else {
-      console.error(`  ${type}: FAILED — ${result.message} (code: ${result.code})`);
-    }
+  if (result.code === 200 || result.result === true) {
+    console.log('SUCCESS — all webhooks registered');
+  } else {
+    console.error('FAILED —', result.message, `(code: ${result.code})`);
+    console.error('Full response:', JSON.stringify(result, null, 2));
   }
 
   console.log('\nDone.');
