@@ -2,6 +2,7 @@ import { orderConfirmationTemplate } from './templates/order-confirmation';
 import { abandonedCartTemplate, type AbandonedCartData } from './templates/abandoned-cart';
 import { shippingUpdateTemplate } from './templates/shipping-update';
 import { healthCheckTemplate } from './templates/health-check';
+import { stockSyncTemplate } from './templates/stock-sync';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -165,6 +166,39 @@ export async function sendHealthCheckAlert(data: HealthCheckAlertData) {
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
     subject: `MooreItems Health Check — ${data.needsAttention} issue${data.needsAttention !== 1 ? 's' : ''} need attention`,
+    html,
+  });
+}
+
+// ============================================================
+// Stock Sync Alert Email
+// ============================================================
+
+export interface StockSyncChange {
+  name: string;
+  action: 'hidden' | 'reactivated' | 'stock_updated' | 'error';
+  oldStock?: number;
+  newStock?: number;
+  error?: string;
+}
+
+export interface StockSyncAlertData {
+  totalChecked: number;
+  hidden: number;
+  reactivated: number;
+  stockUpdated: number;
+  errors: number;
+  duration: number;
+  timestamp: string;
+  changes: StockSyncChange[];
+}
+
+export async function sendStockSyncAlert(data: StockSyncAlertData) {
+  const html = stockSyncTemplate(data);
+  const totalChanges = data.hidden + data.reactivated + data.stockUpdated;
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `MooreItems Stock Sync — ${totalChanges} change${totalChanges !== 1 ? 's' : ''} detected`,
     html,
   });
 }

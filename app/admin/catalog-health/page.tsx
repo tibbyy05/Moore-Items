@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ExternalLink,
   Loader2,
+  Package,
   RefreshCw,
   Shield,
   Wrench,
@@ -39,6 +40,16 @@ interface HealthData {
     needs_attention: number;
     health_score: number;
   };
+}
+
+interface StockSyncData {
+  timestamp: string;
+  total_checked: number;
+  hidden: number;
+  reactivated: number;
+  stock_updated: number;
+  errors: number;
+  duration_seconds: number;
 }
 
 const SEVERITY_ORDER: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
@@ -74,6 +85,8 @@ export default function CatalogHealthPage() {
   const [data, setData] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [stockSyncLoading, setStockSyncLoading] = useState(false);
+  const [stockSyncData, setStockSyncData] = useState<StockSyncData | null>(null);
 
   const runCheck = async () => {
     setLoading(true);
@@ -90,6 +103,23 @@ export default function CatalogHealthPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runStockSync = async () => {
+    setStockSyncLoading(true);
+    try {
+      const res = await fetch('/api/admin/catalog/stock-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Stock sync failed');
+      const result = await res.json();
+      setStockSyncData(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStockSyncLoading(false);
     }
   };
 
@@ -120,24 +150,78 @@ export default function CatalogHealthPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={runCheck}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-4 h-4" />
-              Run Health Check
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={runStockSync}
+            disabled={stockSyncLoading || loading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1a1a2e] hover:bg-[#2a2a3e] text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+          >
+            {stockSyncLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Syncing Stock...
+              </>
+            ) : (
+              <>
+                <Package className="w-4 h-4" />
+                Sync CJ Stock
+              </>
+            )}
+          </button>
+          <button
+            onClick={runCheck}
+            disabled={loading || stockSyncLoading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold-500 hover:bg-gold-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Run Health Check
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Stock sync result banner */}
+      {stockSyncData && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Package className="w-5 h-5 text-gold-500" />
+            <h3 className="text-sm font-semibold text-[#1a1a2e]">Stock Sync Complete</h3>
+            <span className="text-xs text-gray-400 ml-auto">
+              {new Date(stockSyncData.timestamp).toLocaleString()} &middot; {stockSyncData.duration_seconds}s
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-[#1a1a2e]">{stockSyncData.total_checked}</p>
+              <p className="text-xs text-gray-500">Checked</p>
+            </div>
+            <div className="bg-red-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-red-600">{stockSyncData.hidden}</p>
+              <p className="text-xs text-gray-500">Hidden</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-green-600">{stockSyncData.reactivated}</p>
+              <p className="text-xs text-gray-500">Reactivated</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-blue-600">{stockSyncData.stock_updated}</p>
+              <p className="text-xs text-gray-500">Updated</p>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-amber-600">{stockSyncData.errors}</p>
+              <p className="text-xs text-gray-500">Errors</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Empty state */}
       {!data && !loading && (
