@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
+  console.log('[cj-webhook] Raw body:', JSON.stringify(payload));
   console.log('[cj-webhook] Received:', payload.type, '— params count:', payload.params?.length ?? 0);
 
   // Respond immediately, process in background
@@ -40,8 +41,10 @@ async function processWebhook(payload: CJWebhookPayload) {
   }
 }
 
-async function handleStockUpdate(params: any[]) {
-  if (!params || params.length === 0) {
+async function handleStockUpdate(params: any) {
+  console.log('[cj-webhook] params type:', typeof params, 'value:', JSON.stringify(params));
+
+  if (!params) {
     console.log('[cj-webhook] STOCK event with empty params, skipping');
     return;
   }
@@ -51,18 +54,46 @@ async function handleStockUpdate(params: any[]) {
   // Extract US warehouse stock entries grouped by VID
   const stockByVid = new Map<string, number>();
 
-  for (const entry of params) {
-    const vid = entry.vid as string;
-    if (!vid) continue;
+  try {
+    // Normalize params — could be an array of entries or an object keyed by VID
+    let entries: any[] = [];
 
-    // Only count US warehouse stock
-    if (entry.countryCode === 'US') {
-      const current = stockByVid.get(vid) ?? 0;
-      stockByVid.set(vid, current + (entry.storageNum ?? 0));
-    } else if (!stockByVid.has(vid)) {
-      // Ensure VID exists in map even if non-US (so we can still update it to 0 if no US entries)
-      stockByVid.set(vid, 0);
+    if (Array.isArray(params)) {
+      // Flat array of stock entries
+      entries = params;
+    } else if (typeof params === 'object') {
+      // Object keyed by VID, values are entries or arrays of entries
+      for (const key of Object.keys(params)) {
+        const val = params[key];
+        if (Array.isArray(val)) {
+          entries.push(...val);
+        } else if (val && typeof val === 'object') {
+          entries.push(val);
+        }
+      }
     }
+
+    if (entries.length === 0) {
+      console.log('[cj-webhook] No stock entries found in params');
+      return;
+    }
+
+    for (const entry of entries) {
+      const vid = entry.vid as string;
+      if (!vid) continue;
+
+      // Only count US warehouse stock
+      if (entry.countryCode === 'US') {
+        const current = stockByVid.get(vid) ?? 0;
+        stockByVid.set(vid, current + (entry.storageNum ?? 0));
+      } else if (!stockByVid.has(vid)) {
+        // Ensure VID exists in map even if non-US (so we can still update it to 0 if no US entries)
+        stockByVid.set(vid, 0);
+      }
+    }
+  } catch (err: any) {
+    console.error('[cj-webhook] Failed to parse params:', err?.message, '— raw:', JSON.stringify(params));
+    return;
   }
 
   if (stockByVid.size === 0) {
