@@ -87,6 +87,7 @@ export function ProductJsonLd(props: ProductJsonLdProps) {
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',
       seller: { '@type': 'Organization', name: SITE_NAME },
+      priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     },
   };
 
