@@ -122,10 +122,12 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs, 
       setIsFetchingMore(false);
       fetchingRef.current = false;
       return true;
-    } else if (replace) {
-      setCategoryProducts([]);
-      setTotalProducts(0);
-      setTotalPages(1);
+    } else {
+      if (replace) {
+        setCategoryProducts([]);
+        setTotalProducts(0);
+        setTotalPages(1);
+      }
       setHasMore(false);
     }
 
@@ -652,7 +654,7 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs, 
                   <ProductGrid products={filteredAndSortedProducts} columns={3} />
                   <div ref={sentinelRef} className="h-1" />
                   {isFetchingMore && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 py-6">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 py-6">
                       {Array.from({ length: 8 }).map((_, index) => (
                         <div
                           key={`skeleton-${index}`}
