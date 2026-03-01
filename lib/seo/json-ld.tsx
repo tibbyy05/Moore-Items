@@ -88,6 +88,41 @@ export function ProductJsonLd(props: ProductJsonLdProps) {
         : 'https://schema.org/OutOfStock',
       seller: { '@type': 'Organization', name: SITE_NAME },
       priceValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      hasMerchantReturnPolicy: {
+        '@type': 'MerchantReturnPolicy',
+        applicableCountry: 'US',
+        returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+        merchantReturnDays: 30,
+        returnMethod: 'https://schema.org/ReturnByMail',
+        returnFees: 'https://schema.org/ReturnFeesCustomerResponsibility',
+      },
+      shippingDetails: {
+        '@type': 'OfferShippingDetails',
+        shippingRate: {
+          '@type': 'MonetaryAmount',
+          value: '4.99',
+          currency: 'USD',
+        },
+        shippingDestination: {
+          '@type': 'DefinedRegion',
+          addressCountry: 'US',
+        },
+        deliveryTime: {
+          '@type': 'ShippingDeliveryTime',
+          handlingTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 1,
+            maxValue: 2,
+            unitCode: 'DAY',
+          },
+          transitTime: {
+            '@type': 'QuantitativeValue',
+            minValue: 3,
+            maxValue: 7,
+            unitCode: 'DAY',
+          },
+        },
+      },
     },
   };
 
