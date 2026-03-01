@@ -5,7 +5,8 @@
       "WebFetch(domain:www.mooreitems.com)",
       "Bash(npx next:*)",
       "Bash(git:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

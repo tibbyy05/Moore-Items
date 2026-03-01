@@ -5,13 +5,7 @@ export const runtime = 'nodejs';
 
 interface CJWebhookPayload {
   type: string;
-  params: any[];
-}
-
-interface CJStockEntry {
-  vid: string;
-  storageNum: number;
-  countryCode: string;
+  params: any;
 }
 
 export async function POST(request: NextRequest) {
@@ -23,7 +17,14 @@ export async function POST(request: NextRequest) {
   }
 
   console.log('[cj-webhook] Raw body:', JSON.stringify(payload));
-  console.log('[cj-webhook] Received:', payload.type, '— params count:', payload.params?.length ?? 0);
+
+  const params = payload.params;
+  const paramsInfo = Array.isArray(params)
+    ? `array(${params.length})`
+    : params && typeof params === 'object'
+      ? `object(${Object.keys(params).length} keys)`
+      : typeof params;
+  console.log('[cj-webhook] Received:', payload.type, '— params:', paramsInfo);
 
   // Respond immediately, process in background
   const promise = processWebhook(payload);
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest) {
 async function processWebhook(payload: CJWebhookPayload) {
   if (payload.type === 'STOCK') {
     await handleStockUpdate(payload.params);
+  } else if (payload.type === 'VARIANT') {
+    await handleVariantUpdate(payload.params);
   } else {
     console.log('[cj-webhook] Unhandled webhook type:', payload.type);
   }
@@ -149,6 +152,104 @@ async function handleStockUpdate(params: any) {
   const productIds = Array.from(affectedProductIds);
   for (const productId of productIds) {
     await reconcileProductStatus(supabase, productId);
+  }
+}
+
+async function handleVariantUpdate(params: any) {
+  console.log('[cj-webhook] VARIANT params type:', typeof params, 'value:', JSON.stringify(params));
+
+  if (!params || typeof params !== 'object') {
+    console.log('[cj-webhook] VARIANT event with invalid params, skipping');
+    return;
+  }
+
+  const vid = params.vid as string;
+  if (!vid) {
+    console.log('[cj-webhook] VARIANT event missing vid, skipping');
+    return;
+  }
+
+  const supabase = createAdminClient();
+
+  // Match vid to our variant
+  const { data: variant, error: fetchError } = await supabase
+    .from('mi_product_variants')
+    .select('id, cj_vid, product_id, stock_count, is_active, name')
+    .eq('cj_vid', vid)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error('[cj-webhook] VARIANT fetch error:', fetchError.message);
+    return;
+  }
+
+  if (!variant) {
+    console.log('[cj-webhook] VARIANT no match for vid:', vid);
+    return;
+  }
+
+  const isActive = params.variantStatus === 1 || params.variantStatus === '1';
+  console.log('[cj-webhook] VARIANT matched:', variant.name, '(vid:', vid, ') — variantStatus:', params.variantStatus, '→', isActive ? 'active' : 'delisted');
+
+  if (!isActive) {
+    // Delisted or missing status → deactivate variant and zero stock
+    const { error: updateError } = await supabase
+      .from('mi_product_variants')
+      .update({ is_active: false, stock_count: 0 })
+      .eq('id', variant.id);
+
+    if (updateError) {
+      console.error('[cj-webhook] VARIANT update failed:', updateError.message);
+      return;
+    }
+
+    console.log('[cj-webhook] VARIANT deactivated:', variant.name);
+
+    // Check if ALL variants of parent product are now inactive/zero
+    const { data: siblings } = await supabase
+      .from('mi_product_variants')
+      .select('is_active, stock_count')
+      .eq('product_id', variant.product_id);
+
+    const allDead = !siblings || siblings.length === 0 ||
+      siblings.every((v) => !v.is_active || (v.stock_count ?? 0) === 0);
+
+    if (allDead) {
+      const { data: product } = await supabase
+        .from('mi_products')
+        .select('id, name, status, category_id')
+        .eq('id', variant.product_id)
+        .single();
+
+      if (product && product.status === 'active') {
+        await supabase
+          .from('mi_products')
+          .update({ status: 'out_of_stock' })
+          .eq('id', product.id);
+
+        console.log('[cj-webhook] Product marked out_of_stock (all variants dead):', product.name);
+
+        if (product.category_id) {
+          await updateCategoryCount(supabase, product.category_id);
+        }
+      }
+    }
+  } else {
+    // Re-activated variant
+    const { error: updateError } = await supabase
+      .from('mi_product_variants')
+      .update({ is_active: true })
+      .eq('id', variant.id);
+
+    if (updateError) {
+      console.error('[cj-webhook] VARIANT reactivate failed:', updateError.message);
+      return;
+    }
+
+    console.log('[cj-webhook] VARIANT reactivated:', variant.name);
+
+    // If parent product was out_of_stock, bring it back
+    await reconcileProductStatus(supabase, variant.product_id);
   }
 }
 
