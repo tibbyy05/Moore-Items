@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FaInstagram, FaFacebookF, FaTiktok, FaLinkedin } from 'react-icons/fa';
+import { FaInstagram, FaFacebookF, FaTiktok, FaLinkedin, FaCcVisa, FaCcMastercard, FaCcAmex, FaCcDiscover, FaCcApplePay, FaGooglePay } from 'react-icons/fa';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCategories } from '@/components/providers/CategoriesProvider';
 
@@ -205,15 +205,16 @@ export function Footer() {
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col items-center text-center gap-4">
           <p className="text-sm text-warm-100/70">© 2026 MooreItems. All rights reserved.</p>
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            {['Visa', 'Mastercard', 'Amex', 'Apple Pay'].map((label) => (
-              <span
-                key={label}
-                className="px-3 py-1 rounded-md border border-white/15 text-xs text-warm-100/70 bg-white/5"
-              >
-                {label}
-              </span>
-            ))}
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-xs text-warm-100/50 uppercase tracking-wider">We Accept</span>
+            <div className="flex items-center gap-3 flex-wrap justify-center text-white/80">
+              <FaCcVisa size={42} />
+              <FaCcMastercard size={42} />
+              <FaCcAmex size={42} />
+              <FaCcDiscover size={42} />
+              <FaCcApplePay size={42} />
+              <FaGooglePay size={42} />
+            </div>
           </div>
           <span className="text-xs text-warm-500 mt-4">
             Powered by{' '}
