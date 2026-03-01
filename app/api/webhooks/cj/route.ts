@@ -26,22 +26,20 @@ export async function POST(request: NextRequest) {
       : typeof params;
   console.log('[cj-webhook] Received:', payload.type, '— params:', paramsInfo);
 
-  // Respond immediately, process in background
-  const promise = processWebhook(payload);
-  // waitUntil not available in pages router — use catch to avoid unhandled rejection
-  promise.catch((err) => console.error('[cj-webhook] Background processing failed:', err));
+  // Process synchronously before responding — Netlify kills the function after response
+  try {
+    if (payload.type === 'STOCK') {
+      await handleStockUpdate(payload.params);
+    } else if (payload.type === 'VARIANT') {
+      await handleVariantUpdate(payload.params);
+    } else {
+      console.log('[cj-webhook] Unhandled webhook type:', payload.type);
+    }
+  } catch (err: any) {
+    console.error('[cj-webhook] Processing failed:', err?.message);
+  }
 
   return NextResponse.json({ received: true });
-}
-
-async function processWebhook(payload: CJWebhookPayload) {
-  if (payload.type === 'STOCK') {
-    await handleStockUpdate(payload.params);
-  } else if (payload.type === 'VARIANT') {
-    await handleVariantUpdate(payload.params);
-  } else {
-    console.log('[cj-webhook] Unhandled webhook type:', payload.type);
-  }
 }
 
 async function handleStockUpdate(params: any) {
