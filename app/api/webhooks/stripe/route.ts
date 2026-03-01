@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { fulfillCJOrder } from '@/lib/cj/fulfill-order';
-import { sendAbandonedCart, sendOrderConfirmation } from '@/lib/email/sendgrid';
+import { sendAbandonedCart, sendOrderConfirmation, sendNewOrderAdminNotification } from '@/lib/email/sendgrid';
 import { generateDownloadToken } from '@/lib/download-token';
 
 export const runtime = 'nodejs';
@@ -165,6 +165,25 @@ export async function POST(request: NextRequest) {
                 .eq('id', orderId);
 
               console.log(`[Webhook] Order confirmation email sent for #${order.order_number}`);
+
+              // ---- ADMIN NOTIFICATION (fire-and-forget) ----
+              try {
+                sendNewOrderAdminNotification({
+                  orderNumber: order.order_number,
+                  customerName,
+                  customerEmail,
+                  items: (orderItems || []).map(item => ({
+                    name: item.product_name,
+                    quantity: item.quantity,
+                    price: item.unit_price,
+                    variant_info: item.variant_info || undefined,
+                  })),
+                  total: order.total || (session.amount_total || 0) / 100,
+                  timestamp: new Date().toISOString(),
+                }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
+              } catch (adminEmailError) {
+                console.error('[Webhook] Admin order notification failed:', adminEmailError);
+              }
             }
           }
         } catch (emailError) {

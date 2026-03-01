@@ -3,6 +3,7 @@ import { abandonedCartTemplate, type AbandonedCartData } from './templates/aband
 import { shippingUpdateTemplate } from './templates/shipping-update';
 import { healthCheckTemplate } from './templates/health-check';
 import { stockSyncTemplate } from './templates/stock-sync';
+import { newOrderAdminTemplate, type AdminOrderNotificationData } from './templates/new-order-admin';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -199,6 +200,21 @@ export async function sendStockSyncAlert(data: StockSyncAlertData) {
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
     subject: `MooreItems Stock Sync — ${totalChanges} change${totalChanges !== 1 ? 's' : ''} detected`,
+    html,
+  });
+}
+
+// ============================================================
+// New Order Admin Notification Email
+// ============================================================
+
+export type { AdminOrderNotificationData };
+
+export async function sendNewOrderAdminNotification(data: AdminOrderNotificationData) {
+  const html = newOrderAdminTemplate(data);
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `New Order #${data.orderNumber} — ${data.customerName} ($${data.total.toFixed(2)})`,
     html,
   });
 }
