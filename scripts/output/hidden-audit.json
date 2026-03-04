@@ -1,0 +1,2380 @@
+{
+  "timestamp": "2026-03-01T21:34:26.849Z",
+  "total_hidden": 369,
+  "api_cost": "$0.1571",
+  "summary": {
+    "A_junk_stay_hidden": 161,
+    "B_legitimate_reactivate": 172,
+    "C_unclear": 11,
+    "duplicates_of_active": 25
+  },
+  "duplicates": [
+    {
+      "id": "dcb2560f-20d5-438d-aff7-5dc26125f07f",
+      "name": "Beach Lounge Chair",
+      "category": "home-furniture"
+    },
+    {
+      "id": "4188c174-ef40-4822-89fa-83b698021dc3",
+      "name": "Bookshelf,Storage Rack,Multifunctional Rack",
+      "category": "storage-organization"
+    },
+    {
+      "id": "8298cbed-2340-4e7c-9fcf-e0bf6e05dea0",
+      "name": "Chenille Curved Modular Sectional Sofa With 4 Pillows",
+      "category": "home-furniture"
+    },
+    {
+      "id": "8163d13d-e79b-4e4d-8032-c02b14b6c921",
+      "name": "Chenille Curved Modular Sectional Sofa With 4 Pillows",
+      "category": "home-furniture"
+    },
+    {
+      "id": "dc83883a-e35e-418a-aaf1-73e59ae211e0",
+      "name": "Chenille Curved Sectional Sofa with 2 Pillows",
+      "category": "home-furniture"
+    },
+    {
+      "id": "34482bb1-9997-4d02-b16c-fdeb6f091253",
+      "name": "Chenille Curved Sectional Sofa With 2 Pillows",
+      "category": "home-furniture"
+    },
+    {
+      "id": "08a1158d-9b7e-4b14-8c01-0cd01f1cabd0",
+      "name": "Dressing Table Set",
+      "category": "home-furniture"
+    },
+    {
+      "id": "491b247d-2348-4706-86ed-ea30b1136198",
+      "name": "Indoor Lounge Chairs",
+      "category": "home-furniture"
+    },
+    {
+      "id": "1c211f14-2b83-4440-80fd-4a744232c88d",
+      "name": "Indoor Lounge Chairs",
+      "category": "home-furniture"
+    },
+    {
+      "id": "2b2d360c-471f-48c2-b4a8-1bb6b412ee82",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "c1b03bf8-b8a3-47dc-a3e2-85df4c7ec13e",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "da9b95e1-fc56-4b4d-92f1-d2d20274fa10",
+      "name": "Long Console Table",
+      "category": "electronics"
+    },
+    {
+      "id": "e1335648-ed7c-4044-9c4c-dd769fba7c4d",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "200641b2-2c7a-49f3-ad36-0dec6ffcf912",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "36272153-3f67-47ce-8ef3-7382a04033c9",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "4de2c60a-e651-4885-bf96-345fb8ed7637",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "fa0d8f0f-85a1-45bf-b271-8b1d1545e30c",
+      "name": "Long Console Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "3e6fe88e-de5f-46ba-962f-9597246cbafa",
+      "name": "Long Console Table Living Room Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "134da8b6-9807-4b9a-832b-8005d39f30bf",
+      "name": "Long Console Table Living Room Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "1c844d48-d536-4914-bcec-89dcdeb8e6b6",
+      "name": "Long Console Table Living Room Table",
+      "category": "home-furniture"
+    },
+    {
+      "id": "e5fec21c-de5a-4172-a8e3-9c6704cd0ac7",
+      "name": "Outdoor Garden Storage Shed Tool House",
+      "category": "garden-outdoor"
+    },
+    {
+      "id": "4557a229-7d90-4896-a8d7-0cf917f9c82b",
+      "name": "Stainless Steel Dog Grooming Bath Tub with Ramp",
+      "category": "pet-supplies"
+    },
+    {
+      "id": "ff95e1d5-7594-42ce-908b-76edc2c0a3b2",
+      "name": "Summer New Short-sleeved Printed Fake Two-piece T-shirt V-neck Fashion Spike Top",
+      "category": "fashion"
+    },
+    {
+      "id": "d33565da-6778-4717-8d01-a9f5a0ddd2a0",
+      "name": "Summer New Short-sleeved Printed Fake Two-piece T-shirt V-neck Fashion Spike Top",
+      "category": "fashion"
+    },
+    {
+      "id": "3c5103a9-2587-4d6d-b465-96b36314d032",
+      "name": "Summer New Short-sleeved Printed Fake Two-piece T-shirt V-neck Fashion Spike Top",
+      "category": "fashion"
+    }
+  ],
+  "legitimate": [
+    {
+      "id": "e2b5b5ec-eb68-4874-86f8-d85c68d71fb0",
+      "name": "0.59 In. T X 47.64 In. L X 6.5 In. W Tongue And Groove Engineered Hardwood Flooring-Prohibited From Being Sold On Wayfair And Amazon Platforms",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate flooring material for home use with good engagement (12 images, 14 reviews)"
+    },
+    {
+      "id": "3bf2fadb-fb46-4345-9d37-fc502f969c91",
+      "name": "03 Ottoman White",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Standard furniture item with strong reviews (17), correctly categorized"
+    },
+    {
+      "id": "eb91e927-6568-412a-b395-548f64f22c1d",
+      "name": "100 Tiles Peel And Stick Backsplash 3 In. X 5.9 In. X 0.12 In. PVC Subway Wall Tile, White ,12 Sq. Ft.Case--Prohibited From Being Sold On Wayfair And Amazon Platforms",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Consumer home improvement product for DIY backsplash with good metrics (6 images, 24 reviews)"
+    },
+    {
+      "id": "2b78ea22-8f98-4ba1-a6d4-d71dc8920ae6",
+      "name": "10x20ft Blue 6-sided Low-end Cooling Shed Iron PE Cloth",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Portable outdoor shed/canopy for consumer use with extensive photos (24 images, 12 reviews)"
+    },
+    {
+      "id": "007493af-55b3-40d4-98b3-15330170b4a9",
+      "name": "12Mil 6 In. X 36 In. Uv Surface Flooring Tile, Peel And Stick Water Resistant Flooring--Prohibited From Being Sold On Wayfair And Amazon Platforms",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "DIY flooring tiles for home use, legitimate consumer product with 25 reviews"
+    },
+    {
+      "id": "3a3eeb08-77f2-4306-a1e5-4f6040004b4c",
+      "name": "16FT RV Awning",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Consumer outdoor/RV product, legitimate accessory with good engagement (9 images, 11 reviews)"
+    },
+    {
+      "id": "a6dd0eff-db13-4e2e-a97f-5f9fd59bd422",
+      "name": "1Dreamy Water Drop - A Diamond Jewelry Necklace Pendant Set With 1-carat",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry pendant with pricing and reviews"
+    },
+    {
+      "id": "f805ef6f-1eb3-4882-a538-b706ec77565c",
+      "name": "1Dynamic - A And Jewelry Necklace Pendant Set With 1-carat Moissanite S925",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry item with strong reviews (24)"
+    },
+    {
+      "id": "4efbe8b7-319b-440d-9ae0-a717b1093837",
+      "name": "1Empowering The Future - , And Jewelry With Moissanite S925 Sterling Silver",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry with solid reviews (18)"
+    },
+    {
+      "id": "fe20342e-f7b4-4ed8-8b96-1d979c39d4d4",
+      "name": "1Heart To Have Your Luxurious Fashion Diamond Pendant Necklace Set With",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry pendant with good reviews (19)"
+    },
+    {
+      "id": "994582b4-06ec-4087-aefd-662b29e3b6eb",
+      "name": "1Hug Your Lover With A Large Diamond Ring Luxury Fashion Set With",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate ring jewelry with multiple images (6) and reviews (13)"
+    },
+    {
+      "id": "1c817d85-6020-4f02-aa1a-491cbed69b92",
+      "name": "1Return To Simplicity - , And Jewelry Set With Moissanite S925 Sterling",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry set with reviews (7)"
+    },
+    {
+      "id": "8ae388ab-7907-4847-a22c-80b2383538a3",
+      "name": "1Stars Overlapping - A Diamond Jewelry Pendant Set With 50-point Moissanite",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry pendant with reviews (9)"
+    },
+    {
+      "id": "93d70556-a287-4884-9060-b3302061ea29",
+      "name": "1The Light Of Faith Luxury Fashion Mossan Diamond S925 Silver Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry bracelet with good reviews (18)"
+    },
+    {
+      "id": "0c2a345b-9c4d-4cbc-9df1-3d23b8455c91",
+      "name": "1The Love Of Your Life Diamond Ring, Wedding Ring, Luxury Fashion Set With",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate ring jewelry with multiple images (6) and reviews (11)"
+    },
+    {
+      "id": "ff8f6a8f-b3a5-45b1-b0bb-a57d9e36fd65",
+      "name": "1Wish Diamond Ring Luxury Fashion Set Moissanite Silver Ring Prohibit Tk Sales",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate ring jewelry with multiple images (6) and reviews (8)"
+    },
+    {
+      "id": "b416ad52-6f19-44c9-b22d-439bd3969ea0",
+      "name": "1Wish Light - A And Diamond Jewelry Necklace Pendant Set With Pear-shaped",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry pendant with reviews (9)"
+    },
+    {
+      "id": "971d3894-0901-461f-8e3d-3a93a9f65235",
+      "name": "1With You In My Heart - A And Jewelry Necklace Pendant Set With 0.5-carat",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry pendant with reviews (12)"
+    },
+    {
+      "id": "533ded0d-1b5e-4825-a0ec-98467b74852e",
+      "name": "1Years - Earrings And Stud Jewelry Set With Moissanite S925 Sterling Silver",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry earrings with excellent reviews (34)"
+    },
+    {
+      "id": "35229f38-4a09-4c29-a8fd-23235c2dea1b",
+      "name": "2350W Variable Frequency Gasoline Generator",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate consumer tool/equipment for home or outdoor use with strong reviews (31)"
+    },
+    {
+      "id": "13ac8c19-f05c-40e8-9f7c-30d7fa26c46d",
+      "name": "27.56-inch Glass Door Modern Double Door Cabinet, Prohibited Platform Temu",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Storage cabinet for home use with strong metrics (12 images, 25 reviews)"
+    },
+    {
+      "id": "7458916d-226d-4699-99eb-72ee1911d74f",
+      "name": "3-piece Wooden Folding Breakfast Corner Dining Table Set, Prohibited From",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate dining furniture set with strong metrics (6 images, 30 reviews)"
+    },
+    {
+      "id": "5ce002a0-70e2-4098-b312-056faf363039",
+      "name": "4 Mil Peel And Stick Flooring Tile, Water Resistant",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "DIY flooring tiles for consumer home use with decent engagement (8 images, 6 reviews)"
+    },
+    {
+      "id": "4b08e6af-08cc-47be-a4d0-b95591847548",
+      "name": "55.12 Inch Spacious Cat House With Tempered Glass, Prohibited Platform Temu",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet furniture - large cat house with reviews (14)"
+    },
+    {
+      "id": "d78d598a-29de-4b9e-b8f4-0d887adab93f",
+      "name": "5ct Moissanite Engagement Rings For Women, 11MM Center Stone, D Color VVS1",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry engagement ring with reviews (13)"
+    },
+    {
+      "id": "c487be12-dbf9-4401-8a9d-4049d7508412",
+      "name": "5tiers Of Wall Shelves",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate storage shelving for home use with strong engagement (7 images, 26 reviews)"
+    },
+    {
+      "id": "94900853-ef5e-42a7-9414-cd87256e3e7d",
+      "name": "63x65x82cm, Lemon Pattern, Aluminum, Beach Chair, Oxford Cloth",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Consumer beach/patio furniture with good reviews (25)"
+    },
+    {
+      "id": "069e6848-89b9-420e-8d37-decb885d68fc",
+      "name": "63x70x99cm, Lemon Pattern, Aluminum, Beach Chair, Oxford Cloth",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Consumer beach chair with multiple images (12) and decent reviews (8)"
+    },
+    {
+      "id": "ab7cc892-e29b-46a6-9864-a63b838a1d2f",
+      "name": "6Doors Metal Storage Locker With Card Slot,Metal Locker For Employees With",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Storage locker for home/office use with decent engagement (8 images, 12 reviews)"
+    },
+    {
+      "id": "4f9703c2-a69f-45c6-9c6b-2e90436fd86e",
+      "name": "80x40x104cm, Liftable, Computer Desk",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate home furniture desk with excellent reviews (32)"
+    },
+    {
+      "id": "dc92e1c2-d6d2-4180-b72f-d64dce489617",
+      "name": "Ah Car Jump Starter Power Supply With Dual USB Fast Charging And Red",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Car jump starter/power bank - legitimate consumer electronics"
+    },
+    {
+      "id": "88963885-1c51-42d4-ae2d-71ec3258400c",
+      "name": "Air Purifier A1 Replacement Filter-Prohibited Sales Platforms- Amazon",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Air purifier replacement filter - legitimate consumer product"
+    },
+    {
+      "id": "e893580b-9614-473e-8ad8-819bcf8c8de7",
+      "name": "Air Tool And Accessories Kit, Impact Wrench, Air Ratchet, Die",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Air tools and accessories - legitimate tools for consumer/professional use"
+    },
+    {
+      "id": "9ebbd1f2-a192-4eaf-81b8-a4518775a23c",
+      "name": "AppleVinegar Soft Candy",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Dietary supplement candy - legitimate consumer health product"
+    },
+    {
+      "id": "ba4dac78-6806-4a9e-9bff-a47cab8798cd",
+      "name": "Aroma Filter",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Air diffuser/aroma filter - legitimate consumer home product"
+    },
+    {
+      "id": "ce177819-7e2b-4c0f-9df9-50bd21739a5e",
+      "name": "Backpack",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Clothing/fashion accessory - legitimate consumer product"
+    },
+    {
+      "id": "a3e8fca3-20eb-4754-9449-d2772430ac8f",
+      "name": "Bar Cart",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Home furniture - legitimate consumer product"
+    },
+    {
+      "id": "ee0fe425-9634-4460-9154-1f79706363ae",
+      "name": "Bar Table",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Home furniture - legitimate consumer product"
+    },
+    {
+      "id": "d459349b-c8b5-4de3-a729-4a5399e8fe98",
+      "name": "Bathroom Sink Drain Has No Overflow Hole, And The Basin And Washbasin",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Bathroom fixture/sink - legitimate consumer product"
+    },
+    {
+      "id": "b6b1f69d-9091-4f65-9f94-524fac2ab46b",
+      "name": "Blind Box",
+      "verdict": "B",
+      "suggested_category": "kids-toys",
+      "reason": "Collectible mystery/blind box toy - legitimate consumer product"
+    },
+    {
+      "id": "0053431c-5978-4065-908c-5061e962e738",
+      "name": "Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Jewelry - legitimate consumer product"
+    },
+    {
+      "id": "a44f0504-2c82-4193-8550-2e4b613021e9",
+      "name": "Brown Tongue and Groove Engineered Flooring",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Flooring material - legitimate consumer home product"
+    },
+    {
+      "id": "24383fb9-431e-4391-85b9-d0566c40a6ee",
+      "name": "Bulletin Board Border 65.6 Feet Rolled Scalloped Border Trim For School Black",
+      "verdict": "B",
+      "suggested_category": "kids-toys",
+      "reason": "School/classroom decoration supplies - legitimate consumer product"
+    },
+    {
+      "id": "0d1684b2-e6ba-463a-ba3d-694d3a56ff33",
+      "name": "Butter Soft Capsules",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Dietary supplement - legitimate health/wellness product"
+    },
+    {
+      "id": "2bdb7563-3897-4d82-aef7-88f27e5b4ff3",
+      "name": "Cake Tray",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Baking/kitchen tool - legitimate consumer product"
+    },
+    {
+      "id": "3b13613c-0704-4abb-9e63-a5d872915eca",
+      "name": "Camping Down Socks Kamperbox Sleeping Bag Down Boots - Prohibited Sales",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Camping clothing/gear - legitimate consumer product"
+    },
+    {
+      "id": "a03873ef-5cec-43b1-9758-25de842bd04e",
+      "name": "Car and motorcycle bicycle reflective stickers mountain bike luminous",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Reflective stickers for bikes/vehicles - legitimate consumer product"
+    },
+    {
+      "id": "c997592d-0a1a-4752-8c43-a1b3b0ed8c0d",
+      "name": "Car Bracket With Adjustable Strength Suction Cup",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Phone/device car mount - legitimate consumer accessory"
+    },
+    {
+      "id": "964c4161-cccd-4c3d-8314-8781ccdc0b98",
+      "name": "Car Diamond Crystal Wax Black Wax Coating Waxing Polishing Sewage Crystal",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Car wax/polish - legitimate consumer auto care product"
+    },
+    {
+      "id": "2d5dd25e-9990-4caf-b024-8e0b7c71a91f",
+      "name": "Car HUD HD Head-up Display",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Car dashboard accessory/HUD display - legitimate consumer product"
+    },
+    {
+      "id": "dfa3432e-ba96-4cca-9b79-fff8f204dfa0",
+      "name": "Car Inflatable Bed",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Inflatable travel bed for vehicles - legitimate consumer product"
+    },
+    {
+      "id": "5fa29429-a247-479e-8113-cf619aacbed9",
+      "name": "Car Seat Storage Organizer & Handbag Holder",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Car organizer/storage - legitimate consumer product"
+    },
+    {
+      "id": "6633a827-94a5-46b1-ae6c-132e569c05b2",
+      "name": "Car Vacuum Cleaner Wireless 5000Pa Handheld Mini Vaccum Cleaner For Car",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Portable vacuum cleaner - legitimate consumer electronics"
+    },
+    {
+      "id": "375b3549-e25a-471d-b23e-0490eb45a15b",
+      "name": "Cat Enclosure",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Pet furniture/enclosure - legitimate pet product"
+    },
+    {
+      "id": "83be1383-d969-4294-a253-4bf5ca9de1c6",
+      "name": "Cat Tunnel",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Pet toy/furniture - legitimate pet product"
+    },
+    {
+      "id": "16273c12-95d4-42d0-ab1e-e7f23933f860",
+      "name": "Chain",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Jewelry chain - legitimate consumer product"
+    },
+    {
+      "id": "86a4d91a-9c27-4251-8563-f47d2829e012",
+      "name": "Chenille Curved Sectional Sofa With 2 Pillows,Curved Symmetrical Modular",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "16ff7f19-8bd9-4b8b-a023-2ce47ff2d875",
+      "name": "Chenille Curved Sectional Sofa with 4 Pillows",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "73ebbbf1-aea7-4897-a439-c3a9e87dfb6e",
+      "name": "Chenille Curved Sectional Sofa With 4 Pillows",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "29f8663c-4aed-4669-9396-2e8ee5fc2fd6",
+      "name": "Chenille Curved Sectional Sofa With 4 Pillows,Curved Symmetrical Modular",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "5bf91c66-c0fa-47f3-8f60-f6998dbd98c8",
+      "name": "Chenille Curved Sectional Sofa with 4 Seats",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "95bbbc30-8937-4e54-9b6a-4dd214d5d706",
+      "name": "Chenille Sectional Sofa with 2 Pillows",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Sofa/furniture - legitimate consumer product"
+    },
+    {
+      "id": "a29c052d-3fb9-4d76-988a-64d41b777537",
+      "name": "Chenille Sectional Sofa With 2 Pillows",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with good reviews and multiple images"
+    },
+    {
+      "id": "3041c310-3f2d-448a-bbbe-5a059bdba3d8",
+      "name": "Chenille Sectional Sofa With 2 Pillows",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with strong review count"
+    },
+    {
+      "id": "58269939-b36b-439e-93e8-54755ae639f8",
+      "name": "Chenille Sectional Sofa With 2 Pillows,Symmetrical Modular Sofa Sectional",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with multiple images and strong reviews"
+    },
+    {
+      "id": "f688c992-edad-4be7-97f0-774ec1a03afb",
+      "name": "Chicken Coop",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate outdoor/garden structure for keeping backyard chickens"
+    },
+    {
+      "id": "2c77ac6b-75fb-45c1-ba74-d3f316d6cd11",
+      "name": "Chicken Coop",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate outdoor/garden structure for keeping backyard chickens"
+    },
+    {
+      "id": "0bfff80f-33c1-4be6-9c53-85515a5e2539",
+      "name": "Christmas Tree",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate seasonal home decoration item"
+    },
+    {
+      "id": "b2a23669-5766-4a27-9328-697fbf51455d",
+      "name": "Club Chair",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with many images and good reviews"
+    },
+    {
+      "id": "7d49cde7-4240-41b7-b4df-b4a3370c1311",
+      "name": "Cocktail picks",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Legitimate kitchen/bar accessory for entertaining"
+    },
+    {
+      "id": "03a49d1f-8f9c-436f-bb01-1de0500366ee",
+      "name": "Compact Computer Cart With Storage Space, Dark Coffee Color,Prohibited",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate storage/organization furniture despite 'Prohibited' label"
+    },
+    {
+      "id": "0890ced9-144d-4e12-92ff-354eefedd550",
+      "name": "Cuban Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry item"
+    },
+    {
+      "id": "3153a60c-622d-4adc-9934-d03eecf40c49",
+      "name": "Dancing Shoes",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate footwear/fashion item"
+    },
+    {
+      "id": "dda87ae9-3f90-4d54-a905-872117deb3ad",
+      "name": "Deck Balusters, 101 Pack Metal Deck Spindles, Staircase Baluster With",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate outdoor deck/patio construction material for consumer DIY"
+    },
+    {
+      "id": "b4a0998a-5dfe-4162-b7d0-e579f0229c40",
+      "name": "Dining Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with many images and good reviews"
+    },
+    {
+      "id": "1531a3a7-0f4c-4516-83e1-52d2e8c1dadf",
+      "name": "Dog Bed",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet supply item"
+    },
+    {
+      "id": "ed05683c-1420-46c4-a324-7642dd623766",
+      "name": "Dog Ramp",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet accessory to help dogs access furniture"
+    },
+    {
+      "id": "4b92db74-769f-40f4-90cd-b2d1d27ea1aa",
+      "name": "Dog Toy Basket",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet supply storage item"
+    },
+    {
+      "id": "90701f60-6616-40f7-b3c0-79a1d9de821d",
+      "name": "Double Bed, Not Available On Weekends, Amazon Shipping, WalMart Banned",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item despite odd restrictions in name"
+    },
+    {
+      "id": "f045ee60-4d6c-4fed-a6d5-c767f6f85c22",
+      "name": "Dream Candy Gift Box",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Legitimate gift/candy packaging product for consumers"
+    },
+    {
+      "id": "93f0e560-3a45-4ce0-b401-186cb6559dc1",
+      "name": "Dress",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate clothing item"
+    },
+    {
+      "id": "60d817b7-bac1-487c-b936-998d9a54e297",
+      "name": "Electric Fence Netting, 35 H X 164inch L, PE Net Fencing With Posts &",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate outdoor fencing product for gardens and livestock"
+    },
+    {
+      "id": "bce454b4-5982-4d9f-b212-b77845a39ecb",
+      "name": "End Table",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item"
+    },
+    {
+      "id": "d221a330-1cb3-4f55-85ea-541e63978437",
+      "name": "Energy Powder",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health/wellness supplement product"
+    },
+    {
+      "id": "c12cd8bd-f02b-46f0-b5b9-cf91cbc6382c",
+      "name": "Essential Oil",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health/beauty product"
+    },
+    {
+      "id": "d5afeaab-b5c4-4c49-a238-95c8705c30e3",
+      "name": "File Cabinet",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate consumer product - storage furniture for office/home"
+    },
+    {
+      "id": "451e0ab2-0517-4793-94b6-6f35489f8b6a",
+      "name": "Folding Faucets",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Legitimate consumer product - kitchen/bathroom fixture"
+    },
+    {
+      "id": "d416471d-3740-46e6-8892-0e3dbb47b554",
+      "name": "Folk Guitar Outer Box, Made Of Hard Plywood Wrapped In PU Leather, Not",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Legitimate consumer product - musical instrument accessory/part"
+    },
+    {
+      "id": "290a5e66-717e-41b0-ac86-09f0afe665e2",
+      "name": "Gazebo With Galvanized Steel Roof Swiship-Ship Prohibited By WalMart Original",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Outdoor gazebo is legitimate consumer product"
+    },
+    {
+      "id": "b1fb62f9-18ca-4719-8a71-3d92fa17ecb6",
+      "name": "Generator Power Cord 125V/250V",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate electrical cord for consumer use"
+    },
+    {
+      "id": "e87cbdd0-2dfc-44e8-8f1b-0017ddef32df",
+      "name": "Glucosamine Chondroitin Ginger Yellow Tablets",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health supplement product"
+    },
+    {
+      "id": "fe5718b2-baf9-473d-baf5-b1b38061efb1",
+      "name": "Glutathione Hard Capsule Whitening",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health/wellness supplement"
+    },
+    {
+      "id": "63f86981-5348-4ced-99de-8b15f2653b4d",
+      "name": "Hair, Skin, Nails Supplements",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health supplement product"
+    },
+    {
+      "id": "888c8bbd-d4b7-44c6-b410-653619b7b25d",
+      "name": "Hand Grip",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Exercise/fitness hand grip device"
+    },
+    {
+      "id": "3cf0443b-69d0-4cc3-86bd-277035efbe2e",
+      "name": "Handbag",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Fashion accessory, consumer product"
+    },
+    {
+      "id": "538731e9-baf8-4c79-bc1a-d8e5c25e8a5f",
+      "name": "Handbag",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Fashion accessory, consumer product"
+    },
+    {
+      "id": "b6189a75-1d6c-44f0-88a7-5071618b247e",
+      "name": "Handheld Bag",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Fashion accessory"
+    },
+    {
+      "id": "9f4a2a56-bda8-46ae-958d-284eb327275c",
+      "name": "Ice Grid",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Kitchen/refrigerator ice tray or grid"
+    },
+    {
+      "id": "05cbc34a-9ff4-4343-a372-98a0a3ae74f8",
+      "name": "Ice Grid",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Kitchen ice tray or grid"
+    },
+    {
+      "id": "ef67292c-25f8-41eb-aab2-03d417f971bd",
+      "name": "Immune Supplement",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health supplement product"
+    },
+    {
+      "id": "7d496540-a37c-40cf-92e1-1ad543c2181d",
+      "name": "Lion Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Jewelry accessory"
+    },
+    {
+      "id": "ef7df35d-21fc-4765-9197-fc5c0932b1d1",
+      "name": "Lions Mane Mushroom Supplement Cognitive Support, Focus, Mood Boost, And",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health/wellness supplement"
+    },
+    {
+      "id": "2404cf3b-22e9-4ca2-8b69-810e0d60f02f",
+      "name": "Lutein Capsules",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health supplement product"
+    },
+    {
+      "id": "7021413b-9d4c-4810-a8b1-bdb12d51657d",
+      "name": "Magnesium Glycinate 90 Capsules",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Health supplement product"
+    },
+    {
+      "id": "59cf18c0-14d9-4ce9-838d-f27640125ad6",
+      "name": "Metal scissors",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Basic tool/household item"
+    },
+    {
+      "id": "a01327c6-34cd-431a-ad55-6d6cec31b607",
+      "name": "Mouse Trap, Galvanized Iron Mouse Control Bait Catcher, Prohibited Platform",
+      "verdict": "B",
+      "suggested_category": "pest-control",
+      "reason": "Consumer pest control product - legitimate household item"
+    },
+    {
+      "id": "df1879f1-dc1b-4d82-b8d6-fe326dfe187d",
+      "name": "Necklaces",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Jewelry accessory"
+    },
+    {
+      "id": "d803e225-3a24-4274-8989-7ca96be60c94",
+      "name": "Necklaces",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Jewelry accessory"
+    },
+    {
+      "id": "a416b776-0d03-4a40-b7f5-39c49a55a7ff",
+      "name": "New Pet Collar",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Pet accessory"
+    },
+    {
+      "id": "37944b31-483a-4979-bb95-3c0de4f6d554",
+      "name": "No Provide Self Pick-up 6X10FT Polycarbonate Greenhouse Raised Base And",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Greenhouse is legitimate garden product despite shipping notes"
+    },
+    {
+      "id": "7dd35fca-b4bf-44bb-9899-6a2774d3b3a9",
+      "name": "No. 7 Large Oil Brushes Come In A Pack Of Two. They Have The Corresponding",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Art/painting brushes are legitimate consumer product"
+    },
+    {
+      "id": "442a093b-675e-4dd2-9eb0-a261689bb090",
+      "name": "Office Desk",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item, good price and reviews"
+    },
+    {
+      "id": "40ba93b6-3175-48b4-b822-99a82fbbdb59",
+      "name": "Office Desk",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with solid reviews"
+    },
+    {
+      "id": "af23e8b6-b48d-4462-a3ec-f927fe8692c1",
+      "name": "Only Self Pickup--Brown Faux Leather Synthetic Leather 3-Piece Sofa Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa, high price reflects furniture cost"
+    },
+    {
+      "id": "bf71b634-ee86-44e5-8f48-d519c42acabc",
+      "name": "Only Self Pickup--Light Grey Fluffy Fabric Living Room Sofa",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa with many images and good reviews"
+    },
+    {
+      "id": "6dadef10-be76-4b5b-8519-0d26acacbd6c",
+      "name": "Only Self Pickup--Red Faux Leather Synthetic Leather 3-Piece Sofa Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa set"
+    },
+    {
+      "id": "a01b2f79-680b-453a-a46e-0cf018c7a506",
+      "name": "Only Self Pickup--Teal Blue Fluffy Fabric 3-Piece Living Room Sofa Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa set with good reviews"
+    },
+    {
+      "id": "0ba49b7b-f3d3-4c7e-9aea-8e5a791edc16",
+      "name": "Outdoor medicine bottle Aluminum alloy survival pills full waterproof cans",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Legitimate outdoor survival/camping container"
+    },
+    {
+      "id": "be10e9b8-4d56-498b-a8c5-6f7696b4303b",
+      "name": "Oval Chopper",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Kitchen tool/gadget for food preparation"
+    },
+    {
+      "id": "4b77f46d-380d-4b92-8b84-ad3ea8efc4b4",
+      "name": "Pearl Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry item"
+    },
+    {
+      "id": "b2236b38-226e-4974-99cd-dba4b3add96c",
+      "name": "Pearl White Faux Leather 3-Piece Sofa Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa set, not jewelry"
+    },
+    {
+      "id": "93afda48-b3bc-462e-a998-0756a09c9c20",
+      "name": "Pearl White Faux Leather 3-Piece Sofa Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate sofa set with good reviews"
+    },
+    {
+      "id": "b8d95bd6-3044-4c9a-a9fb-9dc55d56f3b8",
+      "name": "Pet Cages, Totoro Cages, Amazon Shipping, WalMart Banned, No Shipments On",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet cage despite odd name formatting"
+    },
+    {
+      "id": "b61ac796-7689-4fdf-86a4-111b3e4b8f70",
+      "name": "Pet Camping Tent Amazon Shipping, WalMart Banned, No Shipments On Weekends",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet camping shelter despite odd name"
+    },
+    {
+      "id": "33249423-cdcd-46f4-8381-25f54a57724f",
+      "name": "Plush pet nest",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate pet bed with many images"
+    },
+    {
+      "id": "ea59c59c-6cc4-4636-9e3e-70f12079d576",
+      "name": "Portable Breathalyzer Alcohol Detector",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Legitimate consumer electronics device"
+    },
+    {
+      "id": "7781b045-48eb-405a-8086-5699e3800b10",
+      "name": "Power Bank",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Legitimate consumer electronics"
+    },
+    {
+      "id": "90ac1b9d-95e6-48fe-8c9f-47a5aa937040",
+      "name": "Privacy Screen",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Legitimate consumer electronics accessory"
+    },
+    {
+      "id": "d501ace2-384e-48d4-bf62-b8cb87612d80",
+      "name": "Pro Series Square Jack 8000 Lbs",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate tool for vehicle/equipment maintenance"
+    },
+    {
+      "id": "efb7afed-7d72-48a5-8ec2-7942659c86d3",
+      "name": "Professional Background Frame Set",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate photography/home decor item"
+    },
+    {
+      "id": "fb639bd4-b7b6-491a-9dcc-f316a690eeb2",
+      "name": "PU Leather Car Storage Bag Multifunction Seat Back Tray Hanging Bag",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate car organization accessory"
+    },
+    {
+      "id": "456ef845-4c0d-4f7c-855c-940d444bebcd",
+      "name": "PVC Pipe Plastic Goal",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Legitimate sports goal equipment"
+    },
+    {
+      "id": "f5368e03-5eba-4c64-8de7-1fbb2e70fce8",
+      "name": "Queen Size Bed",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item"
+    },
+    {
+      "id": "3ab0f24d-c3c6-481d-8956-c98e2bed6ace",
+      "name": "Raspberry Mushroom Gummies Extract, 60 Gummies",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health supplement"
+    },
+    {
+      "id": "2e7178ab-812f-43bf-bfed-dd1a7a0e6f3a",
+      "name": "Rope Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry item"
+    },
+    {
+      "id": "db2cf385-7c6f-44a9-8654-a0152020c079",
+      "name": "Rope Bracelet",
+      "verdict": "B",
+      "suggested_category": "jewelry",
+      "reason": "Legitimate jewelry item"
+    },
+    {
+      "id": "14017eab-0405-4af8-a617-f3f5a15bffc9",
+      "name": "Self-pick-up Only Women's Casual Sleeveless Backless Loose Solid Color",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate clothing item"
+    },
+    {
+      "id": "4648431c-1ca7-4aa0-88d6-9929490e7749",
+      "name": "Self-pick-up Plus Size Women'S Casual Round Neck Long Sleeve T-Shirt Solid",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate clothing item"
+    },
+    {
+      "id": "4df71afa-8a34-408b-9e5f-fb591c5892d0",
+      "name": "Self-pick-up Plus Size Women's Lightweight Sleeveless Top Solid Color Loose",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate clothing item"
+    },
+    {
+      "id": "ba973f9d-bc17-46f6-b019-79cf99aef14c",
+      "name": "Self-pick-up Women's Plus Size Sleeveless Top V Neck Button Casual T-Shirt",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate clothing item with good reviews"
+    },
+    {
+      "id": "5d9445f0-a460-4145-bdc4-728c0d142c11",
+      "name": "Shell Multifunctional Car Vacuum Cleaner",
+      "verdict": "B",
+      "suggested_category": "electronics",
+      "reason": "Legitimate car cleaning appliance"
+    },
+    {
+      "id": "1f77de3d-5384-4f54-b5fe-a99fbd81ef59",
+      "name": "Single Donor Raw Indian Unprocessed Hair Vendors",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate hair product for wigs/extensions"
+    },
+    {
+      "id": "fd82f223-20c4-40e6-816e-96baff7c541e",
+      "name": "Slow Rebound Memory Foam Car Seat Cushion",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate car seat cushion accessory"
+    },
+    {
+      "id": "6728ce25-271e-458b-b9d8-b07723e74ae1",
+      "name": "Sofa Chair",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item"
+    },
+    {
+      "id": "19f2da3f-459f-4525-90bd-1926f253767f",
+      "name": "Sofa Chair",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture with good images and reviews"
+    },
+    {
+      "id": "21fe0096-af8a-4582-bb56-5d5d436d2de0",
+      "name": "Soft Capsule Vitamin",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health supplement"
+    },
+    {
+      "id": "56cb8069-6573-4676-ba5e-b8977187abb7",
+      "name": "Soft Capsules",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health/supplement product"
+    },
+    {
+      "id": "5f6f89d3-4e6d-4ece-bf02-fa39e37695c5",
+      "name": "Solid Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with good price and reviews"
+    },
+    {
+      "id": "6c0f141a-53fa-4f79-ae83-0d284739a940",
+      "name": "Solid Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with good price and reviews"
+    },
+    {
+      "id": "0de481b5-2144-4328-9806-7dff741c9d08",
+      "name": "Solid Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with multiple images and reviews"
+    },
+    {
+      "id": "6119986f-4240-4cce-9c50-5e5b5a862b4b",
+      "name": "Step Ladder",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate household tool, consumer product"
+    },
+    {
+      "id": "24bf00d9-bb63-4a88-a03d-c87562b50a05",
+      "name": "Storage Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with multiple images and reviews"
+    },
+    {
+      "id": "488b0a81-41d0-40a4-8b1f-0b32a66ef886",
+      "name": "Storage Bench",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with good price and reviews"
+    },
+    {
+      "id": "d5fa2594-9eba-44af-9982-d12457de022c",
+      "name": "Storage Shelves, Kitchen Shelves, Prohibited Platform Wayfair",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Legitimate storage product, gibberish suffix doesn't negate product value"
+    },
+    {
+      "id": "4df43dae-cc51-418a-b39f-f33c753abc1c",
+      "name": "Tapesty",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Misspelled tapestry, legitimate home decor item with multiple images"
+    },
+    {
+      "id": "412eac35-6141-42cf-b26f-24fdb285b098",
+      "name": "Taro Peptide Deer Collagen Extract Set",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate wellness/supplement product"
+    },
+    {
+      "id": "f94770c1-da78-430e-8cf4-c567ecf27522",
+      "name": "Thickness Planer 13-Inch Two-Speed Three-Blade 15-Amp For Woodworking",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate power tool for woodworking, consumer product"
+    },
+    {
+      "id": "fbcbd9db-3c01-4ba7-aca1-99ea581098fa",
+      "name": "Triple Fold Pad",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Likely exercise/yoga mat pad, consumer product with multiple images"
+    },
+    {
+      "id": "2bdd2194-766f-4784-bf97-d189c4949a99",
+      "name": "Tummy Machine",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Likely abdominal exercise equipment, consumer fitness product"
+    },
+    {
+      "id": "d249f8a9-38dd-4560-8a99-b553d78ff777",
+      "name": "TV Stand",
+      "verdict": "B",
+      "suggested_category": "home-furniture",
+      "reason": "Legitimate furniture item with good price and reviews"
+    },
+    {
+      "id": "f89d00f6-a7a1-4fd5-aadd-8127e85d4cbe",
+      "name": "Up Canopy Tent",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate outdoor/camping product with good reviews"
+    },
+    {
+      "id": "fa316aea-2758-47cd-88dc-7f4c73eae6f0",
+      "name": "Upgrade Crystal Magic Crystal Epilator",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate hair removal device, consumer beauty product"
+    },
+    {
+      "id": "fa0f6d5f-115b-4a49-9abc-65a582868e60",
+      "name": "V Bike Brake Pads Road Mountain Bicycle V-Brake Blocks Set 70mm",
+      "verdict": "B",
+      "suggested_category": "sports-outdoors",
+      "reason": "Legitimate bike replacement parts, consumer product"
+    },
+    {
+      "id": "5c2461d6-d20e-47a6-a72f-da6cf3c2fd1c",
+      "name": "Vendercart Vision Support Eye Health Supplement",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health supplement product"
+    },
+    {
+      "id": "4514977c-f697-4dec-9659-47bc415537bd",
+      "name": "Vertical Pattern Three In One Handle Universal Wheel 20in 24in 28in ABS",
+      "verdict": "B",
+      "suggested_category": "storage-organization",
+      "reason": "Likely luggage wheels/casters, consumer product with multiple images"
+    },
+    {
+      "id": "e3b99131-c9b4-4974-b052-8dd436ae7cdd",
+      "name": "VEVOR 2200 Lbs Attic Lift, 1600W 110V Electric Hoist With 14ft Wired Remote",
+      "verdict": "B",
+      "suggested_category": "tools-hardware",
+      "reason": "Legitimate home storage lift tool, consumer product for residential use"
+    },
+    {
+      "id": "dc79f999-fb5f-43e8-bbae-f071f5f5dc98",
+      "name": "VEVOR 240W Commercial Meat Slicer, Electric Deli Food Slicer, Carbon Steel",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Legitimate kitchen appliance/food slicer for consumer use"
+    },
+    {
+      "id": "8cd90dba-a0a7-4013-a213-6071e7fed638",
+      "name": "Vitamin D3 2000 IU for Women",
+      "verdict": "B",
+      "suggested_category": "health-beauty",
+      "reason": "Legitimate health supplement product"
+    },
+    {
+      "id": "725eed38-a29f-47cb-bb39-7032148ccd2c",
+      "name": "Weeding Cloth",
+      "verdict": "B",
+      "suggested_category": "garden-outdoor",
+      "reason": "Legitimate garden product, landscape fabric with multiple images"
+    },
+    {
+      "id": "373c2cda-b161-4c2f-b609-50f82816a5f2",
+      "name": "Women Handbag",
+      "verdict": "B",
+      "suggested_category": "fashion",
+      "reason": "Legitimate fashion/accessories item"
+    },
+    {
+      "id": "7b511c5e-a1f4-4fee-9f81-7d7482d5fd02",
+      "name": "Wooden Chicken Coop Swiship-Ship Prohibited By WalMart",
+      "verdict": "B",
+      "suggested_category": "pet-supplies",
+      "reason": "Legitimate chicken coop product for consumers despite naming issues"
+    },
+    {
+      "id": "9bd8cb40-6a45-4231-9239-65c372ba7412",
+      "name": "Xilaizhi Bagged Soft Candy",
+      "verdict": "B",
+      "suggested_category": "kitchen-dining",
+      "reason": "Legitimate food product with multiple images"
+    }
+  ],
+  "unclear": [
+    {
+      "id": "ffdaca12-4f4a-4096-abd1-6f28490d66e7",
+      "name": "133x137x180cm, Four-legged Stand, Chairlift - Black",
+      "verdict": "C",
+      "reason": "Unclear - 'chairlift' could be a lift chair (legitimate furniture) or ski equipment (industrial). Vague description needs clarification"
+    },
+    {
+      "id": "5a2402e0-6075-41a5-aec1-90ad34f3e55a",
+      "name": "62.2length ,35.83inch Deepth ,human Body Structure For USA People",
+      "verdict": "C",
+      "reason": "Unclear description - unclear if this is medical equipment, anatomical model, or furniture despite decent metrics"
+    },
+    {
+      "id": "28e5b77a-f6ac-447a-8dd2-9b755da71ea3",
+      "name": "87.4 Length ,35.83inch Deepth ,human Body Structure For USA People",
+      "verdict": "C",
+      "reason": "Unclear description - appears similar to other 'human body structure' items; may be anatomical model, specialty furniture, or medical equipment"
+    },
+    {
+      "id": "983b2825-d69a-490c-8ec2-7fc6679d12c5",
+      "name": "Disinfecting Small Branch Hose Coupling Agent",
+      "verdict": "C",
+      "reason": "Unclear - could be garden tool accessory or industrial chemical product"
+    },
+    {
+      "id": "f0280cd0-d0a7-46a2-9b4a-2b1910557e74",
+      "name": "Hair Salon Equipment Barber Chair",
+      "verdict": "C",
+      "reason": "Could be commercial equipment or consumer salon chair - needs review"
+    },
+    {
+      "id": "638b1af3-179a-4023-97e1-6215022af239",
+      "name": "Home Slippers Couples Feel Cool Stepping On Excrement",
+      "verdict": "C",
+      "reason": "Odd product description suggests quality/translation issues - needs review"
+    },
+    {
+      "id": "36c04aa9-68ad-4f4a-b636-aa1cd7848902",
+      "name": "Iron 0.6mm Oil Drum American Green",
+      "verdict": "C",
+      "reason": "Could be industrial container or decorative item - needs review"
+    },
+    {
+      "id": "f92ecca9-fb0a-4f0d-8cfe-43b671bb0050",
+      "name": "JEEDESON 40.15 Inches Long X 5.11 Inches Wide X 0.6 Inches Thick",
+      "verdict": "C",
+      "reason": "Unclear product name/description - needs review"
+    },
+    {
+      "id": "9b82ec33-4259-4a98-a41a-2a91a8626f49",
+      "name": "Microwave Bracket, Not Shipped On Weekends, Amazon Shipping, WalMart Banned",
+      "verdict": "C",
+      "reason": "Unclear description with shipping restrictions - needs review"
+    },
+    {
+      "id": "dc48c9f6-ab6c-4641-af5a-7d6014c62748",
+      "name": "Tap185",
+      "verdict": "C",
+      "reason": "Unclear product name, likely gibberish despite many images"
+    },
+    {
+      "id": "a2cf8e63-62f5-4ec0-b991-00bee66b8815",
+      "name": "Violin Strings, AM Not For Sale",
+      "verdict": "C",
+      "reason": "Conflicting name (says not for sale), but violin strings are legitimate products"
+    }
+  ],
+  "junk": [
+    {
+      "id": "78cc18ea-edfd-411c-ba81-5b8db0431a77",
+      "name": "12000lbs Electric Truck Winch with 85ft Steel Cable",
+      "verdict": "A",
+      "reason": "Auto/vehicle equipment - winch is a car part for trucks"
+    },
+    {
+      "id": "5466e401-1505-4da7-9966-d8c4cbdce7f6",
+      "name": "12V Automatic Submersible Bilge Pump 750GPH",
+      "verdict": "A",
+      "reason": "Marine/boat equipment - bilge pump is specifically for water vessels"
+    },
+    {
+      "id": "d876df07-1e5c-4cf4-b669-063bc0967de9",
+      "name": "13x6.50-6 4-Ply Lawn Mower Tire",
+      "verdict": "A",
+      "reason": "Agricultural/farm equipment - lawn mower tire is equipment-specific part"
+    },
+    {
+      "id": "3bccab26-3ad7-4eaf-8aef-afd8728ba461",
+      "name": "1964-1978 Ford 289-302-351 V8 Stainless Sbc Small Block Hugger",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - engine component for specific car models"
+    },
+    {
+      "id": "2d7fd3d1-aa5a-4f62-bb41-ea0a432b5de5",
+      "name": "2.5HP Flatbed Concrete Compactor",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - concrete compactor for construction use"
+    },
+    {
+      "id": "0c67668f-92cd-4ab3-b2af-5add9bcdc67e",
+      "name": "20L Oil Drum, Black",
+      "verdict": "A",
+      "reason": "Industrial storage container for bulk oil/fuel - wholesale packaging"
+    },
+    {
+      "id": "898ba46f-82f1-4644-88a0-4300fe9ac873",
+      "name": "20L Oil Drum, Green",
+      "verdict": "A",
+      "reason": "Industrial storage container for bulk oil/fuel - wholesale packaging"
+    },
+    {
+      "id": "af983580-4cd8-400e-8149-64f8b1699b73",
+      "name": "28231-2B700 Turbo Turbocharger Fits Kia Forte Hyundai Veloster 1.6L 2013-2017",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - turbocharger for specific car models"
+    },
+    {
+      "id": "e595e486-0650-403d-ba2b-bb91bd24e1b4",
+      "name": "2x Rear Pair Air Suspension Shock Strut Fit For Cadillac Escalade Chevrolet",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - suspension struts for specific car models"
+    },
+    {
+      "id": "bcc8200b-26c9-4778-9609-cd6d0d26fd29",
+      "name": "3-channel Car Camera With 32GB MMC Card",
+      "verdict": "A",
+      "reason": "Auto/vehicle equipment - car dash camera is vehicle-specific"
+    },
+    {
+      "id": "e64b2a22-1e88-428d-830d-92dc31f76424",
+      "name": "3-ton Low Profile Aluminum Steel Racing Car Landing Jack Dual Lifting Car",
+      "verdict": "A",
+      "reason": "Auto/vehicle equipment - car jack for vehicles"
+    },
+    {
+      "id": "8eddac19-90a6-4b6a-a9d2-7778fb732b79",
+      "name": "30 Gallon Fuel Caddy with 4 Wheels",
+      "verdict": "A",
+      "reason": "Industrial/commercial fuel storage equipment - wholesale/bulk container"
+    },
+    {
+      "id": "823041d3-27ef-436d-90f2-2d5b43ec65bb",
+      "name": "3KW Variable Frequency Drive AC 220V CNC",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - CNC machinery component"
+    },
+    {
+      "id": "907cd367-94c8-40e2-afdb-310892140cf5",
+      "name": "4-Ply All-Purpose Utility Tire",
+      "verdict": "A",
+      "reason": "Agricultural/equipment tire - not for standard vehicles"
+    },
+    {
+      "id": "b9fc7cc2-05ec-4978-9e13-4abf3cb9e20e",
+      "name": "7.0HP 5500PPM MAX Gas Vibration Compactor With A Pressure Capacity Of 20 X",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - gas compactor for construction"
+    },
+    {
+      "id": "7c1c2f5d-7639-4199-b4f8-b1943230b125",
+      "name": "7.3L Turbo Pedestal EBP Valve Delete Kit",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - engine modification kit for specific diesel truck models"
+    },
+    {
+      "id": "e52cbcce-5bd7-419d-8681-5056a19c0fea",
+      "name": "8.5 LB Hot-Dipped Galvanized Fluke Anchor Kit",
+      "verdict": "A",
+      "reason": "Marine/boat equipment - anchor kit for water vessels"
+    },
+    {
+      "id": "6568ece0-ae70-41d3-a667-7f1f06e3abcd",
+      "name": "8KW Diesel Air Heater with Remote Control",
+      "verdict": "A",
+      "reason": "Industrial/commercial heating equipment, not a consumer product"
+    },
+    {
+      "id": "5af41421-d729-4978-ac06-c76d093de96a",
+      "name": "93-97 Chevy Camaro,Firebird 5.7 LT1 V8 Stainless Header Manifold",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - exhaust header manifold"
+    },
+    {
+      "id": "12e0a67f-67d7-4d12-8d65-68807625018a",
+      "name": "97-02 BMW M52 323i 328i 528i E46 E39 Z3 2.5L 2.8L 3.0L L6 Exhaust Header",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - exhaust header"
+    },
+    {
+      "id": "d272063e-1176-41fe-9be3-a6ba3b4b1308",
+      "name": "Acura Integra B-Series Engine Block 1994-2001",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - engine block"
+    },
+    {
+      "id": "d6fbcd82-1691-4c39-8ec0-9b11f62d5cc9",
+      "name": "Adjustable Car Cup Holder",
+      "verdict": "A",
+      "reason": "Auto/vehicle accessory"
+    },
+    {
+      "id": "b89de62f-3c3c-44d5-b899-73b53964fe99",
+      "name": "All Weather Car Floor Mats for 2014-2021 Tundra Double Cab",
+      "verdict": "A",
+      "reason": "Auto/vehicle accessory - car floor mats"
+    },
+    {
+      "id": "8369fd35-ed35-4ed0-88e5-683146c3fceb",
+      "name": "Allon Fuel Caddy, Gas Storage Tank 4 Wheels, With Manuel Transfer Pump",
+      "verdict": "A",
+      "reason": "Auto/fuel storage equipment - not a consumer household product"
+    },
+    {
+      "id": "26805be0-5812-4ab2-b16c-eae2d9dbcfb4",
+      "name": "Auto Feed Drain Cleaner Machine with 4 Cutter Heads",
+      "verdict": "A",
+      "reason": "Industrial drain cleaning equipment - commercial/professional tool"
+    },
+    {
+      "id": "467816bd-4a25-4386-b9cd-481c8bfbf631",
+      "name": "Auto Headrest Hangers",
+      "verdict": "A",
+      "reason": "Auto/vehicle accessory"
+    },
+    {
+      "id": "3482013c-1f42-4070-a9d1-44a71fb8d7b0",
+      "name": "Automatic Wire Stripping Machine",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - not a consumer product"
+    },
+    {
+      "id": "073cd573-8eae-4cde-bcb5-0bb5717dd87c",
+      "name": "Automobile headlight repair liquid",
+      "verdict": "A",
+      "reason": "Auto/vehicle maintenance product"
+    },
+    {
+      "id": "64b24c7a-6cd6-4808-bc4b-2e65c68af8da",
+      "name": "Black Exhaust Header For S,uzuki 89-94 Geo Tracker 1.6L 85-95 Samurai 1.3L",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - exhaust header"
+    },
+    {
+      "id": "f2c2f84a-a575-466f-bf2c-fa8db1659d14",
+      "name": "Black Performance Exhaust Header System For 90-95 T,oyota Pickup&4-Runner",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - exhaust header system"
+    },
+    {
+      "id": "e7337b85-e886-45c8-a258-0bdc3ff043cf",
+      "name": "Blue Polyethylene Wrapping Film",
+      "verdict": "A",
+      "reason": "Raw construction/packing material - wholesale packaging"
+    },
+    {
+      "id": "d27fa39c-9788-4951-b724-2b11fdc4fe89",
+      "name": "Boat Trailer Jack",
+      "verdict": "A",
+      "reason": "Marine/boat equipment"
+    },
+    {
+      "id": "497b2c85-a564-4e89-a671-4be80f2039c9",
+      "name": "Brick Tong Lifter Bricks Lifting Carrying Carrier Green Color",
+      "verdict": "A",
+      "reason": "Construction material handling equipment - not a consumer product"
+    },
+    {
+      "id": "ef77f0c6-f5b1-4f26-811b-6b3f541e220c",
+      "name": "Car Led Headlights",
+      "verdict": "A",
+      "reason": "Auto/vehicle parts - headlights"
+    },
+    {
+      "id": "1a35e7db-74e7-4aa9-9e20-c9bb90d7d094",
+      "name": "Carrier & Pinion Bearing Puller",
+      "verdict": "A",
+      "reason": "Auto/mechanical tool - professional automotive equipment"
+    },
+    {
+      "id": "333a5fd0-58a5-4124-83ed-6c9a85c15488",
+      "name": "Chevy Camaro SS 6.2L V8 2010-2015",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust or engine component for specific car model"
+    },
+    {
+      "id": "f37f0f7d-ba25-4c07-927a-06b6079c1c4b",
+      "name": "Chevy GMC 07-14 4.8L 5.3L 6.0L",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - engine specification for specific vehicle models"
+    },
+    {
+      "id": "7ae72afb-e753-4d80-8521-2adccd460f58",
+      "name": "Chevy GMC 1999-2006 Silverado 1500",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - component for specific truck model"
+    },
+    {
+      "id": "2bc114ee-e057-4eda-84a9-7c6d80b5e665",
+      "name": "Chevy LS Exhaust Manifold Header 1967-1974",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header component"
+    },
+    {
+      "id": "dfef15dc-423d-4417-8ca4-3e06e21c8b1e",
+      "name": "Chevy LS1/LS2/LS3/LS6 Exhaust Manifold Headers (1997-2014)",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust headers for specific engine models"
+    },
+    {
+      "id": "df98243d-ce06-4622-8046-91a9761cacea",
+      "name": "Chevy SBC Exhaust Manifold Header 267-400 V8",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header component"
+    },
+    {
+      "id": "a28c705a-ff65-45a6-a00c-2d2765dec60e",
+      "name": "Corrugated Cardboard BoxesX100",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging materials - not consumer product"
+    },
+    {
+      "id": "f1e388d4-bb21-462f-bd97-875ce1d1df68",
+      "name": "Corrugated Paper Packaging Boxes",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging materials - not consumer product"
+    },
+    {
+      "id": "52d57a82-0d7b-48be-9bb4-7971dd567f92",
+      "name": "Corrugated Paper Packaging Boxes",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging materials - not consumer product"
+    },
+    {
+      "id": "3b8c031e-6df1-4f78-b7bc-689e914644bc",
+      "name": "Corrugated Paper Packaging Boxes",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging materials - not consumer product"
+    },
+    {
+      "id": "80fee182-9774-4964-baa0-00aeca12639b",
+      "name": "Corrugated Paper Packaging BoxesX100",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging materials - not consumer product"
+    },
+    {
+      "id": "b8d5bbbe-2b32-46af-a63d-5bc9f576c078",
+      "name": "Creative And Portable Silicone Glass Pipe",
+      "verdict": "A",
+      "reason": "Drug paraphernalia - adult/illicit product"
+    },
+    {
+      "id": "86bf5cc7-73ad-4eb6-9258-0d40ba620026",
+      "name": "Creative fashion USB lighter charging cigarette lighter",
+      "verdict": "A",
+      "reason": "Tobacco/smoking accessory - adult product"
+    },
+    {
+      "id": "425143d6-6449-4f32-9a29-a171209a4c6f",
+      "name": "Datsun 1977-1983 280Z 280ZX 2.8L",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - engine component for specific car model"
+    },
+    {
+      "id": "16ec3c46-b78b-4d98-861d-cf1e6c073e26",
+      "name": "Diamond Grinding Head Electric Grinding Accessories Sheet",
+      "verdict": "A",
+      "reason": "Industrial/commercial grinding equipment accessory"
+    },
+    {
+      "id": "84e50fcc-f387-4405-affc-344b2f738261",
+      "name": "Digital Price Calculation Scale 40kg",
+      "verdict": "A",
+      "reason": "Commercial/wholesale equipment - industrial scale for business use"
+    },
+    {
+      "id": "e354b974-d76b-41d2-9dd3-29b3d9041045",
+      "name": "Electric Hoist, 1320 Lbs Lifting Capacity, 1150W 110V Electric Steel Wire",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - not typical consumer product"
+    },
+    {
+      "id": "7076acae-6bf4-4857-b752-2dbc46f720fc",
+      "name": "Exhaust Downpipe For Chevy 3' 11-15 6.6L Duramax Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust component for specific truck"
+    },
+    {
+      "id": "2a251981-d4d0-43e8-9a08-7f28b481dab4",
+      "name": "Exhaust Downpipe For Porsche Boxster 986 2000-2004 2.7L 3.2L Ban The Sale",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust component for specific car model"
+    },
+    {
+      "id": "b625f5cb-eb96-4e58-a48a-915de331950c",
+      "name": "Exhaust Header Chevy LS1 LS2 LS3 LS6 LS7 Shorty Chevelle Camaro",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific engine/car models"
+    },
+    {
+      "id": "986f55d4-dac9-4e2a-81ae-cecd355ede3f",
+      "name": "Exhaust Header Fit For BMW M235i&435i&435i X Drive F32&F33&F36&F22&F23 Ban",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific BMW models"
+    },
+    {
+      "id": "9c122de8-9538-4fc8-85f9-6927683ef666",
+      "name": "Exhaust Header Fit For Corvette 2005-2013 C6 LS2 LS3 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "d7fba03b-b912-44d4-b148-38c3600f3179",
+      "name": "Exhaust Header Fit For Ford 00-04 Focus 2.0 121 I4 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "fa787751-ccec-413e-8f0e-0bd0a70a7f43",
+      "name": "Exhaust Header Fit For S,ubaru WRX&STI 2015 R400 Gemini Quad Tips Ban The",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "0a72c38f-c10f-493e-9671-2d6d4c31ebbb",
+      "name": "Exhaust Header Fit For T,oyota 93-98 S,upra 3.0L Non-Turbo Ban The Sale Of",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "0c87e07d-6319-4841-87fd-4c0199885906",
+      "name": "Exhaust Header For 00-01 GMC YUKON 4.8L 5.3L , 99-01 GMC SIERRA 1500 2500",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - exhaust header for specific truck models"
+    },
+    {
+      "id": "9f17be76-9080-4f50-8011-4077416f252a",
+      "name": "Exhaust Header For 05-06 Pontiac GTO 6.0 V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "bb844700-13f5-416e-87d7-90122a97e558",
+      "name": "Exhaust Header For 05-11 Chrysler 300C Charger Magnum Challenger 5.7 6.1",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car models"
+    },
+    {
+      "id": "4d908714-cfd0-482f-9241-72263da20bf8",
+      "name": "Exhaust Header For 08-14 S.ubaru Impreza WRX STi GE GH GR GV 2.0L 2.5L EJ20",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "ba3f5882-667e-4ed5-a5f6-a39ec0c4c564",
+      "name": "Exhaust Header For 1932-1953 Ford Flathead V8 Car Pickup Truck Shorty",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for vintage vehicles"
+    },
+    {
+      "id": "ae851a0b-fea3-4db1-916a-3e9d5d4c6e50",
+      "name": "Exhaust Header For 240Sx S14 1995-1998 Ka24De",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "7448319a-57ba-4210-ab62-fc66e4cb959e",
+      "name": "Exhaust Header For 96-04 FORD MUSTANG GT V8 4.6",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "a1acf9f5-b59c-4ced-8d62-e9f4673544e5",
+      "name": "Exhaust Header For C10 LS LS1 LS2 LS3 LS6 Long Tube 1-7,8 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "980e26a5-c48c-48dd-a292-91053932ff87",
+      "name": "Exhaust Header For Chevy 05-10 Cobalt HHR 2.2 2.4 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "70205128-f693-4b23-a7b7-5d429e3ea180",
+      "name": "Exhaust Header For Chevy LS LS3 LS6 LS7",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for car engines"
+    },
+    {
+      "id": "7dad91e4-a280-438d-989e-a40bfc1d81bf",
+      "name": "Exhaust Header For Chevy LS1 LS2 LS3 LS6 4.8L 5.3L 5.7L Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "cf5dcaf8-50eb-45c7-bec7-4460e8b2870b",
+      "name": "Exhaust Header For Chevy S10 GMC Sonoma Blazer 4.3L 4WD 1996-2001 Ban The",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "783d6cdc-a6d9-4d82-a1d2-e2623c6aa8fd",
+      "name": "Exhaust Header For Chevy Small Block Blazer S10 S15 2WD",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicles"
+    },
+    {
+      "id": "26594a99-4288-47a9-bf49-7b9730f102a6",
+      "name": "Exhaust Header For Corvette 97-04 5.7 V8 Long Tube 1-7-8 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "213021f2-c70b-4830-b2b4-9b8a45c36c4b",
+      "name": "Exhaust Header For Ford 97-03 F150 LOBO 4.6L V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for truck"
+    },
+    {
+      "id": "f732d1c0-8469-4ffa-8cc1-13b53fff7bb4",
+      "name": "Exhaust Header For LS Swap S10 LS1 LS2 LS3 LS6 Bel Air Camaro Nova",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for multiple car models"
+    },
+    {
+      "id": "e31234e2-d2ca-49a6-a0c0-6d353d2ec373",
+      "name": "Exhaust Header For N,issan Altima VQ35DE V6 3.5 02-06 Manual Models",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car model"
+    },
+    {
+      "id": "c4735149-8a0b-4218-ba75-1dba8e4c3b0d",
+      "name": "Exhaust Header For Small Block Chevy Sprint Roadster SBC V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for vehicles"
+    },
+    {
+      "id": "207dc392-706e-44eb-b287-260a347249d6",
+      "name": "Exhaust Header Ford F150 F250 Bronco 87-96 5.8L V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for trucks"
+    },
+    {
+      "id": "81e6d40d-b68f-4c50-93ad-922120700bb3",
+      "name": "Exhaust Header Manifold Header Fits Mustang 260 289 302 V8 64-70 Ban The",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "61d52e7d-5125-4319-80fa-c48dd56f0b5f",
+      "name": "Exhaust Headers for Toyota Tundra & Sequoia 4.7L V8 (2000-2004)",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for trucks"
+    },
+    {
+      "id": "800bd5ae-a28c-4999-9565-1aa6ea44ffc6",
+      "name": "Exhaust Headers For Wrangler JK 2007-2011 3.8 V6",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicle"
+    },
+    {
+      "id": "bc841725-6a31-4f1f-ad4e-9e10f29f5264",
+      "name": "Exhaust Headers W,Y Pipe Fits Chevy GMC 2014-2017 5.3 6.2 Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "2fa72f8e-61f1-431e-a13a-f271c308c3f1",
+      "name": "Exhaust Manifold for Jeep Wrangler Cherokee 4.0L 1991-1999",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust manifold for specific vehicles"
+    },
+    {
+      "id": "a5c2064d-7551-433a-b1b4-e8fb81062b1b",
+      "name": "Exhaust Manifold Header For 2004-2007 Cobalt Saturn SS,ION 2.0L",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific cars"
+    },
+    {
+      "id": "ffd697d4-b582-47f0-8ab5-d38818841559",
+      "name": "Exhaust Manifold Header For Chevy Camaro Firebird 82-92 Third Gen F-Body",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicles"
+    },
+    {
+      "id": "907fe65b-135f-4fce-8134-b4d201c402fd",
+      "name": "Exhaust Manifold Header For Chevy GMC V8 396 402 427 454 502 Ban The Sale",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "a4a27441-6251-4208-a8c1-f6edfa6134df",
+      "name": "Exhaust Manifold Header For Chevy LSX LS1 LS2 LS3 LS6 1-3,4",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for car engines"
+    },
+    {
+      "id": "9f243739-fdf8-4ec9-be0d-80c649fcd701",
+      "name": "Exhaust Manifold Header For Ford 79-93 Fox Body Mustang 94-04 Mustang 4.8 5.3",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicles"
+    },
+    {
+      "id": "ac26c92b-258c-49f1-b6a4-15f01e0e0c96",
+      "name": "Exhaust Manifold Header For Ford F150 F250 Bronco 5.8 V8 1987-1996",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for trucks"
+    },
+    {
+      "id": "8fb2a705-c08e-4a82-bbad-b517e17440c1",
+      "name": "Exhaust Manifold Header for Ford F250/F350/F450 7.3L",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for trucks"
+    },
+    {
+      "id": "98563d80-b350-4d6b-b4de-9eda381e9e23",
+      "name": "Exhaust Manifold Header for Ford Mustang 3.7L V6",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicle"
+    },
+    {
+      "id": "368e1991-cf81-41af-a1be-18c85e9e7f59",
+      "name": "Exhaust Manifold Header for Ford Powerstroke F250/F350 6.0L",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for trucks"
+    },
+    {
+      "id": "d885557c-d4bc-4317-a150-a901aad05a7e",
+      "name": "Exhaust Manifold Header for Honda Civic EX 2001-2005",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car"
+    },
+    {
+      "id": "9f1e66a2-7d1f-43b0-a3de-86fdf87944dc",
+      "name": "Exhaust Manifold Header for Lexus IS300 01-05",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car"
+    },
+    {
+      "id": "c105290e-bec8-442a-8e03-2437f1ef4874",
+      "name": "Exhaust Manifold Header for Nissan D21 Hardbody 1990-1995",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific truck"
+    },
+    {
+      "id": "b7d81f94-cc35-460c-afe5-e8f8ce6eabf5",
+      "name": "Exhaust Manifold Header for Oldsmobile Cutlass 65-74",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific car"
+    },
+    {
+      "id": "3a8169a8-fca1-4333-bc43-297e28b415b2",
+      "name": "Exhaust Manifold Header For S10 GMC Sonoma 94-04 2.2L Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "f2463f8e-7118-4128-9f70-de2a07663bd0",
+      "name": "Exhaust Manifold Header W DownpipeJeep Wrangler TJ 197-99 2.5 L4 Ban The",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header with suspicious name pattern"
+    },
+    {
+      "id": "44b80fd2-7bff-4767-a735-9410c317dab3",
+      "name": "Exhaust Manifold Headers For Chevy 1968-1972 BBC 396 427 Chevelle Camaro Silver",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for specific vehicles"
+    },
+    {
+      "id": "c432f23a-e65f-446a-8d2b-272cb465a73c",
+      "name": "Exhaust Manifold Headers Small Block Chevy Lake Style SBC 265-400 V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - exhaust header for engines"
+    },
+    {
+      "id": "5e55e9bb-ca2d-48b3-a7ce-d50e436f4ada",
+      "name": "Female Pleasure Masturbator",
+      "verdict": "A",
+      "reason": "Adult/sexual product - should stay hidden"
+    },
+    {
+      "id": "6f47746c-d9d2-4bae-88c8-74e98a72e0da",
+      "name": "Flat Aluminum Alloy Staircase Balusters",
+      "verdict": "A",
+      "reason": "Raw construction material - architectural component for building/renovation"
+    },
+    {
+      "id": "664d1825-f211-4052-9660-eb8f332f2108",
+      "name": "Ford 1999-2004 F150 4WD RWD 5.4 Modular V8",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - engine for specific vehicle"
+    },
+    {
+      "id": "68135827-b9bb-462e-93c9-904a995887c7",
+      "name": "Front Air Shock Absorber",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - suspension component"
+    },
+    {
+      "id": "8ffacbb5-334c-4edc-8c7b-cc78967b319f",
+      "name": "Front Grille Fits For Tacoma 2001 2002 2003 2004 With Light Letters Matte",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - grille for specific truck model"
+    },
+    {
+      "id": "2b7939e3-a12a-44e8-80f5-52b3c26bb706",
+      "name": "Front pads",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - brake pads for vehicles"
+    },
+    {
+      "id": "1fc93a39-7edd-4a45-87dd-3307fbe013af",
+      "name": "Front Rear Fender Flares Compatible With 2007-2018 Wrangler JK JKU",
+      "verdict": "A",
+      "reason": "Auto/car/vehicle part - fender flares for specific vehicle"
+    },
+    {
+      "id": "1eccf986-4261-4776-87e0-2468e05a55c2",
+      "name": "Front Rear Fenders Compatible With 2020- Wrangler Gladiator JT Sport Willys",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "b04db70e-835c-44a9-9781-a412e9135fb8",
+      "name": "Front Struts Coil Springs For 2003-2008 Corolla 1.8L 172115 172114",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "917ace6c-616d-41bd-96ad-cd4ba4628fdc",
+      "name": "G33003354 ZY 18x8.50-8 4PR 4LUG QM510X2 White Rim Wheels MP",
+      "verdict": "A",
+      "reason": "Vehicle wheels/auto parts"
+    },
+    {
+      "id": "c5e34db3-0102-4cf0-b901-b17f7b6f883b",
+      "name": "GMC-Chevy GMT800 V8 Stainless Steel Exhaust Manifold",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "08df6893-b219-46ea-82d2-98e61b783f4e",
+      "name": "Hay Spear Bale Fork - 1600 lb Capacity",
+      "verdict": "A",
+      "reason": "Agricultural/farm equipment"
+    },
+    {
+      "id": "8836414f-4af5-4dd9-b68d-ea7d330b5118",
+      "name": "HDPE Trench Drain Channel System",
+      "verdict": "A",
+      "reason": "Construction/industrial drainage equipment"
+    },
+    {
+      "id": "76a899dc-b758-450a-88b7-762cd9027fb8",
+      "name": "Heavy Duty Trailer Jack",
+      "verdict": "A",
+      "reason": "Vehicle/trailer equipment"
+    },
+    {
+      "id": "c7206195-7465-4663-b38f-52f12fe3229f",
+      "name": "High Protection Fast Car Paint Spray",
+      "verdict": "A",
+      "reason": "Auto/vehicle maintenance product"
+    },
+    {
+      "id": "6beb0c68-c05a-40e9-b4f3-4c92a39acc57",
+      "name": "High-pressure Manual Grease Gun Head Flat Head Grease Nozzle Head",
+      "verdict": "A",
+      "reason": "Vehicle/industrial maintenance equipment"
+    },
+    {
+      "id": "2906ead8-84b8-4780-bf2c-a4f53f5ba6fb",
+      "name": "Hood Hinge",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "b45f5f12-c9ff-4c56-84d0-07b37cc1e44a",
+      "name": "Hydraulic Valve 2 Spool Hydraulic Joystick Control Valve 11gpm Hydraulic",
+      "verdict": "A",
+      "reason": "Industrial/commercial hydraulic equipment"
+    },
+    {
+      "id": "1969612e-c2a3-4477-a90d-d99171ad2f97",
+      "name": "Jaw Timber Lifting Harvesting Pliers Gripper",
+      "verdict": "A",
+      "reason": "Agricultural/farm equipment"
+    },
+    {
+      "id": "3a08e8d7-8268-4352-bf30-4243b2ed61f3",
+      "name": "Jeep Wrangler YJ Exhaust Manifold Header with Downpipe",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "adba9ced-d7db-4c2c-b4df-98b649b09bdd",
+      "name": "K04 Turbocharger for Mazda CX-7 2.3L (2007-2013)",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "d5f0f0ec-51c0-494f-867c-9ff9ee63d4a0",
+      "name": "LED Daytime Running Lights Car LED COB DRL Fog Lights IP45 Waterproof",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "703095b6-79fb-4d7a-bcf9-ccf1d7d8a446",
+      "name": "Long Tube Stainless Performance Headers For Dodge Ram 1500 09-18 5.7",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "cda665f2-557c-4e07-bc2f-5d8dca8703cd",
+      "name": "Long Tube Stainless Steel Header Exhaust Manifold for Chevy Camaro SS LS3",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "4e48cfc3-226c-4cb7-92be-34bfdd50f5f9",
+      "name": "Low Profile 20-Gallon Oil Drain Pan with Pump",
+      "verdict": "A",
+      "reason": "Vehicle/auto maintenance equipment"
+    },
+    {
+      "id": "2d43866d-3171-4039-b48a-88f065de002f",
+      "name": "Marine Trailer Assistant, Flexibly Adjustable Bunk Guide-Ons, Pair Of",
+      "verdict": "A",
+      "reason": "Marine/boat equipment"
+    },
+    {
+      "id": "64d1d28d-30ea-4b72-8765-a54b5304a80d",
+      "name": "Microfiber Car Towel - Thickened & Shed-Resistant",
+      "verdict": "A",
+      "reason": "Vehicle-specific product/auto maintenance"
+    },
+    {
+      "id": "f80b514c-b4f3-44cd-9308-486aec64c556",
+      "name": "Muffler Delete Pipe Eliminator for Chevy Silverado GMC 6.6L 11-15",
+      "verdict": "A",
+      "reason": "Vehicle/auto parts"
+    },
+    {
+      "id": "bafc058e-b3a5-4349-b61e-a4de7168fe51",
+      "name": "NEMA Steel Enclosure, 12 X 12 X 6inch NEMA 4X Steel Electrical Box",
+      "verdict": "A",
+      "reason": "Industrial/commercial electrical equipment"
+    },
+    {
+      "id": "d2a83236-5ed2-49e9-904d-57aab0ca472e",
+      "name": "OUHOE Car Iron Powder Rust Remover Spray Anti Rust Rust Remover Car",
+      "verdict": "A",
+      "reason": "Car/auto product - rust remover for vehicles"
+    },
+    {
+      "id": "945b4cac-73cd-4c12-8b04-246ed57fd9f9",
+      "name": "Pair Turbochargers with Gaskets for Ford F150 EcoBoost 3.5L",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - turbocharger for specific car model"
+    },
+    {
+      "id": "a0848450-14ef-4233-bde0-f25b007354ca",
+      "name": "Paper Packaging Boxes",
+      "verdict": "A",
+      "reason": "Wholesale/bulk packaging - commercial supplies"
+    },
+    {
+      "id": "7aef1c34-68f5-43ad-ae82-a1edb2a70fb0",
+      "name": "Performance Exhaust Downpipe for BMW 335i & 135i",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - car exhaust component"
+    },
+    {
+      "id": "251503bd-0490-4cbb-a9f5-1a8222da8fb1",
+      "name": "PEX-A Flexible Pipe Tubing for Potable Water",
+      "verdict": "A",
+      "reason": "Raw construction material - plumbing supplies"
+    },
+    {
+      "id": "fef4a7c6-ba26-435e-a76c-d1b2c382f697",
+      "name": "Pure color label thermal paper",
+      "verdict": "A",
+      "reason": "Bulk/wholesale commercial paper supplies"
+    },
+    {
+      "id": "21d28de7-8795-4a43-9681-82049396126b",
+      "name": "Quick Lock Wheel Chocks for Dual Axle Trailers",
+      "verdict": "A",
+      "reason": "Trailer/vehicle safety equipment - auto parts"
+    },
+    {
+      "id": "ff549b38-5d87-4b78-a96e-fa417564096d",
+      "name": "Radiator For 1994-2000 Chevy GMC C K 1500 2500 3500 Tahoe Yukon W 4 Oil Coolers",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - radiator for specific car"
+    },
+    {
+      "id": "4e83fc9e-ac1b-4100-aa89-19dfbb4dce95",
+      "name": "Rail Mill Guide System, 9 Ft Milling Guide, 4 Crossbar Kits Chainsaw Mill",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - chainsaw mill system"
+    },
+    {
+      "id": "cbdbf23a-a038-4d75-9364-1920322f3e9f",
+      "name": "Rayhong Automobile Coating Spray Paint Decontamination",
+      "verdict": "A",
+      "reason": "Auto/vehicle product - car paint treatment"
+    },
+    {
+      "id": "f59f43b6-38fd-4594-a7ce-cd1788114f47",
+      "name": "Roof Luggage Rack Basket, 64 Inch Black Steel",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - roof rack for cars"
+    },
+    {
+      "id": "5289e7d7-91a7-438a-8738-7a8ceadde2e7",
+      "name": "Rotating Engine Motor Stand with 360° Adjustable Head",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - automotive workshop tool"
+    },
+    {
+      "id": "499e6f50-b31c-4cc1-887e-212e582cdd9f",
+      "name": "Set Of 2 Sawmill Frames",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment - sawmill parts"
+    },
+    {
+      "id": "1fb7da32-0c04-45c6-90a1-5e7e3ff74698",
+      "name": "Small Block V8 Chevy 1935-48 Fat Fenderwell Headers",
+      "verdict": "A",
+      "reason": "Auto/vehicle part - engine headers for specific car"
+    },
+    {
+      "id": "dcc839c5-b755-4e2c-bd5e-eed4a05faec3",
+      "name": "Stainless Steel Cable Railing 500ft, Wire Rope 316 Marine Grade",
+      "verdict": "A",
+      "reason": "Marine/construction material, wholesale bulk packaging (500ft)"
+    },
+    {
+      "id": "c88a9e10-0aa7-46a9-ad3b-3de0a071bc3e",
+      "name": "Stainless Steel Exhaust Header Set",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, exhaust component"
+    },
+    {
+      "id": "a05e3e7a-41a5-4481-92cb-e09a384f60ba",
+      "name": "T,oyota Tacoma Exhaust Header 1995-2001 2.4L 2.7L L4",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, exhaust component for specific vehicle model"
+    },
+    {
+      "id": "5348b41f-73b0-41c6-9e99-f09515fee256",
+      "name": "TA-102M Portable 360 Degree Rotation UV Dual Segment 28-36dB Outdoor",
+      "verdict": "A",
+      "reason": "Industrial/commercial outdoor antenna equipment, not consumer product"
+    },
+    {
+      "id": "db992203-96c7-4f5b-beb7-adf9ce3f05fe",
+      "name": "TA-102P 360 Degree UV Dual Band 28-36dB Outdoor Antenna With Black Bracket",
+      "verdict": "A",
+      "reason": "Industrial/commercial outdoor antenna equipment, not consumer product"
+    },
+    {
+      "id": "45539884-f84b-4b7a-b764-53819d8968ab",
+      "name": "Tesla Model Y Front Right Fender Molding Trim 2020-2023",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, car trim component"
+    },
+    {
+      "id": "b767d5f5-55a0-4b23-8e71-673d8e0cee3d",
+      "name": "Tire X2 Professional Tire Changer",
+      "verdict": "A",
+      "reason": "Industrial/commercial equipment, professional automotive tool"
+    },
+    {
+      "id": "0adeb1a1-088a-48ed-992a-984b7eef834b",
+      "name": "Tongue And Groove Engineered Hardwood",
+      "verdict": "A",
+      "reason": "Raw construction/flooring material, wholesale supply"
+    },
+    {
+      "id": "0b9184b7-3cb7-4f86-8abe-7faf271d87f1",
+      "name": "TURBO DOWNPIPE EXHAUST 99-04 VW GOLF JETTA BEETLE 1.8T Ban The Sale Of Amazon",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, exhaust component with suspicious naming"
+    },
+    {
+      "id": "c5ddcdf7-d093-41b1-90da-fe811b1df364",
+      "name": "Turbo Turbocharger for Nissan Juke 1.6L 2011-2015",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, turbocharger component"
+    },
+    {
+      "id": "b959f428-376d-49b5-8091-0e1ee1e6adba",
+      "name": "Turbo Turbocharger for VW Audi CCTA Engine",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, turbocharger component"
+    },
+    {
+      "id": "be667c88-77d9-468f-b170-2a817dff2b11",
+      "name": "Turbocharger for Ford F-Series 7.3L Diesel (1999.5-2003)",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, turbocharger component"
+    },
+    {
+      "id": "8416ac0d-6946-4536-b11a-2381f94f3818",
+      "name": "Turbocharger for Mini Cooper Clubman S R56 R57 R58 2007-2016",
+      "verdict": "A",
+      "reason": "Auto/vehicle part, turbocharger component"
+    },
+    {
+      "id": "f22b7b37-f731-42c4-ac2e-4dfcd21d1b89",
+      "name": "Vibrating Bunny Clitoral Stimulator",
+      "verdict": "A",
+      "reason": "Adult/sexual product"
+    },
+    {
+      "id": "5de9f78d-9ab4-44aa-8d95-6fb1116d3bc8",
+      "name": "Vibrating Toys For Women",
+      "verdict": "A",
+      "reason": "Adult/sexual product"
+    },
+    {
+      "id": "2e0aa720-017f-4f7a-85f8-affb3dbd21d9",
+      "name": "Wireless Butterfly Clitoral Stimulator",
+      "verdict": "A",
+      "reason": "Adult/sexual product"
+    },
+    {
+      "id": "b647831e-868d-462c-a2e0-8f83fbf0d6e6",
+      "name": "Women's Adult Products, Double Vibrator Masturbation Sticks",
+      "verdict": "A",
+      "reason": "Adult/sexual product"
+    }
+  ]
+}

@@ -19,6 +19,7 @@ import {
   Tag,
   Truck,
   Activity,
+  Radar,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     heading: 'TOOLS',
     items: [
+      { href: '/admin/product-scout', label: 'Product Scout', icon: Radar, count: null },
       { href: '/admin/us-stock', label: 'US Stock', icon: MapPin, count: null },
       { href: '/admin/catalog-health', label: 'Catalog Health', icon: Activity, count: null },
     ],
