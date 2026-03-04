@@ -294,6 +294,7 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
       unit_price: item.unitPrice,
       total: item.unitPrice * item.quantity,
+      warehouse: item.warehouse,
     }));
 
     const { error: orderItemsError } = await supabase

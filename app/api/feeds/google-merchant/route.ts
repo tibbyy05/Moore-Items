@@ -40,6 +40,7 @@ interface ProductRow {
   compare_at_price: number | null;
   images: string[] | null;
   stock_count: number;
+  warehouse: string | null;
   digital_file_path: string | null;
   mi_categories: { name: string; slug: string } | null;
 }
@@ -52,7 +53,8 @@ function productToXml(product: ProductRow): string {
   const title = truncate(product.name, 150);
   const images = product.images || [];
   const availability = product.stock_count > 0 ? 'in_stock' : 'out_of_stock';
-  const shippingPrice = product.retail_price >= FREE_SHIPPING_THRESHOLD ? 0 : 4.99;
+  const isCN = product.warehouse === 'CN';
+  const shippingPrice = product.retail_price >= FREE_SHIPPING_THRESHOLD ? 0 : (isCN ? 6.99 : 4.99);
 
   let entry = `    <item>
       <g:id>${escapeXml(product.id)}</g:id>
@@ -82,8 +84,13 @@ function productToXml(product: ProductRow): string {
       <g:identifier_exists>false</g:identifier_exists>
       <g:shipping>
         <g:country>US</g:country>
+        <g:service>${isCN ? 'International Standard' : 'Standard Shipping'}</g:service>
         <g:price>${formatPrice(shippingPrice)}</g:price>
-      </g:shipping>
+      </g:shipping>${isCN ? `
+      <g:min_handling_time>2</g:min_handling_time>
+      <g:max_handling_time>5</g:max_handling_time>
+      <g:min_transit_time>7</g:min_transit_time>
+      <g:max_transit_time>15</g:max_transit_time>` : ''}
     </item>`;
 
   return entry;
@@ -99,7 +106,7 @@ export async function GET() {
     while (true) {
       const { data, error } = await supabase
         .from('mi_products')
-        .select('id, name, slug, description, retail_price, compare_at_price, images, stock_count, digital_file_path, mi_categories(name, slug)')
+        .select('id, name, slug, description, retail_price, compare_at_price, images, stock_count, warehouse, digital_file_path, mi_categories(name, slug)')
         .eq('status', 'active')
         .is('digital_file_path', null)
         .range(from, from + BATCH_SIZE - 1);

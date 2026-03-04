@@ -43,8 +43,15 @@ async function handleStockUpdate(params: any) {
 
   const supabase = createAdminClient();
 
-  // Extract stock entries grouped by VID
-  const stockByVid = new Map<string, number>();
+  // Extract stock entries grouped by VID, tracking per-country stock
+  const stockByVid = new Map<string, { us: number; cn: number }>();
+
+  function addStock(vid: string, countryCode: string, amount: number) {
+    if (!stockByVid.has(vid)) stockByVid.set(vid, { us: 0, cn: 0 });
+    const entry = stockByVid.get(vid)!;
+    if (countryCode === 'US') entry.us += amount;
+    else if (countryCode === 'CN') entry.cn += amount;
+  }
 
   try {
     if (Array.isArray(params)) {
@@ -52,11 +59,7 @@ async function handleStockUpdate(params: any) {
       for (const entry of params) {
         const vid = entry.vid as string;
         if (!vid) continue;
-        if (entry.countryCode === 'US') {
-          stockByVid.set(vid, (stockByVid.get(vid) ?? 0) + (entry.storageNum ?? 0));
-        } else if (!stockByVid.has(vid)) {
-          stockByVid.set(vid, 0);
-        }
+        addStock(vid, entry.countryCode, entry.storageNum ?? 0);
       }
     } else if (typeof params === 'object') {
       // Object keyed by VID — values are arrays of warehouse entries or empty array (= cleared)
@@ -65,22 +68,14 @@ async function handleStockUpdate(params: any) {
         if (Array.isArray(val)) {
           if (val.length === 0) {
             // Empty array = CJ cleared all stock for this VID
-            stockByVid.set(vid, 0);
+            stockByVid.set(vid, { us: 0, cn: 0 });
           } else {
             for (const entry of val) {
-              if (entry.countryCode === 'US') {
-                stockByVid.set(vid, (stockByVid.get(vid) ?? 0) + (entry.storageNum ?? 0));
-              } else if (!stockByVid.has(vid)) {
-                stockByVid.set(vid, 0);
-              }
+              addStock(vid, entry.countryCode, entry.storageNum ?? 0);
             }
           }
         } else if (val && typeof val === 'object') {
-          if (val.countryCode === 'US') {
-            stockByVid.set(vid, (stockByVid.get(vid) ?? 0) + (val.storageNum ?? 0));
-          } else if (!stockByVid.has(vid)) {
-            stockByVid.set(vid, 0);
-          }
+          addStock(vid, val.countryCode, val.storageNum ?? 0);
         }
       }
     }
@@ -106,12 +101,21 @@ async function handleStockUpdate(params: any) {
 
   if (!variants || variants.length === 0) return;
 
+  const productIds = Array.from(new Set(variants.map(v => v.product_id)));
+  const { data: productData } = await supabase
+    .from('mi_products')
+    .select('id, warehouse')
+    .in('id', productIds);
+  const warehouseMap = new Map((productData || []).map((p: any) => [p.id, p.warehouse || 'US']));
+
   // Update each variant's stock_count
   const affectedProductIds = new Set<string>();
   let updated = 0;
 
   for (const variant of variants) {
-    const newStock = stockByVid.get(variant.cj_vid) ?? 0;
+    const stockData = stockByVid.get(variant.cj_vid);
+    const productWarehouse = warehouseMap.get(variant.product_id) || 'US';
+    const newStock = stockData ? (productWarehouse === 'CN' ? stockData.cn : stockData.us) : 0;
 
     if (variant.stock_count === newStock) continue;
 

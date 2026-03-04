@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Eye, Truck, AlertTriangle } from 'lucide-react';
+import { Heart, Eye, Truck, Globe, AlertTriangle } from 'lucide-react';
 import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { QuickViewModal } from './QuickViewModal';
@@ -160,12 +160,17 @@ export function ProductCard({ product, priority = false, className }: ProductCar
               Only {displayStock} left
             </p>
           ) : null}
-          {product.warehouse === 'US' && (
-            <p className="text-[11px] text-green-600 flex items-center gap-1 mt-1">
+          {product.warehouse === 'US' ? (
+            <div className="flex items-center gap-1 text-green-600 text-xs mt-1">
               <Truck className="w-3 h-3" />
-              Delivered in 2-5 days
-            </p>
-          )}
+              <span>Delivered in 2-5 days</span>
+            </div>
+          ) : product.warehouse === 'CN' ? (
+            <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
+              <Globe className="w-3 h-3" />
+              <span>Delivered in 7-15 days</span>
+            </div>
+          ) : null}
         </div>
       </Link>
 

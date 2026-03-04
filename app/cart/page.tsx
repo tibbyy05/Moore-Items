@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { X, Loader2, Truck, Download } from 'lucide-react';
+import { X, Loader2, Truck, Globe, Download } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -289,23 +289,34 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                {items.every((i) => i.isDigital) ? (
-                  <div className="flex items-center gap-2 text-sm text-violet-700 bg-violet-50 rounded-lg px-4 py-3 mt-4">
-                    <Download className="w-4 h-4 flex-shrink-0" />
-                    <span>
-                      Instant Digital Download — available immediately after purchase
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg px-4 py-3 mt-4">
-                    <Truck className="w-4 h-4 flex-shrink-0" />
-                    <span>
-                      {items.some((i) => i.isDigital)
-                        ? 'Digital items available instantly — physical items ship in 2-5 business days'
-                        : 'All items ship from US warehouses — estimated delivery in 2-5 business days'}
-                    </span>
-                  </div>
-                )}
+                {(() => {
+                  const hasDigital = items.some((i) => i.isDigital);
+                  const hasUSItems = items.some((i) => i.warehouse === 'US' && !i.isDigital);
+                  const hasCNItems = items.some((i) => i.warehouse === 'CN' && !i.isDigital);
+
+                  if (!hasUSItems && !hasCNItems && hasDigital) {
+                    return (
+                      <div className="flex items-center gap-2 text-sm text-violet-700 bg-violet-50 rounded-lg px-4 py-3 mt-4">
+                        <Download className="w-4 h-4 flex-shrink-0" />
+                        <span>Instant Digital Download — available immediately after purchase</span>
+                      </div>
+                    );
+                  }
+
+                  const shippingMessage = hasUSItems && hasCNItems
+                    ? 'US items: 2-5 business days \u2022 International items: 7-15 business days'
+                    : hasCNItems
+                      ? 'Items ship internationally — estimated delivery in 7-15 business days'
+                      : 'All items ship from US warehouses — estimated delivery in 2-5 business days';
+
+                  const isCNOnly = hasCNItems && !hasUSItems;
+                  return (
+                    <div className={`flex items-center gap-2 text-sm rounded-lg px-4 py-3 mt-4 ${isCNOnly ? 'text-amber-700 bg-amber-50' : 'text-green-700 bg-green-50'}`}>
+                      {isCNOnly ? <Globe className="w-4 h-4 flex-shrink-0" /> : <Truck className="w-4 h-4 flex-shrink-0" />}
+                      <span>{hasDigital ? `Digital items available instantly — ${shippingMessage.charAt(0).toLowerCase() + shippingMessage.slice(1)}` : shippingMessage}</span>
+                    </div>
+                  );
+                })()}
 
                 <div className="mt-6">
                   <label className="block text-sm font-semibold text-warm-900 mb-2">

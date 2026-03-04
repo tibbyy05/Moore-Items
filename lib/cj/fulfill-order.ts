@@ -67,6 +67,13 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
 
   const variantMap = new Map((variants || []).map((variant) => [variant.id, variant.cj_vid]));
 
+  const productIds = Array.from(new Set(items.map((item) => item.product_id)));
+  const { data: productData } = await supabase
+    .from('mi_products')
+    .select('id, warehouse')
+    .in('id', productIds);
+  const warehouseMap = new Map((productData || []).map((p: any) => [p.id, p.warehouse || 'US']));
+
   // Separate items into CJ-fulfillable and non-CJ
   const cjItems = items.filter((item) => variantMap.get(item.variant_id || ''));
   const nonCjItems = items.filter((item) => !variantMap.get(item.variant_id || ''));
@@ -99,6 +106,10 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
     normalizeText(shipping.phone_number, '0000000000')
   );
 
+  const hasCN = cjItems.some((item) => warehouseMap.get(item.product_id) === 'CN');
+  const hasUS = cjItems.some((item) => warehouseMap.get(item.product_id) !== 'CN');
+  console.log('[cj fulfill] Warehouse routing:', hasCN ? (hasUS ? 'MIXED (US+CN)' : 'CN only') : 'US only');
+
   const countryCode = normalizeText(shipping.country, 'US');
   const shippingPayload = {
     orderNumber: normalizeText(order.order_number, `MI-${order.id}`),
@@ -106,7 +117,7 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
     shippingCountryCode: countryCode,
     shippingCountry: countryCode,
     countryCode: countryCode,
-    fromCountryCode: 'US',
+    fromCountryCode: hasCN && !hasUS ? 'CN' : 'US',
     shippingProvince: normalizeText(shipping.state, 'Unknown'),
     shippingCity: normalizeText(shipping.city, 'Unknown'),
     shippingAddress: normalizeText(
@@ -115,8 +126,12 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
     ),
     shippingCustomerName: normalizeText(shipping.name, order.email || 'Customer'),
     shippingPhone,
-    logisticName: 'USPS+',
-    products: productsPayload.map(p => ({ ...p, wareHouseCountryCode: 'US' })),
+    logisticName: hasCN && !hasUS ? 'CJPacket' : 'USPS+',
+    products: productsPayload.map(p => {
+      const itemRecord = items.find(i => variantMap.get(i.variant_id || '') === p.vid);
+      const wh = warehouseMap.get(itemRecord?.product_id || '') || 'US';
+      return { ...p, wareHouseCountryCode: wh };
+    }),
     payType: 2,
   };
 
