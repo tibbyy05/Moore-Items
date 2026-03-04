@@ -39,7 +39,7 @@ export default function AboutPage() {
               <ul className="list-disc list-inside text-warm-700 space-y-1">
                 <li>Quality: Curated products that meet our standards.</li>
                 <li>Value: Fair pricing without the premium markup.</li>
-                <li>Fast Shipping: Reliable 2-5 day delivery from US warehouses.</li>
+                <li>Fast Shipping: 2-5 day US warehouse delivery, plus international shipping options.</li>
               </ul>
             </section>
           </div>

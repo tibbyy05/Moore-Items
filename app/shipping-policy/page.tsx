@@ -18,8 +18,7 @@ export default function ShippingPolicyPage() {
             Shipping Policy
           </h1>
           <div className="space-y-5 text-warm-700 leading-relaxed">
-            <p>All orders ship from US warehouses.</p>
-            <p>Estimated delivery: 2-5 business days.</p>
+            <p>Orders ship from US warehouses (2-5 business days) or international warehouses (7-15 business days) depending on the product.</p>
             <p>Free shipping on orders over $50.</p>
             <p>Standard shipping: $4.99.</p>
             <p>Processing time: 1-2 business days.</p>

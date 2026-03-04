@@ -5,7 +5,7 @@ import React from 'react';
 const MESSAGES = [
   '🚚 Free US Shipping on Orders $50+',
   '📦 Fast 2-5 Business Day Delivery',
-  '🇺🇸 All Products Ship from US Warehouses',
+  '📦 Fast 2-5 Day US Shipping • 🌐 International Options Available',
 ];
 
 export function AnnouncementBar() {
