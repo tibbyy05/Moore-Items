@@ -204,10 +204,9 @@ Output format — a JSON array:
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
     const body = await request.json();
     const { cj_pid } = body;
 

@@ -27,15 +27,14 @@ async function requireAdmin() {
 
 // GET — list watchlist items
 export async function GET(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get('status') || 'watching';
-  const sort = searchParams.get('sort') || 'created_at';
-  const order = searchParams.get('order') || 'desc';
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status') || 'watching';
+    const sort = searchParams.get('sort') || 'created_at';
+    const order = searchParams.get('order') || 'desc';
     let query = supabase
       .from('mi_scout_watchlist')
       .select('*');
@@ -67,10 +66,9 @@ export async function GET(request: NextRequest) {
 
 // POST — add to watchlist
 export async function POST(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
     const body = await request.json();
     const {
       cj_pid,
@@ -155,10 +153,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE — remove from watchlist
 export async function DELETE(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -183,10 +180,9 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH — update watchlist item (notes, status, refresh stock)
 export async function PATCH(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
     const body = await request.json();
     const { id, notes, status, refresh_stock } = body;
 

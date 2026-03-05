@@ -71,10 +71,11 @@ async function enforceRateLimit() {
 
 // ─── Token Cache ─────────────────────────────────────────────────
 // Persists across Next.js hot reloads and route compilations
+// Uses numeric timestamps to avoid Date serialization issues in globalThis
 const tokenCache = (globalThis as any).__cj_token_cache ||= {
   accessToken: null as string | null,
-  tokenExpiry: null as Date | null,
-  lastAuthRequest: 0,
+  expiresAt: 0,        // ms epoch — when the cached token expires
+  lastAuthRequest: 0,  // ms epoch — when we last called the auth endpoint
 };
 
 class CJClient {
@@ -82,25 +83,25 @@ class CJClient {
   private apiKey = process.env.CJ_API_KEY!;
 
   async authenticate(): Promise<string> {
-    console.log('[cj] authenticate request');
+    const now = Date.now();
 
-    // Return cached token if still valid (with 2-minute buffer)
-    if (
-      tokenCache.accessToken &&
-      tokenCache.tokenExpiry &&
-      new Date(tokenCache.tokenExpiry) > new Date(Date.now() + 2 * 60 * 1000)
-    ) {
-      console.log('[cj] using cached access token');
+    // Return cached token if still valid (2-minute safety buffer)
+    if (tokenCache.accessToken && now < tokenCache.expiresAt - 2 * 60 * 1000) {
       return tokenCache.accessToken;
     }
 
-    // Prevent auth spam — enforce 300s between auth calls
-    const timeSinceLastAuth = Date.now() - tokenCache.lastAuthRequest;
-    if (timeSinceLastAuth < 300000 && tokenCache.lastAuthRequest > 0) {
+    // Prevent auth spam — CJ allows 1 auth call per 300s
+    const timeSinceLastAuth = now - tokenCache.lastAuthRequest;
+    if (timeSinceLastAuth < 300_000 && tokenCache.lastAuthRequest > 0) {
+      // If we have a token at all (even near-expiry), return it rather than throwing
+      if (tokenCache.accessToken) {
+        return tokenCache.accessToken;
+      }
       throw new Error('CJ Auth failed: Too Many Requests, QPS limit is 1 time/300 seconds');
     }
 
-    tokenCache.lastAuthRequest = Date.now();
+    console.log('[cj] authenticating — token expired or missing');
+    tokenCache.lastAuthRequest = now;
 
     const response = await fetch(`${this.baseUrl}/authentication/getAccessToken`, {
       method: 'POST',
@@ -108,15 +109,22 @@ class CJClient {
       body: JSON.stringify({ apiKey: this.apiKey }),
     });
 
+    const authContentType = response.headers.get('content-type') ?? '';
+    if (!authContentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`CJ Auth returned non-JSON response (${response.status}): ${text.slice(0, 200)}`);
+    }
+
     const data: CJAuthResponse = await response.json();
 
     if (!data.result) {
       throw new Error(`CJ Auth failed: ${data.message}`);
     }
 
+    // Cache for 23 hours (CJ tokens last 24h) — numeric timestamp for reliable comparison
     tokenCache.accessToken = data.data.accessToken;
-    tokenCache.tokenExpiry = new Date(data.data.accessTokenExpiryDate);
-    console.log('[cj] access token received, expires at', new Date(tokenCache.tokenExpiry).toISOString());
+    tokenCache.expiresAt = now + 23 * 60 * 60 * 1000;
+    console.log('[cj] access token cached, expires in 23h');
     return tokenCache.accessToken;
   }
 
@@ -133,6 +141,12 @@ class CJClient {
         ...options.headers,
       },
     });
+
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`CJ API returned non-JSON response (${response.status}): ${text.slice(0, 200)}`);
+    }
 
     const data = await response.json();
 

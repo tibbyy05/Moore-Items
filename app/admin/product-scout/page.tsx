@@ -22,6 +22,16 @@ import {
   ImageIcon,
 } from 'lucide-react';
 
+// ─── Safe JSON fetch helper ─────────────────────────────────────────────────
+async function safeJson(res: Response) {
+  const ct = res.headers.get('content-type') ?? '';
+  if (!ct.includes('application/json')) {
+    const text = await res.text();
+    throw new Error(`Server error (${res.status}): ${text.slice(0, 300)}`);
+  }
+  return res.json();
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 interface ScoutVariant {
@@ -229,7 +239,7 @@ function SearchCJTab() {
           ),
         });
 
-        const data = await res.json();
+        const data = await safeJson(res);
         if (!res.ok) throw new Error(data.error || 'Search failed');
 
         if (searchPage === 1) {
@@ -256,7 +266,7 @@ function SearchCJTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cj_pid: product.cj_pid, source: 'scout' }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || 'Import failed');
 
       setImportResults((prev) => ({ ...prev, [product.cj_pid]: data }));
@@ -306,7 +316,7 @@ function SearchCJTab() {
         }),
       });
       if (!res.ok) {
-        const data = await res.json();
+        const data = await safeJson(res);
         throw new Error(data.error || 'Failed to save');
       }
       setSavedPids((prev) => new Set(prev).add(product.cj_pid));
@@ -1055,7 +1065,7 @@ function CatalogTab() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: query.trim(), page: searchPage, pageSize }),
         });
-        const data = await res.json();
+        const data = await safeJson(res);
         if (!res.ok) throw new Error(data.error || 'Search failed');
 
         if (searchPage === 1) {
@@ -1284,7 +1294,7 @@ function WatchlistTab() {
         order: sortBy === 'margin' ? 'desc' : 'desc',
       });
       const res = await fetch(`/api/admin/scout/watchlist?${params}`);
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || 'Failed to fetch');
       setItems(data.items || []);
       setHasLoaded(true);
@@ -1316,7 +1326,7 @@ function WatchlistTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: item.id, refresh_stock: true }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error);
       setItems((prev) => prev.map((i) => (i.id === item.id ? data.item : i)));
     } catch {
@@ -1360,7 +1370,7 @@ function WatchlistTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cj_pid: item.cj_pid, source: 'watchlist' }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error);
       setItems((prev) =>
         prev.map((i) =>

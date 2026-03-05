@@ -220,10 +220,9 @@ async function enrichProduct(
 }
 
 export async function POST(request: NextRequest) {
-  const { supabase, error } = await requireAdmin();
-  if (error) return error;
-
   try {
+    const { supabase, error } = await requireAdmin();
+    if (error) return error;
     const body = await request.json();
     const { query, pid, page = 1, pageSize = 20, countryCode } = body;
 
