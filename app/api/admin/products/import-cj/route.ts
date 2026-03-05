@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
 import { calculatePricing } from '@/lib/pricing';
+import { getPricingConfig } from '@/lib/config/pricing';
 import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import {
   parsePriceValue,
@@ -123,10 +124,10 @@ export async function POST(request: NextRequest) {
 
     const cjPrice = parseFloat(String(cjPriceParsed));
     const shipCost = parseFloat(String(shippingCost));
-    const pricing = calculatePricing(cjPrice, shipCost);
-
     const isUSWarehouse = hasUSStock || detectUSWarehouse(payload);
     const warehouse: 'US' | 'CN' = isUSWarehouse ? 'US' : 'CN';
+    const warehouseConfig = getPricingConfig(warehouse);
+    const pricing = calculatePricing(cjPrice, shipCost, warehouseConfig.markupMultiplier);
     const shippingDays = warehouse === 'US' ? '2-5 days' : '7-16 days';
     const deliveryCycle = payload.deliveryCycle || null;
     const shippingEstimate =
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
       shipping_cost: shipCost,
       stripe_fee: pricing.stripeFee,
       total_cost: pricing.totalCost,
-      markup_multiplier: 2.0,
+      markup_multiplier: warehouseConfig.markupMultiplier,
       retail_price: pricing.retailPrice,
       margin_dollars: pricing.marginDollars,
       margin_percent: pricing.marginPercent,
