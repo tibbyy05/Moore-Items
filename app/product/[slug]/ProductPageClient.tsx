@@ -663,7 +663,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                   <span>
                     Standard Shipping — Estimated {product.shippingDays}
                   </span>
-                  <span className="text-warm-500">· Ships from</span>
+                  <span className="text-warm-500">· Ships from </span>
                   <span className="font-semibold text-warm-900">
                     {product.warehouse === 'CA' ? 'Canada' : 'China'}
                   </span>
