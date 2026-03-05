@@ -56,6 +56,8 @@ interface CJFreightResult {
   logisticAging: string;
 }
 
+import { createAdminClient } from '@/lib/supabase/admin';
+
 // ─── Rate Limiting ───────────────────────────────────────────────
 // 3-second gap between any CJ API calls (QPS limit)
 const rateState = (globalThis as any).__cj_rate_state ||= { lastRequestTime: 0 };
@@ -69,13 +71,11 @@ async function enforceRateLimit() {
   rateState.lastRequestTime = Date.now();
 }
 
-// ─── Token Cache ─────────────────────────────────────────────────
-// Persists across Next.js hot reloads and route compilations
-// Uses numeric timestamps to avoid Date serialization issues in globalThis
+// ─── Token Cache (L1: in-memory, L2: Supabase mi_settings) ─────
 const tokenCache = (globalThis as any).__cj_token_cache ||= {
   accessToken: null as string | null,
-  expiresAt: 0,        // ms epoch — when the cached token expires
-  lastAuthRequest: 0,  // ms epoch — when we last called the auth endpoint
+  expiresAt: 0,        // ms epoch
+  lastAuthRequest: 0,  // ms epoch
 };
 
 class CJClient {
@@ -85,15 +85,39 @@ class CJClient {
   async authenticate(): Promise<string> {
     const now = Date.now();
 
-    // Return cached token if still valid (2-minute safety buffer)
-    if (tokenCache.accessToken && now < tokenCache.expiresAt - 2 * 60 * 1000) {
+    // L1: In-memory cache (warm instances — no I/O)
+    if (tokenCache.accessToken && now < tokenCache.expiresAt - 5 * 60 * 1000) {
       return tokenCache.accessToken;
+    }
+
+    // L2: Supabase persistent cache (survives cold starts)
+    try {
+      const supabase = createAdminClient();
+      const { data: rows } = await supabase
+        .from('mi_settings')
+        .select('key, value')
+        .in('key', ['cj_access_token', 'cj_token_expires_at']);
+
+      if (rows && rows.length === 2) {
+        const tokenRow = rows.find((r: any) => r.key === 'cj_access_token');
+        const expiryRow = rows.find((r: any) => r.key === 'cj_token_expires_at');
+        const dbExpiry = Number(expiryRow?.value || 0);
+
+        if (tokenRow?.value && now < dbExpiry - 5 * 60 * 1000) {
+          // Populate L1 from L2
+          tokenCache.accessToken = tokenRow.value;
+          tokenCache.expiresAt = dbExpiry;
+          console.log('[cj] token restored from Supabase cache');
+          return tokenCache.accessToken;
+        }
+      }
+    } catch (err) {
+      console.warn('[cj] Supabase token cache read failed, continuing to auth:', err);
     }
 
     // Prevent auth spam — CJ allows 1 auth call per 300s
     const timeSinceLastAuth = now - tokenCache.lastAuthRequest;
     if (timeSinceLastAuth < 300_000 && tokenCache.lastAuthRequest > 0) {
-      // If we have a token at all (even near-expiry), return it rather than throwing
       if (tokenCache.accessToken) {
         return tokenCache.accessToken;
       }
@@ -121,10 +145,23 @@ class CJClient {
       throw new Error(`CJ Auth failed: ${data.message}`);
     }
 
-    // Cache for 23 hours (CJ tokens last 24h) — numeric timestamp for reliable comparison
+    // Cache for 23 hours (CJ tokens last 24h)
+    const expiresAt = now + 23 * 60 * 60 * 1000;
     tokenCache.accessToken = data.data.accessToken;
-    tokenCache.expiresAt = now + 23 * 60 * 60 * 1000;
-    console.log('[cj] access token cached, expires in 23h');
+    tokenCache.expiresAt = expiresAt;
+
+    // Persist to L2 (fire-and-forget — don't block the request)
+    try {
+      const supabase = createAdminClient();
+      await supabase.from('mi_settings').upsert([
+        { key: 'cj_access_token', value: data.data.accessToken, updated_at: new Date().toISOString() },
+        { key: 'cj_token_expires_at', value: String(expiresAt), updated_at: new Date().toISOString() },
+      ]);
+      console.log('[cj] token persisted to Supabase');
+    } catch (err) {
+      console.warn('[cj] Supabase token cache write failed:', err);
+    }
+
     return tokenCache.accessToken;
   }
 
