@@ -6,11 +6,6 @@ import { parsePriceValue, extractImagesFromDetail, detectUSWarehouse } from '@/l
 import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import { PRICING_CONFIG } from '@/lib/config/pricing';
 
-// Sequential delay helper — respects CJ's 1 QPS limit
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
   const {
@@ -285,46 +280,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Build results from list data + sequential enrichment for first few
-    // Use detectUSWarehouse on raw list data as baseline warehouse signal
-    const results: EnrichedProduct[] = [];
-
-    // Batch cross-reference all PIDs against catalog and watchlist
+    // Batch cross-reference all PIDs against catalog and watchlist (fast Supabase queries)
     const pids = products.map((p: any) => p.pid);
-    const { data: catalogMatches } = await supabase
-      .from('mi_products')
-      .select('id, slug, status, cj_pid')
-      .in('cj_pid', pids);
+    const [{ data: catalogMatches }, { data: watchlistMatches }] = await Promise.all([
+      supabase.from('mi_products').select('id, slug, status, cj_pid').in('cj_pid', pids),
+      supabase.from('mi_scout_watchlist').select('cj_pid, status').in('cj_pid', pids),
+    ]);
     const catalogMap = new Map(
       (catalogMatches || []).map((m: any) => [m.cj_pid, m])
     );
-
-    const { data: watchlistMatches } = await supabase
-      .from('mi_scout_watchlist')
-      .select('cj_pid, status')
-      .in('cj_pid', pids);
     const watchlistMap = new Map(
       (watchlistMatches || []).map((m: any) => [m.cj_pid, m.status])
     );
 
-    // Enrich first 5 products sequentially (respecting rate limit)
-    const enrichLimit = Math.min(products.length, 5);
-    for (let i = 0; i < enrichLimit; i++) {
-      const enriched = await enrichProduct(products[i].pid, supabase);
-      if (enriched) {
-        results.push(enriched);
-      }
-      // Small delay between enrichments — the CJ client rate limiter
-      // handles the 3s gap per call, but we add a buffer for safety
-      if (i < enrichLimit - 1) {
-        await delay(500);
-      }
-    }
-
-    // For remaining products, build from list data (no extra API calls)
-    for (let i = enrichLimit; i < products.length; i++) {
-      const p = products[i];
-      const cjPrice = parsePriceValue(p.sellPrice ?? (p as any).productSellPrice) || 0;
+    // Build lightweight results from list data — no per-product CJ API calls
+    // Full enrichment happens on direct PID lookup (preview/import)
+    const results: EnrichedProduct[] = products.map((p: any) => {
+      const cjPrice = parsePriceValue(p.sellPrice ?? p.productSellPrice) || 0;
       const shippingCost = PRICING_CONFIG.shippingCostEstimate;
       const pricing = calculatePricing(cjPrice, shippingCost);
       const isUS = detectUSWarehouse(p);
@@ -335,9 +307,9 @@ export async function POST(request: NextRequest) {
         catalogStatus = existing.status === 'hidden' ? 'hidden' : 'in_catalog';
       }
 
-      results.push({
+      return {
         cj_pid: p.pid,
-        name: p.productNameEn || (p as any).productName || '',
+        name: p.productNameEn || p.productName || '',
         description: '',
         images: p.productImage ? [p.productImage] : [],
         wholesale_price: cjPrice,
@@ -360,8 +332,8 @@ export async function POST(request: NextRequest) {
         cj_url: `https://cjdropshipping.com/product/detail/${p.pid}.html`,
         watchlist_status: watchlistMap.get(p.pid) || null,
         _needs_enrichment: true,
-      } as any);
-    }
+      } as any;
+    });
 
     return NextResponse.json({
       results,
