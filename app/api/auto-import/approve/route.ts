@@ -328,103 +328,78 @@ export async function POST(request: NextRequest) {
     if (error) return error;
 
     const body = await request.json();
-    const { suggestion_ids } = body;
+    const { suggestion_id } = body;
 
-    if (!Array.isArray(suggestion_ids) || suggestion_ids.length === 0) {
-      return NextResponse.json({ error: 'Missing suggestion_ids array' }, { status: 400 });
+    if (!suggestion_id || typeof suggestion_id !== 'string') {
+      return NextResponse.json({ error: 'Missing suggestion_id string' }, { status: 400 });
     }
 
-    const results: Array<{
-      suggestion_id: string;
-      cj_pid: string;
-      success: boolean;
-      product_id?: string;
-      error?: string;
-    }> = [];
+    const { data: suggestion } = await supabase
+      .from('mi_auto_import_suggestions')
+      .select('*')
+      .eq('id', suggestion_id)
+      .single();
 
-    for (const suggestionId of suggestion_ids) {
-      const { data: suggestion } = await supabase
-        .from('mi_auto_import_suggestions')
-        .select('*')
-        .eq('id', suggestionId)
-        .single();
+    if (!suggestion) {
+      return NextResponse.json({ error: 'Suggestion not found' }, { status: 404 });
+    }
 
-      if (!suggestion) {
-        results.push({
-          suggestion_id: suggestionId,
-          cj_pid: '',
-          success: false,
-          error: 'Suggestion not found',
-        });
-        continue;
-      }
+    if (suggestion.status !== 'pending') {
+      return NextResponse.json(
+        { error: `Already ${suggestion.status}`, suggestion_id, cj_pid: suggestion.cj_pid },
+        { status: 409 }
+      );
+    }
 
-      if (suggestion.status !== 'pending') {
-        results.push({
-          suggestion_id: suggestionId,
+    try {
+      const result = await importProduct(supabase, suggestion);
+
+      if (result.success) {
+        await supabase
+          .from('mi_auto_import_suggestions')
+          .update({
+            status: 'imported',
+            imported_product_id: result.product_id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', suggestion_id);
+
+        return NextResponse.json({
+          success: true,
+          suggestion_id,
           cj_pid: suggestion.cj_pid,
-          success: false,
-          error: `Already ${suggestion.status}`,
+          product_id: result.product_id,
         });
-        continue;
-      }
-
-      try {
-        const result = await importProduct(supabase, suggestion);
-
-        if (result.success) {
-          await supabase
-            .from('mi_auto_import_suggestions')
-            .update({
-              status: 'imported',
-              imported_product_id: result.product_id,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', suggestionId);
-        } else {
-          await supabase
-            .from('mi_auto_import_suggestions')
-            .update({
-              status: 'error',
-              error_message: result.error,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', suggestionId);
-        }
-
-        results.push({
-          suggestion_id: suggestionId,
-          cj_pid: suggestion.cj_pid,
-          ...result,
-        });
-      } catch (err: any) {
+      } else {
         await supabase
           .from('mi_auto_import_suggestions')
           .update({
             status: 'error',
-            error_message: err?.message || 'Import failed',
+            error_message: result.error,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', suggestionId);
+          .eq('id', suggestion_id);
 
-        results.push({
-          suggestion_id: suggestionId,
-          cj_pid: suggestion.cj_pid,
-          success: false,
-          error: err?.message || 'Import failed',
-        });
+        return NextResponse.json(
+          { success: false, suggestion_id, cj_pid: suggestion.cj_pid, error: result.error },
+          { status: 500 }
+        );
       }
+    } catch (err: any) {
+      await supabase
+        .from('mi_auto_import_suggestions')
+        .update({
+          status: 'error',
+          error_message: err?.message || 'Import failed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', suggestion_id);
+
+      return NextResponse.json(
+        { success: false, suggestion_id, cj_pid: suggestion.cj_pid, error: err?.message || 'Import failed' },
+        { status: 500 }
+      );
     }
-
-    const imported = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success).length;
-
-    return NextResponse.json({
-      success: true,
-      imported,
-      failed,
-      results,
-    });
   } catch (err: any) {
     console.error('[auto-import] Approve error:', err);
     return NextResponse.json(

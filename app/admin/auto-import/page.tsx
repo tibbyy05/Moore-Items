@@ -136,29 +136,63 @@ export default function AutoImportPage() {
     }
   };
 
+  const updateSuggestionStatus = (id: string, status: string, errorMessage?: string) => {
+    setBatches((prev) =>
+      prev.map((batch) => ({
+        ...batch,
+        items: batch.items.map((item) =>
+          item.id === id ? { ...item, status, error_message: errorMessage || null } : item
+        ),
+      }))
+    );
+  };
+
   const handleApprove = async () => {
     if (selected.size === 0) return;
     setApproving(true);
     setMessage('');
     setError('');
-    setApproveProgress(`Importing ${selected.size} product${selected.size > 1 ? 's' : ''}...`);
-    try {
-      const res = await fetch('/api/auto-import/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suggestion_ids: Array.from(selected) }),
-      });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(data.error || 'Approve failed');
-      setMessage(`Imported ${data.imported} product${data.imported !== 1 ? 's' : ''}${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
-      setSelected(new Set());
-      fetchSuggestions();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setApproving(false);
-      setApproveProgress('');
+
+    const ids = Array.from(selected);
+    let imported = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < ids.length; i++) {
+      setApproveProgress(`Importing product ${i + 1} of ${ids.length}...`);
+      try {
+        const res = await fetch('/api/auto-import/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ suggestion_id: ids[i] }),
+        });
+        const data = await safeJson(res);
+        if (data.success) {
+          imported++;
+          updateSuggestionStatus(ids[i], 'imported');
+        } else {
+          failed++;
+          const errMsg = data.error || 'Import failed';
+          errors.push(errMsg);
+          updateSuggestionStatus(ids[i], 'error', errMsg);
+        }
+      } catch (err: any) {
+        failed++;
+        const errMsg = err.message || 'Import failed';
+        errors.push(errMsg);
+        updateSuggestionStatus(ids[i], 'error', errMsg);
+      }
     }
+
+    const parts: string[] = [];
+    if (imported > 0) parts.push(`${imported} imported`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    setMessage(parts.join(', '));
+    if (errors.length > 0) setError(errors[0]);
+
+    setSelected(new Set());
+    setApproving(false);
+    setApproveProgress('');
   };
 
   const handleReject = async () => {
