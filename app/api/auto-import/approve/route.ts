@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
-import { calculatePricing, computeCompareAtPrice } from '@/lib/pricing';
+import { calculatePricingWithConfig, computeCompareAtPrice } from '@/lib/pricing';
+import { getPricingConfigFromDB } from '@/lib/config/pricing';
 import { parsePriceValue, extractImagesFromDetail, matchCategoryId } from '@/lib/cj/sync';
 import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import { categorizeWithAI, generateReviewsForProduct, stripHtml } from '@/lib/ai/product-enrichment';
+import Anthropic from '@anthropic-ai/sdk';
 
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
@@ -107,7 +109,8 @@ async function importProduct(
     shippingCost = Math.max(cjPrice * 0.3, 3);
   }
 
-  const pricing = calculatePricing(cjPrice, shippingCost);
+  const pricingConfig = await getPricingConfigFromDB(supabase, hasUSStock ? 'US' : 'CN');
+  const pricing = calculatePricingWithConfig(cjPrice, shippingCost, pricingConfig);
   const compareAtPrice = computeCompareAtPrice(pricing.retailPrice);
 
   const warehouse: 'US' | 'CN' = hasUSStock ? 'US' : 'CN';
@@ -117,31 +120,23 @@ async function importProduct(
   // 4. Extract images
   const images = extractImagesFromDetail(detail, payload.productImage);
 
-  // 5. Clean description
-  let description = payload.description || '';
-  description = description.replace(/<img[^>]*>/gi, '');
-  description = description.replace(/<p>\s*<\/p>/gi, '');
-  description = description.trim();
+  // 5. AI-clean name and description
+  let rawDescription = payload.description || '';
+  rawDescription = rawDescription.replace(/<img[^>]*>/gi, '');
+  rawDescription = rawDescription.replace(/<p>\s*<\/p>/gi, '');
+  rawDescription = rawDescription.trim();
 
-  // 6. Generate slug
-  const slug = productName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 80);
-
-  // 7. AI categorization
+  // AI categorization first (needs raw name for keyword matching fallback)
   const { data: categoryRows } = await supabase
     .from('mi_categories')
     .select('id, name, slug');
 
   let categoryId = await categorizeWithAI(
     productName,
-    description,
+    rawDescription,
     categoryRows || []
   );
 
-  // Fallback to keyword matching if AI fails
   if (!categoryId) {
     categoryId = matchCategoryId(
       payload.categoryName,
@@ -150,10 +145,81 @@ async function importProduct(
     );
   }
 
-  // 8. Insert product
+  const categorySlug = categoryRows?.find((c: any) => c.id === categoryId)?.slug || 'general';
+
+  let cleanName = productName;
+  let description = rawDescription;
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
+    try {
+      const anthropic = new Anthropic({ apiKey: anthropicKey });
+      const cleanResponse = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: `You are a product copywriter for MooreItems.com — a curated marketplace positioned as "Nordstrom meets Target".
+Write clean, compelling product copy that sells the lifestyle and benefit, not the specs.
+Respond ONLY with valid JSON. No markdown, no backticks, no explanation.`,
+        messages: [
+          {
+            role: 'user',
+            content: `Clean and rewrite this CJ dropshipping product for our store.
+
+Raw name: ${productName}
+Raw description/specs: ${stripHtml(rawDescription).slice(0, 800)}
+Category: ${categorySlug}
+
+Rules for the name:
+- Remove ALL of: dimensions, weights, model numbers, platform references (Temu, Amazon, Walmart), promotional words (New, Hot, Top Sale, Best), shipping references, material specs
+- Keep it under 70 characters
+- Make it sound like a real retail product name
+
+Rules for the description:
+- Write 2 paragraphs of engaging marketing copy (4-6 sentences each)
+- Focus on lifestyle benefits and who this is for — not raw specs
+- Do NOT include: melting points, cross-border references, platform names, "product display", "housekeeping", Chinese manufacturing references, material chemistry specs, or any text that sounds like a warehouse listing
+- End with one sentence about why it fits everyday life
+- Tone: warm, confident, accessible — like Target.com product copy
+
+Respond with exactly this JSON:
+{"cleanName":"...","cleanDescription":"..."}`,
+          },
+        ],
+      });
+
+      const rawText = cleanResponse.content
+        .map((b) => (b.type === 'text' ? b.text : ''))
+        .join('')
+        .trim();
+
+      const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+      const cleaned = JSON.parse(jsonText);
+
+      if (cleaned.cleanName && typeof cleaned.cleanName === 'string') {
+        cleanName = cleaned.cleanName.slice(0, 200);
+      }
+      if (cleaned.cleanDescription && typeof cleaned.cleanDescription === 'string') {
+        description = cleaned.cleanDescription;
+      }
+    } catch (err) {
+      console.error('[auto-import] AI description cleaning failed, using raw:', err);
+      description = stripHtml(rawDescription).slice(0, 2000);
+    }
+  } else {
+    description = stripHtml(rawDescription).slice(0, 2000);
+  }
+
+  // 6. Generate slug from cleaned name
+  const slug = cleanName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 80);
+
+  // 7. Insert product
   const productData = {
     cj_pid: trimmedPid,
-    name: productName,
+    name: cleanName,
     slug: `${slug}-${trimmedPid.substring(0, 8)}`,
     description,
     category_id: categoryId,
@@ -162,7 +228,7 @@ async function importProduct(
     shipping_cost: shippingCost,
     stripe_fee: pricing.stripeFee,
     total_cost: pricing.totalCost,
-    markup_multiplier: 2.0,
+    markup_multiplier: pricingConfig.markupMultiplier,
     retail_price: pricing.retailPrice,
     compare_at_price: compareAtPrice,
     margin_dollars: pricing.marginDollars,
@@ -193,7 +259,7 @@ async function importProduct(
       const variantPrice = parsePriceValue(variant.variantSellPrice);
       if (variantPrice === null || Number.isNaN(variantPrice)) continue;
 
-      const variantPricing = calculatePricing(variantPrice, shippingCost);
+      const variantPricing = calculatePricingWithConfig(variantPrice, shippingCost, pricingConfig);
       const parsed = parseVariantColorSize(variant, productName);
 
       let variantStock = 100;
@@ -229,7 +295,7 @@ async function importProduct(
   await generateReviewsForProduct(
     supabase,
     inserted.id,
-    productName,
+    cleanName,
     description,
     pricing.retailPrice,
     categoryName
