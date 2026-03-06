@@ -1,3 +1,9 @@
+// ─── Cron Schedule ─────────────────────────────────────────────────
+// 4AM full sync:  POST /api/admin/catalog/stock-sync?key=STOCK_SYNC_SECRET
+// 2PM risk sync:  POST /api/admin/catalog/stock-sync?key=STOCK_SYNC_SECRET&mode=risk
+// Both endpoints use the STOCK_SYNC_SECRET env var for query-param auth.
+// ───────────────────────────────────────────────────────────────────
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
@@ -87,11 +93,54 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function buildRiskProductIds(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<Set<string>> {
+  const riskIds = new Set<string>();
+
+  // Products with any active variant having stock_count < 25
+  const lowStockVariants = await fetchAll<any>(
+    supabase,
+    'mi_product_variants',
+    'product_id',
+    (q: any) => q.eq('is_active', true).lt('stock_count', 25)
+  );
+  for (const v of lowStockVariants) {
+    if (v.product_id) riskIds.add(v.product_id);
+  }
+
+  // Products ordered in last 14 days (paid orders only)
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const recentOrders = await fetchAll<any>(
+    supabase,
+    'mi_orders',
+    'id',
+    (q: any) => q.gte('created_at', fourteenDaysAgo).eq('payment_status', 'paid')
+  );
+
+  if (recentOrders.length > 0) {
+    const orderIds = recentOrders.map((o: any) => o.id);
+    const recentItems = await fetchAll<any>(
+      supabase,
+      'mi_order_items',
+      'product_id',
+      (q: any) => q.in('order_id', orderIds)
+    );
+    for (const item of recentItems) {
+      if (item.product_id) riskIds.add(item.product_id);
+    }
+  }
+
+  return riskIds;
+}
+
 export async function POST(request: NextRequest) {
   const { authorized } = await checkAuth(request);
   if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const mode: 'full' | 'risk' = new URL(request.url).searchParams.get('mode') === 'risk' ? 'risk' : 'full';
 
   const startTime = Date.now();
   const supabase = createAdminClient();
@@ -109,12 +158,22 @@ export async function POST(request: NextRequest) {
   const productDriftUpdates: { id: string; flagged: boolean; details: any }[] = [];
 
   // Fetch all CJ products that are active or out_of_stock
-  const products = await fetchAll<any>(
+  const allProducts = await fetchAll<any>(
     supabase,
     'mi_products',
     'id, name, cj_pid, status, category_id',
     (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock'])
   );
+
+  // In risk mode, filter to high-risk products only
+  let products: any[];
+  if (mode === 'risk') {
+    const riskIds = await buildRiskProductIds(supabase);
+    products = allProducts.filter((p: any) => riskIds.has(p.id));
+    console.log(`[stock-sync] Risk mode: ${products.length} of ${allProducts.length} products qualified`);
+  } else {
+    products = allProducts;
+  }
 
   // Process one product at a time to respect CJ rate limit (1 QPS)
   for (let i = 0; i < products.length; i++) {
@@ -343,11 +402,13 @@ export async function POST(request: NextRequest) {
       changes,
       driftFlagged,
       driftProducts,
+      mode,
     }).catch((err) => console.error('[stock-sync] Failed to send alert email:', err));
   }
 
   return NextResponse.json({
     timestamp,
+    mode,
     total_checked: totalChecked,
     hidden,
     reactivated,

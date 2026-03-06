@@ -7,10 +7,12 @@ function scoreColor(hidden: number, reactivated: number): string {
 }
 
 export function stockSyncTemplate(data: StockSyncAlertData): string {
-  const { totalChecked, hidden, reactivated, stockUpdated, errors, duration, timestamp, changes } = data;
+  const { totalChecked, hidden, reactivated, stockUpdated, errors, duration, timestamp, changes, mode } = data;
+  const isRisk = mode === 'risk';
   const date = new Date(timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const totalChanges = hidden + reactivated + stockUpdated;
   const accentColor = scoreColor(hidden, reactivated);
+  const reportTitle = isRisk ? 'CJ Risk Sync Report (2PM)' : 'CJ Stock Sync Report';
 
   let changesHtml = '';
 
@@ -150,7 +152,7 @@ export function stockSyncTemplate(data: StockSyncAlertData): string {
 <body style="margin:0;padding:0;background:#f7f6f3;font-family:'DM Sans',Arial,Helvetica,sans-serif;width:100%;-webkit-text-size-adjust:100%;">
 
 <div style="display:none;font-size:1px;color:#f7f6f3;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
-  Stock sync: ${totalChanges} change${totalChanges !== 1 ? 's' : ''} across ${totalChecked} products.
+  ${isRisk ? 'Risk' : 'Stock'} sync: ${totalChanges} change${totalChanges !== 1 ? 's' : ''} across ${totalChecked} products.
 </div>
 
 <!-- HEADER -->
@@ -161,7 +163,7 @@ export function stockSyncTemplate(data: StockSyncAlertData): string {
         <tr>
           <td align="center">
             <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:38px;color:#c8a45e;letter-spacing:2px;">MooreItems</h1>
-            <p style="margin:12px 0 0;font-family:'DM Sans',Arial,sans-serif;font-size:16px;color:#8890a4;letter-spacing:0.5px;">CJ Stock Sync Report</p>
+            <p style="margin:12px 0 0;font-family:'DM Sans',Arial,sans-serif;font-size:16px;color:#8890a4;letter-spacing:0.5px;">${reportTitle}</p>
           </td>
         </tr>
       </table>
@@ -182,6 +184,7 @@ export function stockSyncTemplate(data: StockSyncAlertData): string {
               <p style="margin:0 0 8px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;color:#888;text-transform:uppercase;letter-spacing:1px;">Total Changes</p>
               <p style="margin:0;font-family:'DM Sans',Arial,sans-serif;font-size:64px;font-weight:800;color:${accentColor};">${totalChanges}</p>
               <p style="margin:8px 0 0;font-family:'DM Sans',Arial,sans-serif;font-size:15px;color:#888;">${date}</p>
+              ${isRisk ? `<p style="margin:12px auto 0;font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#7c3aed;background:#f5f3ff;display:inline-block;padding:6px 16px;border-radius:6px;">Risk list: ${totalChecked} products (low stock + recently ordered)</p>` : ''}
             </div>
 
             <!-- Summary stats -->

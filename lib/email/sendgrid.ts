@@ -194,14 +194,18 @@ export interface StockSyncAlertData {
   changes: StockSyncChange[];
   driftFlagged: number;
   driftProducts: { name: string; maxDriftPct: number }[];
+  mode: 'full' | 'risk';
 }
 
 export async function sendStockSyncAlert(data: StockSyncAlertData) {
   const html = stockSyncTemplate(data);
   const totalChanges = data.hidden + data.reactivated + data.stockUpdated;
+  const subject = data.mode === 'risk'
+    ? `MooreItems — Risk Sync Complete (2PM)`
+    : `MooreItems Stock Sync — ${totalChanges} change${totalChanges !== 1 ? 's' : ''} detected`;
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
-    subject: `MooreItems Stock Sync — ${totalChanges} change${totalChanges !== 1 ? 's' : ''} detected`,
+    subject,
     html,
   });
 }
