@@ -20,6 +20,7 @@ import {
   Truck,
   Activity,
   Radar,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +68,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/product-scout', label: 'Product Scout', icon: Radar, count: null },
       { href: '/admin/us-stock', label: 'US Stock', icon: MapPin, count: null },
       { href: '/admin/catalog-health', label: 'Catalog Health', icon: Activity, count: null },
+      { href: '/admin/auto-import', label: 'Auto Import', icon: Sparkles, count: null },
     ],
   },
   {

@@ -4,6 +4,7 @@ import { shippingUpdateTemplate } from './templates/shipping-update';
 import { healthCheckTemplate } from './templates/health-check';
 import { stockSyncTemplate } from './templates/stock-sync';
 import { newOrderAdminTemplate, type AdminOrderNotificationData } from './templates/new-order-admin';
+import { autoImportDigestTemplate } from './templates/auto-import-digest';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -221,6 +222,35 @@ export async function sendNewOrderAdminNotification(data: AdminOrderNotification
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
     subject: `New Order #${data.orderNumber} — ${data.customerName} ($${data.total.toFixed(2)})`,
+    html,
+  });
+}
+
+// ============================================================
+// Auto-Import Digest Email
+// ============================================================
+
+export interface AutoImportDigestSuggestion {
+  productName: string;
+  productImage: string | null;
+  cjPrice: number;
+  retailPrice: number;
+  marginPercent: number;
+  aiScore: number;
+  aiReasoning: string;
+}
+
+export interface AutoImportDigestData {
+  batchDate: string;
+  suggestionCount: number;
+  suggestions: AutoImportDigestSuggestion[];
+}
+
+export async function sendAutoImportDigest(data: AutoImportDigestData) {
+  const html = autoImportDigestTemplate(data);
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `MooreItems Auto-Import — ${data.suggestionCount} new product suggestion${data.suggestionCount !== 1 ? 's' : ''}`,
     html,
   });
 }
