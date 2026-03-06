@@ -2,10 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cjClient } from '@/lib/cj/client';
-import { calculatePricing } from '@/lib/pricing';
+import { calculatePricingWithConfig } from '@/lib/pricing';
+import { getPricingConfigFromDB } from '@/lib/config/pricing';
 import { parsePriceValue, detectUSWarehouse } from '@/lib/cj/sync';
 import { sendAutoImportDigest } from '@/lib/email/sendgrid';
 import Anthropic from '@anthropic-ai/sdk';
+
+const EXCLUDED_CATEGORIES = [
+  'sofa', 'couch', 'sectional', 'mattress', 'bed frame',
+  'wardrobe', 'dresser', 'armoire', 'recliner', 'loveseat',
+];
+
+const MAX_CJ_PRICE = 150;
 
 // V2 list items use different field names than the V1/detail API
 function v2Pid(item: any): string {
@@ -143,7 +151,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'No new products after deduplication', suggested: 0 });
     }
 
-    // 3. Compute quick pricing and filter non-viable
+    // 3. Filter excluded categories / high-ticket, then compute pricing
+    const pricingConfig = await getPricingConfigFromDB(supabase, 'US');
+
     const viableCandidates: Array<{
       product: any;
       cjPrice: number;
@@ -155,13 +165,22 @@ export async function POST(request: NextRequest) {
 
     let priceSkipped = 0;
     let marginSkipped = 0;
+    let categorySkipped = 0;
+    let overPriceSkipped = 0;
     for (const product of newProducts) {
+      // Exclude heavy furniture categories
+      const cat = (product.categoryName || product.categoryNameEn || '').toLowerCase();
+      if (EXCLUDED_CATEGORIES.some((term) => cat.includes(term))) { categorySkipped++; continue; }
+
       const cjPrice = v2Price(product);
       if (cjPrice === null || cjPrice <= 0) { priceSkipped++; continue; }
 
+      // Exclude high-ticket items
+      if (cjPrice > MAX_CJ_PRICE) { overPriceSkipped++; continue; }
+
       const isUS = detectUSWarehouse(product);
       const shippingCost = Math.max(cjPrice * 0.3, 3);
-      const pricing = calculatePricing(cjPrice, shippingCost);
+      const pricing = calculatePricingWithConfig(cjPrice, shippingCost, pricingConfig);
 
       if (pricing.marginPercent < 15) { marginSkipped++; continue; }
 
@@ -175,7 +194,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`[auto-import] After margin filter: ${viableCandidates.length} viable (${priceSkipped} no price, ${marginSkipped} low margin)`);
+    console.log(`[auto-import] After filters: ${viableCandidates.length} viable (${categorySkipped} excluded category, ${overPriceSkipped} over $${MAX_CJ_PRICE}, ${priceSkipped} no price, ${marginSkipped} low margin)`);
 
     if (viableCandidates.length === 0) {
       return NextResponse.json({ message: 'No viable products found', suggested: 0 });
