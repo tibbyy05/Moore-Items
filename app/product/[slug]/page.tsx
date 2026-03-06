@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Metadata } from 'next';
 import { fetchProductBySlug } from '@/lib/seo/fetchers';
 import { SITE_URL, SITE_NAME } from '@/lib/seo/constants';
