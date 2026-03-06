@@ -38,11 +38,12 @@ async function importProduct(
 ): Promise<{ success: boolean; product_id?: string; error?: string }> {
   const trimmedPid = suggestion.cj_pid.trim();
 
-  // Check if product already exists
+  // Check if product already exists (allow re-importing hidden products)
   const { data: existing } = await supabase
     .from('mi_products')
     .select('id')
     .eq('cj_pid', trimmedPid)
+    .neq('status', 'hidden')
     .maybeSingle();
 
   if (existing) {
