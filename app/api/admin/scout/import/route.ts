@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { cjClient } from '@/lib/cj/client';
 import { calculatePricing, computeCompareAtPrice } from '@/lib/pricing';
@@ -448,6 +449,9 @@ export async function POST(request: NextRequest) {
       })
       .eq('cj_pid', trimmedPid)
       .eq('status', 'watching');
+
+    // Bust cache for the new product page
+    revalidatePath(`/product/${inserted.slug}`);
 
     return NextResponse.json({
       success: true,

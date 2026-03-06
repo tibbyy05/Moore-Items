@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { PRICING_CONFIG } from '@/lib/config/pricing';
 import { calculatePricingWithConfig, computeCompareAtPriceWithConfig } from '@/lib/pricing';
@@ -96,6 +97,11 @@ export async function POST(request: NextRequest) {
 
     offset += pageSize;
     if (products.length < pageSize) break;
+  }
+
+  // Bulk reprice — revalidate all product pages
+  if (updated > 0) {
+    revalidatePath('/product', 'layout');
   }
 
   return NextResponse.json({

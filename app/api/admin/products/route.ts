@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 async function requireAdmin(request: NextRequest) {
@@ -155,6 +156,11 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  // Bust Next.js cache for the updated product page
+  if (data?.slug) {
+    revalidatePath(`/product/${data.slug}`);
+  }
+
   return NextResponse.json({ product: data });
 }
 
@@ -169,6 +175,13 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Missing id' }, { status: 400 });
   }
 
+  // Fetch slug before deleting so we can revalidate
+  const { data: product } = await supabase
+    .from('mi_products')
+    .select('slug')
+    .eq('id', id)
+    .single();
+
   const { error: deleteError } = await supabase
     .from('mi_products')
     .delete()
@@ -176,6 +189,10 @@ export async function DELETE(request: NextRequest) {
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  if (product?.slug) {
+    revalidatePath(`/product/${product.slug}`);
   }
 
   return NextResponse.json({ success: true });
