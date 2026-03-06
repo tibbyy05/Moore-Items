@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { PRICING_CONFIG } from '@/lib/config/pricing';
+import { getPricingConfigFromDB, getCategoryPricingRules, PRICING_CONFIG } from '@/lib/config/pricing';
 import { calculatePricingWithConfig, computeCompareAtPriceWithConfig } from '@/lib/pricing';
 
 async function requireAdmin() {
@@ -32,11 +32,8 @@ export async function POST(request: NextRequest) {
   if (error) return error;
 
   const body = await request.json().catch(() => ({}));
-  const override = body?.config || {};
-  const config = {
-    ...PRICING_CONFIG,
-    ...override,
-  };
+  const bodyConfig = body.config ?? {};
+  const categoryRules = await getCategoryPricingRules(supabase);
 
   let updated = 0;
   let skipped = 0;
@@ -44,10 +41,15 @@ export async function POST(request: NextRequest) {
   const pageSize = 200;
   let offset = 0;
 
+  // Build category_id → slug lookup
+  const { data: categories } = await supabase.from('mi_categories').select('id, slug');
+  const categoryIdToSlug: Record<string, string> = {};
+  if (categories) categories.forEach((c: any) => { categoryIdToSlug[c.id] = c.slug; });
+
   while (true) {
     const { data: products, error: fetchError } = await supabase
       .from('mi_products')
-      .select('id, cj_price, shipping_cost, status')
+      .select('id, cj_price, shipping_cost, status, warehouse, category_id')
       .eq('status', 'active')
       .range(offset, offset + pageSize - 1);
 
@@ -65,17 +67,35 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      const warehouseConfig = await getPricingConfigFromDB(supabase, product.warehouse ?? 'US');
+      const effectiveConfig = { ...warehouseConfig, ...bodyConfig };
+
+      const categorySlug = categoryIdToSlug[product.category_id] ?? '';
+      const categoryRule = categoryRules[categorySlug];
+
+      if (categoryRule?.markup_override) effectiveConfig.markupMultiplier = categoryRule.markup_override;
+      if (categoryRule?.target_margin) effectiveConfig.minimumMargin = Math.max(effectiveConfig.minimumMargin, categoryRule.target_margin);
+
       const shippingCost = Number.isFinite(Number(product.shipping_cost))
         ? Number(product.shipping_cost)
-        : config.shippingCostEstimate;
+        : effectiveConfig.shippingCostEstimate;
 
-      const pricing = calculatePricingWithConfig(cjPrice, shippingCost, config);
+      const pricing = calculatePricingWithConfig(cjPrice, shippingCost, effectiveConfig);
+
+      if (categoryRule?.min_price && pricing.retailPrice < categoryRule.min_price) {
+        pricing.retailPrice = categoryRule.min_price;
+        const baseCost = (product.cj_price ?? 0) + (product.shipping_cost ?? effectiveConfig.shippingCostEstimate);
+        const stripeFee = pricing.retailPrice * effectiveConfig.stripeFeePercent + effectiveConfig.stripeFeeFixed;
+        pricing.marginPercent = ((pricing.retailPrice - baseCost - stripeFee) / pricing.retailPrice) * 100;
+        pricing.marginDollars = pricing.retailPrice - baseCost - stripeFee;
+      }
+
       if (!pricing.isViable) {
         skipped += 1;
         continue;
       }
 
-      const compareAtPrice = computeCompareAtPriceWithConfig(pricing.retailPrice, config);
+      const compareAtPrice = computeCompareAtPriceWithConfig(pricing.retailPrice, effectiveConfig);
 
       const { error: updateError } = await supabase
         .from('mi_products')
@@ -86,7 +106,7 @@ export async function POST(request: NextRequest) {
           total_cost: pricing.totalCost,
           margin_dollars: pricing.marginDollars,
           margin_percent: pricing.marginPercent,
-          markup_multiplier: config.markupMultiplier,
+          markup_multiplier: effectiveConfig.markupMultiplier,
         })
         .eq('id', product.id);
 
