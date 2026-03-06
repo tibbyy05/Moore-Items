@@ -75,7 +75,13 @@ export async function POST(request: NextRequest) {
       sort: 'desc',
     });
 
-    const cjProducts = cjResponse?.list || [];
+    // CJ V2 response shape: { data?: { content: [ { productList: [...] } ] }, content?: [...] }
+    const responseData = (cjResponse as any)?.data || cjResponse;
+    const contentBlocks = Array.isArray(responseData?.content) ? responseData.content : [];
+    const cjProducts = contentBlocks.flatMap((block: any) =>
+      Array.isArray(block?.productList) ? block.productList : []
+    );
+
     if (cjProducts.length === 0) {
       return NextResponse.json({ error: 'No products returned from CJ' }, { status: 502 });
     }
