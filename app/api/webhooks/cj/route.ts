@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
       await handleStockUpdate(payload.params);
     } else if (payload.type === 'VARIANT') {
       await handleVariantUpdate(payload.params);
+    } else if (payload.type === 'PRODUCT') {
+      await handleProductUpdate(payload.params);
     } else {
       console.log('[cj-webhook] Unhandled webhook type:', payload.type);
     }
@@ -229,6 +231,54 @@ async function handleVariantUpdate(params: any) {
 
     // If parent product was out_of_stock, bring it back
     await reconcileProductStatus(supabase, variant.product_id);
+  }
+}
+
+async function handleProductUpdate(params: any) {
+  if (!params || typeof params !== 'object') return;
+
+  const pid = params.pid as string;
+  if (!pid) return;
+
+  const productStatus = params.productStatus;
+  const isDelisted = productStatus === 0 || productStatus === '0';
+
+  // Only act on delisted products — let daily sync handle reactivation
+  // since we need to re-verify stock before bringing a product back
+  if (!isDelisted) return;
+
+  const supabase = createAdminClient();
+
+  const { data: product, error: fetchError } = await supabase
+    .from('mi_products')
+    .select('id, name, status, category_id')
+    .eq('cj_pid', pid)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error('[cj-webhook] PRODUCT fetch error:', fetchError.message);
+    return;
+  }
+
+  // No match — skip silently
+  if (!product) return;
+
+  if (product.status !== 'active') return;
+
+  const { error: updateError } = await supabase
+    .from('mi_products')
+    .update({ status: 'out_of_stock' })
+    .eq('id', product.id);
+
+  if (updateError) {
+    console.error('[cj-webhook] PRODUCT update failed:', updateError.message);
+    return;
+  }
+
+  console.log('[cj-webhook] PRODUCT delisted:', product.name, '(pid:', pid, ')');
+
+  if (product.category_id) {
+    await updateCategoryCount(supabase, product.category_id);
   }
 }
 
