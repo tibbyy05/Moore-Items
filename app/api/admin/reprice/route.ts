@@ -92,6 +92,11 @@ export async function POST(request: NextRequest) {
 
       if (!updateError) {
         updated += 1;
+        // Sync variant prices
+        await supabase
+          .from('mi_product_variants')
+          .update({ retail_price: pricing.retailPrice })
+          .eq('product_id', product.id);
       }
     }
 
