@@ -91,6 +91,8 @@ export default function ProductsPage() {
     categorized: number;
     uncategorized: number;
   } | null>(null);
+  // Map frontend sort fields to API-compatible names (already handled server-side)
+  // The sortField state uses frontend names like 'category', 'cj_price' etc.
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -148,6 +150,8 @@ export default function ProductsPage() {
         const params = new URLSearchParams();
         params.set('page', page.toString());
         params.set('limit', pageSize.toString());
+        params.set('sortBy', sortField);
+        params.set('sortOrder', sortDirection);
         if (searchQuery) params.set('search', searchQuery);
         if (warehouseFilter !== 'all') params.set('warehouse', warehouseFilter);
         if (categoryFilter !== 'all') params.set('category', categoryFilter);
@@ -175,7 +179,7 @@ export default function ProductsPage() {
     return () => {
       controller.abort();
     };
-  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, page, refreshKey]);
+  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, page, sortField, sortDirection, refreshKey]);
 
   useEffect(() => {
     setPage(1);
@@ -214,52 +218,8 @@ export default function ProductsPage() {
       ? products
       : products.filter((product) => product.warehouse === warehouseFilter);
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    let aVal: any;
-    let bVal: any;
-
-    switch (sortField) {
-      case 'name':
-        aVal = (a.name || '').toLowerCase();
-        bVal = (b.name || '').toLowerCase();
-        break;
-      case 'category':
-        aVal = (a.mi_categories?.name || 'zzz').toLowerCase();
-        bVal = (b.mi_categories?.name || 'zzz').toLowerCase();
-        break;
-      case 'cj_price':
-        aVal = Number(a.cj_price || 0) + Number(a.shipping_cost || 0);
-        bVal = Number(b.cj_price || 0) + Number(b.shipping_cost || 0);
-        break;
-      case 'retail_price':
-        aVal = Number(a.retail_price || 0);
-        bVal = Number(b.retail_price || 0);
-        break;
-      case 'margin_percent':
-        aVal = Number(a.margin_percent || 0);
-        bVal = Number(b.margin_percent || 0);
-        break;
-      case 'availability':
-      case 'status':
-        aVal = a.status || '';
-        bVal = b.status || '';
-        break;
-      case 'warehouse':
-        aVal = a.warehouse || '';
-        bVal = b.warehouse || '';
-        break;
-      case 'rating':
-        aVal = Number(a.rating || 0);
-        bVal = Number(b.rating || 0);
-        break;
-      default:
-        return 0;
-    }
-
-    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+  // Sorting is done server-side via sortBy/sortOrder params
+  const sortedProducts = filteredProducts;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -268,6 +228,7 @@ export default function ProductsPage() {
       setSortField(field);
       setSortDirection('asc');
     }
+    setPage(1);
   };
 
   const SortableHeader = ({

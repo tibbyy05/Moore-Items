@@ -50,8 +50,23 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category');
   const warehouse = searchParams.get('warehouse');
   const search = searchParams.get('search');
-  const sortBy = searchParams.get('sortBy') || 'created_at';
+  const rawSortBy = searchParams.get('sortBy') || 'created_at';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+  // Map frontend field names to Supabase columns
+  const sortColumnMap: Record<string, string> = {
+    name: 'name',
+    cj_price: 'cj_price',
+    retail_price: 'retail_price',
+    margin_percent: 'margin_percent',
+    status: 'status',
+    availability: 'status',
+    warehouse: 'warehouse',
+    rating: 'average_rating',
+    created_at: 'created_at',
+  };
+  const sortBy = sortColumnMap[rawSortBy] || 'created_at';
+  const ascending = sortOrder === 'asc';
 
   let query = supabase
     .from('mi_products')
@@ -73,11 +88,32 @@ export async function GET(request: NextRequest) {
   if (warehouse && warehouse !== 'all') query = query.eq('warehouse', warehouse);
   if (search) query = query.or(`name.ilike.%${search}%,cj_pid.ilike.%${search}%`);
 
-  query = query
-    .order(sortBy, { ascending: sortOrder === 'asc' })
-    .range((page - 1) * limit, page * limit - 1);
+  // Category sort: Supabase can't order by joined table, so we sort by
+  // category_id (groups by category) then apply client-side name sort
+  if (rawSortBy === 'category') {
+    query = query
+      .order('category_id', { ascending, nullsFirst: !ascending })
+      .range((page - 1) * limit, page * limit - 1);
+  } else {
+    query = query
+      .order(sortBy, { ascending })
+      .range((page - 1) * limit, page * limit - 1);
+  }
 
-  const { data, error: dbError, count } = await query;
+  let { data, error: dbError, count: totalCount } = await query;
+
+  // For category sort, refine with actual category name ordering
+  if (rawSortBy === 'category' && data) {
+    data = data.sort((a: any, b: any) => {
+      const aName = (a.mi_categories?.name || '').toLowerCase();
+      const bName = (b.mi_categories?.name || '').toLowerCase();
+      if (!aName && bName) return ascending ? 1 : -1;
+      if (aName && !bName) return ascending ? -1 : 1;
+      if (aName < bName) return ascending ? -1 : 1;
+      if (aName > bName) return ascending ? 1 : -1;
+      return 0;
+    });
+  }
 
   if (dbError) {
     return NextResponse.json({ error: dbError.message }, { status: 500 });
@@ -85,10 +121,10 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     products: data,
-    total: count,
+    total: totalCount,
     page,
     limit,
-    totalPages: Math.ceil((count || 0) / limit),
+    totalPages: Math.ceil((totalCount || 0) / limit),
   });
 }
 

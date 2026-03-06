@@ -37,8 +37,7 @@ export async function GET() {
         supabase
           .from('mi_products')
           .select('id', { count: 'exact', head: true })
-          .eq('status', 'active')
-          .eq('stock_count', 0),
+          .eq('status', 'out_of_stock'),
         supabase
           .from('mi_products')
           .select('id', { count: 'exact', head: true })
