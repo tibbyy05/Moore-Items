@@ -68,28 +68,33 @@ export async function GET(request: NextRequest) {
   const sortBy = sortColumnMap[rawSortBy] || 'created_at';
   const ascending = sortOrder === 'asc';
 
-  let query = supabase
-    .from('mi_products')
-    .select('*, mi_categories(name, slug), mi_product_variants(count)', { count: 'exact' });
-
-  if (status && status !== 'all') query = query.eq('status', status);
+  // Resolve category slug to ID once (shared by all queries)
+  let categoryId: string | null = null;
   if (category && category !== 'all') {
     const { data: categoryData } = await supabase
       .from('mi_categories')
       .select('id')
       .eq('slug', category)
       .maybeSingle();
-    if (categoryData?.id) {
-      query = query.eq('category_id', categoryData.id);
-    } else {
-      query = query.eq('category_id', '__none__');
-    }
+    categoryId = categoryData?.id || '__none__';
   }
-  if (warehouse && warehouse !== 'all') query = query.eq('warehouse', warehouse);
-  if (search) query = query.or(`name.ilike.%${search}%,cj_pid.ilike.%${search}%`);
 
-  // Category sort: Supabase can't order by joined table, so we sort by
-  // category_id (groups by category) then apply client-side name sort
+  // Apply shared filters to any query builder
+  function applyFilters(q: any) {
+    if (status && status !== 'all') q = q.eq('status', status);
+    if (categoryId) q = q.eq('category_id', categoryId);
+    if (warehouse && warehouse !== 'all') q = q.eq('warehouse', warehouse);
+    if (search) q = q.or(`name.ilike.%${search}%,cj_pid.ilike.%${search}%`);
+    return q;
+  }
+
+  // Main data query
+  let query = applyFilters(
+    supabase
+      .from('mi_products')
+      .select('*, mi_categories(name, slug), mi_product_variants(count)', { count: 'exact' })
+  );
+
   if (rawSortBy === 'category') {
     query = query
       .order('category_id', { ascending, nullsFirst: !ascending })
@@ -100,7 +105,18 @@ export async function GET(request: NextRequest) {
       .range((page - 1) * limit, page * limit - 1);
   }
 
-  let { data, error: dbError, count: totalCount } = await query;
+  // Warehouse count queries (same filters, lightweight head-only)
+  const [mainResult, usRes, cnRes] = await Promise.all([
+    query,
+    applyFilters(
+      supabase.from('mi_products').select('id', { count: 'exact', head: true })
+    ).eq('warehouse', 'US'),
+    applyFilters(
+      supabase.from('mi_products').select('id', { count: 'exact', head: true })
+    ).eq('warehouse', 'CN'),
+  ]);
+
+  let { data, error: dbError, count: totalCount } = mainResult;
 
   // For category sort, refine with actual category name ordering
   if (rawSortBy === 'category' && data) {
@@ -125,6 +141,7 @@ export async function GET(request: NextRequest) {
     page,
     limit,
     totalPages: Math.ceil((totalCount || 0) / limit),
+    warehouse_counts: { US: usRes.count ?? 0, CN: cnRes.count ?? 0 },
   });
 }
 

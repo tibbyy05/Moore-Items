@@ -95,11 +95,10 @@ export default function ProductsPage() {
   // The sortField state uses frontend names like 'category', 'cj_price' etc.
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [warehouseCounts, setWarehouseCounts] = useState<{ US: number; CN: number } | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 25;
-  const [syncing, setSyncing] = useState(false);
-  const [resyncing, setResyncing] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [verifyPid, setVerifyPid] = useState<string | null>(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
@@ -112,34 +111,7 @@ export default function ProductsPage() {
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [generatingReviews, setGeneratingReviews] = useState<string | null>(null);
   const [polishProduct, setPolishProduct] = useState<any>(null);
-  const handleSync = async () => {
-    setSyncing(true);
-    await fetch('/api/admin/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ warehouse: warehouseFilter }),
-    });
-    setSyncing(false);
-    setSearchQuery('');
-    setRefreshKey((key) => key + 1);
-  };
 
-  const handleResync = async () => {
-    const confirmResync = window.confirm(
-      'This will delete all products and re-sync from CJ. Continue?'
-    );
-    if (!confirmResync) return;
-
-    setResyncing(true);
-    await fetch('/api/admin/resync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ warehouse: warehouseFilter }),
-    });
-    setResyncing(false);
-    setSearchQuery('');
-    setRefreshKey((key) => key + 1);
-  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -166,6 +138,7 @@ export default function ProductsPage() {
           setProducts(data.products || []);
           setTotal(data.total || 0);
           setTotalPages(data.totalPages || 1);
+          if (data.warehouse_counts) setWarehouseCounts(data.warehouse_counts);
         }
       } catch (error: any) {
         if (error?.name === 'AbortError') return;
@@ -483,21 +456,6 @@ export default function ProductsPage() {
         <div className="flex items-end justify-between mb-2">
           <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Products</h1>
           <div className="flex gap-3">
-            <button
-              onClick={handleSync}
-              disabled={syncing || resyncing}
-              className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-60"
-            >
-              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync CJ'}
-            </button>
-            <button
-              onClick={handleResync}
-              disabled={syncing || resyncing}
-              className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors disabled:opacity-60"
-            >
-              {resyncing ? 'Re-syncing...' : 'Re-sync All'}
-            </button>
             <Link
               href="/admin/products/add"
               className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
@@ -564,6 +522,7 @@ export default function ProductsPage() {
             <option value="all">Status: All</option>
             <option value="active">Active</option>
             <option value="pending">Pending</option>
+            <option value="out_of_stock">Out of Stock</option>
             <option value="hidden">Deactivated</option>
           </select>
           <select
@@ -580,6 +539,22 @@ export default function ProductsPage() {
           </select>
         </div>
       </div>
+
+      {!loading && total > 0 && (
+        <p className="text-xs text-gray-400 -mt-4 mb-4 px-1">
+          Showing {total.toLocaleString()}
+          {statusFilter !== 'all'
+            ? ` ${statusFilter === 'out_of_stock' ? 'out of stock' : statusFilter}`
+            : ''}{' '}
+          product{total !== 1 ? 's' : ''}
+          {categoryFilter !== 'all'
+            ? ` in ${categories.find((c) => c.slug === categoryFilter)?.name || categoryFilter}`
+            : ''}
+          {warehouseCounts && warehouseFilter === 'all' && (
+            <> · US: {warehouseCounts.US.toLocaleString()} · CN: {warehouseCounts.CN.toLocaleString()}</>
+          )}
+        </p>
+      )}
 
       {selectedIds.length > 0 && (
         <div className="bg-gold-500/10 border border-gold-500/30 rounded-lg px-6 py-4 mb-6 flex items-center justify-between">
