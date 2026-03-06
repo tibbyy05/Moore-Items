@@ -52,9 +52,16 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (status && status !== 'all') {
+    if (status === 'abandoned') {
+      // Abandoned carts = pending payment orders
+      query = query.eq('payment_status', 'pending');
+    } else if (status && status !== 'all') {
       query = query.eq('payment_status', status);
+    } else {
+      // Default and "all" exclude pending (abandoned carts)
+      query = query.neq('payment_status', 'pending');
     }
+
     if (fulfillment && fulfillment !== 'all') {
       query = query.eq('fulfillment_status', fulfillment);
     }
@@ -79,15 +86,25 @@ export async function GET(request: NextRequest) {
       email?: string | null;
     }>;
 
+    // Real orders = everything except pending
+    const realOrders = summarySource.filter((o) => o.payment_status !== 'pending');
+
     const summary = {
-      total: summarySource.length,
-      paid: summarySource.filter((order) => order.payment_status === 'paid').length,
-      pending: summarySource.filter((order) => order.payment_status === 'pending').length,
-      unfulfilled: summarySource.filter((order) => order.fulfillment_status === 'unfulfilled').length,
-      processing: summarySource.filter((order) => order.fulfillment_status === 'processing').length,
-      shipped: summarySource.filter((order) => order.fulfillment_status === 'shipped').length,
-      delivered: summarySource.filter((order) => order.fulfillment_status === 'delivered').length,
-      customers: new Set(summarySource.map((order) => order.email).filter(Boolean)).size,
+      total: realOrders.length,
+      paid: realOrders.filter((o) => o.payment_status === 'paid').length,
+      unfulfilled: realOrders.filter(
+        (o) => o.fulfillment_status === 'unfulfilled'
+      ).length,
+      processing: realOrders.filter(
+        (o) => o.fulfillment_status === 'processing'
+      ).length,
+      shipped: realOrders.filter((o) => o.fulfillment_status === 'shipped')
+        .length,
+      delivered: realOrders.filter((o) => o.fulfillment_status === 'delivered')
+        .length,
+      customers: new Set(realOrders.map((o) => o.email).filter(Boolean)).size,
+      abandoned: summarySource.filter((o) => o.payment_status === 'pending')
+        .length,
     };
 
     return NextResponse.json({

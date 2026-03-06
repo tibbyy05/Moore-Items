@@ -61,11 +61,11 @@ interface OrdersResponse {
   summary: {
     total: number;
     paid: number;
-    pending: number;
     unfulfilled: number;
     processing: number;
     shipped: number;
     delivered: number;
+    abandoned: number;
   };
 }
 
@@ -132,12 +132,15 @@ export default function AdminOrdersPage() {
   const [summary, setSummary] = useState<OrdersResponse['summary']>({
     total: 0,
     paid: 0,
-    pending: 0,
     unfulfilled: 0,
     processing: 0,
     shipped: 0,
     delivered: 0,
+    abandoned: 0,
   });
+  const [abandonedOrders, setAbandonedOrders] = useState<Order[]>([]);
+  const [abandonedExpanded, setAbandonedExpanded] = useState(false);
+  const [abandonedLoading, setAbandonedLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [activeFilter, setActiveFilter] = useState('paid');
@@ -159,7 +162,7 @@ export default function AdminOrdersPage() {
         limit: limit.toString(),
       });
 
-      if (['paid', 'pending', 'expired'].includes(activeFilter)) {
+      if (['paid', 'expired'].includes(activeFilter)) {
         params.set('status', activeFilter);
       }
       if (['unfulfilled', 'processing', 'shipped', 'delivered'].includes(activeFilter)) {
@@ -178,11 +181,11 @@ export default function AdminOrdersPage() {
         data.summary || {
           total: 0,
           paid: 0,
-          pending: 0,
           unfulfilled: 0,
           processing: 0,
           shipped: 0,
           delivered: 0,
+          abandoned: 0,
         }
       );
     } catch (error) {
@@ -211,7 +214,6 @@ export default function AdminOrdersPage() {
     { key: 'shipped', label: 'Shipped', count: summary.shipped },
     { key: 'delivered', label: 'Delivered', count: summary.delivered },
     { key: 'all', label: 'All Orders', count: summary.total },
-    { key: 'pending', label: 'Pending', count: summary.pending },
     { key: 'unfulfilled', label: 'Unfulfilled', count: summary.unfulfilled },
   ];
 
@@ -335,6 +337,30 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const fetchAbandonedOrders = useCallback(async () => {
+    setAbandonedLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '50',
+        status: 'abandoned',
+      });
+      const res = await fetch(`/api/admin/orders?${params}`);
+      const data = await res.json();
+      setAbandonedOrders(data.orders || []);
+    } catch {
+      // silently fail
+    } finally {
+      setAbandonedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (abandonedExpanded && abandonedOrders.length === 0) {
+      fetchAbandonedOrders();
+    }
+  }, [abandonedExpanded, abandonedOrders.length, fetchAbandonedOrders]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -391,12 +417,12 @@ export default function AdminOrdersPage() {
         </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
+            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <Truck className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1a1a2e]">{summary.pending}</p>
-              <p className="text-xs text-gray-500">Pending</p>
+              <p className="text-2xl font-bold text-[#1a1a2e]">{summary.shipped}</p>
+              <p className="text-xs text-gray-500">Shipped</p>
             </div>
           </div>
         </div>
@@ -915,6 +941,94 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
+
+      {/* Abandoned Carts Section */}
+      {summary.abandoned > 0 && (
+        <div className="bg-gray-50 rounded-xl border border-gray-200/80">
+          <button
+            onClick={() => setAbandonedExpanded(!abandonedExpanded)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <div className="flex items-center gap-2">
+              {abandonedExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              )}
+              <span className="text-sm font-medium text-gray-500">
+                Abandoned Carts
+              </span>
+              <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                {summary.abandoned}
+              </span>
+            </div>
+            <span className="text-xs text-gray-400">
+              Incomplete checkouts (payment never completed)
+            </span>
+          </button>
+
+          {abandonedExpanded && (
+            <div className="border-t border-gray-200/80">
+              {abandonedLoading ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="animate-pulse flex items-center gap-4">
+                      <div className="h-3 bg-gray-200 rounded w-28" />
+                      <div className="h-3 bg-gray-200 rounded w-36" />
+                      <div className="h-3 bg-gray-200 rounded w-16" />
+                    </div>
+                  ))}
+                </div>
+              ) : abandonedOrders.length === 0 ? (
+                <p className="p-4 text-sm text-gray-400">No abandoned carts</p>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left">
+                      <th className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        Order #
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        Customer
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        Items
+                      </th>
+                      <th className="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">
+                        Total
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {abandonedOrders.map((order) => (
+                      <tr key={order.id} className="text-sm text-gray-500">
+                        <td className="px-4 py-2 text-xs whitespace-nowrap">
+                          {formatDate(order.created_at)}
+                        </td>
+                        <td className="px-4 py-2 text-xs font-mono">
+                          {order.order_number}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {order.email || <span className="italic text-gray-300">No email</span>}
+                        </td>
+                        <td className="px-4 py-2 text-xs">
+                          {order.mi_order_items?.length || 0} item{(order.mi_order_items?.length || 0) !== 1 ? 's' : ''}
+                        </td>
+                        <td className="px-4 py-2 text-xs text-right">
+                          {formatCurrency(order.total)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
