@@ -84,6 +84,13 @@ export default function ProductsPage() {
   const [sortField, setSortField] = useState<string>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [copiedPid, setCopiedPid] = useState<string | null>(null);
+  const [stats, setStats] = useState<{
+    active: number;
+    hidden: number;
+    outOfStock: number;
+    categorized: number;
+    uncategorized: number;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -179,6 +186,13 @@ export default function ProductsPage() {
     window.addEventListener('mi:products:refresh', handleRefresh);
     return () => window.removeEventListener('mi:products:refresh', handleRefresh);
   }, []);
+
+  useEffect(() => {
+    fetch('/api/admin/products/stats')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setStats(data); })
+      .catch(() => {});
+  }, [refreshKey]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -535,6 +549,26 @@ export default function ProductsPage() {
         <p className="text-sm text-gray-500">
           Manage your product catalog · {total} products
         </p>
+        {stats && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-400">
+            <span>
+              Active: <span className="font-medium text-emerald-600">{stats.active}</span>
+            </span>
+            <span>
+              Hidden: <span className="font-medium text-gray-500">{stats.hidden}</span>
+            </span>
+            <span>
+              Out of Stock: <span className="font-medium text-red-500">{stats.outOfStock}</span>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span>
+              Categorized: <span className="font-medium text-gray-500">{stats.categorized}</span>
+            </span>
+            <span>
+              Uncategorized: <span className="font-medium text-amber-500">{stats.uncategorized}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
