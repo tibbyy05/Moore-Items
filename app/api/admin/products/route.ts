@@ -145,15 +145,24 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  const { data, error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from('mi_products')
     .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+    .eq('id', id);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+
+  // Re-fetch with category join so the response includes mi_categories
+  const { data, error: fetchError } = await supabase
+    .from('mi_products')
+    .select('*, mi_categories(name, slug)')
+    .eq('id', id)
+    .single();
+
+  if (fetchError || !data) {
+    return NextResponse.json({ error: 'Updated but failed to re-fetch' }, { status: 500 });
   }
 
   // Sync retail_price to all variants for this product
