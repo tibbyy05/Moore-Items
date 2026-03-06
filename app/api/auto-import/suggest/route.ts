@@ -7,6 +7,28 @@ import { parsePriceValue, detectUSWarehouse } from '@/lib/cj/sync';
 import { sendAutoImportDigest } from '@/lib/email/sendgrid';
 import Anthropic from '@anthropic-ai/sdk';
 
+// V2 list items use different field names than the V1/detail API
+function v2Pid(item: any): string {
+  return String(item?.id || item?.pid || item?.productId || '');
+}
+
+function v2Name(item: any): string {
+  return item?.nameEn || item?.productNameEn || item?.name || 'Unknown';
+}
+
+function v2Price(item: any): number | null {
+  // V2 uses nowPrice (may be a range like "3.50-5.00") — take the lower bound
+  const nowPrice = item?.nowPrice;
+  if (typeof nowPrice === 'string' && nowPrice.includes('-')) {
+    const first = nowPrice.split('-')[0]?.trim();
+    const parsed = parseFloat(first);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return parsePriceValue(
+    nowPrice ?? item?.sellPrice ?? item?.sellPriceUsd ?? item?.price
+  );
+}
+
 async function checkAuth(request: NextRequest): Promise<{ authorized: boolean }> {
   const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
@@ -64,7 +86,8 @@ export async function POST(request: NextRequest) {
     const batchId = `auto-${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36)}`;
 
     // 1. Fetch 30 US warehouse products from CJ
-    const randomPage = Math.floor(Math.random() * 5) + 1;
+    // Pages 1-30 are already in our catalog; sample from 31-80 for fresh products
+    const randomPage = Math.floor(Math.random() * 50) + 31;
     console.log(`[auto-import] Fetching CJ products page ${randomPage}...`);
 
     const cjResponse = await cjClient.getProductsV2({
@@ -87,12 +110,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Deduplicate against existing products and pending suggestions
-    const pids = cjProducts.map((p: any) => p.pid).filter(Boolean);
+    const pids = cjProducts.map((p: any) => v2Pid(p)).filter(Boolean);
+    console.log(`[auto-import] CJ raw count: ${cjProducts.length}, extracted PIDs: ${pids.length}`);
 
     const { data: existingProducts } = await supabase
       .from('mi_products')
       .select('cj_pid')
       .in('cj_pid', pids);
+
+    console.log(`[auto-import] After catalog dedup: ${pids.length - (existingProducts?.length || 0)} remain (${existingProducts?.length || 0} already in catalog)`);
 
     const { data: existingSuggestions } = await supabase
       .from('mi_auto_import_suggestions')
@@ -100,12 +126,17 @@ export async function POST(request: NextRequest) {
       .in('cj_pid', pids)
       .eq('status', 'pending');
 
+    console.log(`[auto-import] Already pending suggestions: ${existingSuggestions?.length || 0}`);
+
     const existingPids = new Set([
       ...(existingProducts || []).map((p: any) => p.cj_pid),
       ...(existingSuggestions || []).map((s: any) => s.cj_pid),
     ]);
 
-    const newProducts = cjProducts.filter((p: any) => p.pid && !existingPids.has(p.pid));
+    const newProducts = cjProducts.filter((p: any) => {
+      const pid = v2Pid(p);
+      return pid && !existingPids.has(pid);
+    });
     console.log(`[auto-import] ${cjProducts.length} fetched, ${newProducts.length} after dedup`);
 
     if (newProducts.length === 0) {
@@ -122,15 +153,17 @@ export async function POST(request: NextRequest) {
       isUS: boolean;
     }> = [];
 
+    let priceSkipped = 0;
+    let marginSkipped = 0;
     for (const product of newProducts) {
-      const cjPrice = parsePriceValue(product.sellPrice ?? product.productSellPrice);
-      if (cjPrice === null || cjPrice <= 0) continue;
+      const cjPrice = v2Price(product);
+      if (cjPrice === null || cjPrice <= 0) { priceSkipped++; continue; }
 
       const isUS = detectUSWarehouse(product);
       const shippingCost = Math.max(cjPrice * 0.3, 3);
       const pricing = calculatePricing(cjPrice, shippingCost);
 
-      if (pricing.marginPercent < 15) continue;
+      if (pricing.marginPercent < 15) { marginSkipped++; continue; }
 
       viableCandidates.push({
         product,
@@ -142,7 +175,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`[auto-import] ${viableCandidates.length} viable candidates (>=15% margin)`);
+    console.log(`[auto-import] After margin filter: ${viableCandidates.length} viable (${priceSkipped} no price, ${marginSkipped} low margin)`);
 
     if (viableCandidates.length === 0) {
       return NextResponse.json({ message: 'No viable products found', suggested: 0 });
@@ -153,7 +186,7 @@ export async function POST(request: NextRequest) {
     const candidateList = viableCandidates
       .map(
         (c, i) =>
-          `${i + 1}. "${c.product.productNameEn || c.product.productName}" — CJ $${c.cjPrice.toFixed(2)}, Retail $${c.retailPrice.toFixed(2)}, Margin ${c.marginPercent.toFixed(1)}%, ${c.product.variants?.length || 0} variants, Category: ${c.product.categoryName || 'Unknown'}`
+          `${i + 1}. "${v2Name(c.product)}" — CJ $${c.cjPrice.toFixed(2)}, Retail $${c.retailPrice.toFixed(2)}, Margin ${c.marginPercent.toFixed(1)}%, ${c.product.variants?.length || 0} variants, Category: ${c.product.categoryName || c.product.categoryNameEn || 'Unknown'}`
       )
       .join('\n');
 
@@ -204,10 +237,10 @@ Score ALL products. Be selective — only give 70+ to genuinely good fits.`,
             if (idx < 0 || idx >= viableCandidates.length) continue;
             const c = viableCandidates[idx];
             scoredCandidates.push({
-              cj_pid: c.product.pid,
-              name: c.product.productNameEn || c.product.productName || 'Unknown',
-              image: c.product.productImage || null,
-              category: c.product.categoryName || null,
+              cj_pid: v2Pid(c.product),
+              name: v2Name(c.product),
+              image: c.product.productImage || c.product.bigImage || null,
+              category: c.product.categoryName || c.product.categoryNameEn || null,
               cjPrice: c.cjPrice,
               shippingCost: c.shippingCost,
               retailPrice: c.retailPrice,
@@ -231,10 +264,10 @@ Score ALL products. Be selective — only give 70+ to genuinely good fits.`,
     // Fallback: if AI scoring failed, use margin-based scoring
     if (scoredCandidates.length === 0) {
       scoredCandidates = viableCandidates.map((c) => ({
-        cj_pid: c.product.pid,
-        name: c.product.productNameEn || c.product.productName || 'Unknown',
-        image: c.product.productImage || null,
-        category: c.product.categoryName || null,
+        cj_pid: v2Pid(c.product),
+        name: v2Name(c.product),
+        image: c.product.productImage || c.product.bigImage || null,
+        category: c.product.categoryName || c.product.categoryNameEn || null,
         cjPrice: c.cjPrice,
         shippingCost: c.shippingCost,
         retailPrice: c.retailPrice,
