@@ -56,7 +56,7 @@ interface CJFreightResult {
   logisticAging: string;
 }
 
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '../supabase/admin';
 
 // ─── Rate Limiting ───────────────────────────────────────────────
 // 3-second gap between any CJ API calls (QPS limit)

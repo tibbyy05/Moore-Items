@@ -88,6 +88,7 @@ export default function CatalogHealthPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [stockSyncLoading, setStockSyncLoading] = useState(false);
   const [stockSyncData, setStockSyncData] = useState<StockSyncData | null>(null);
+  const [stockSyncAccepted, setStockSyncAccepted] = useState(false);
 
   const runCheck = async () => {
     setLoading(true);
@@ -109,11 +110,17 @@ export default function CatalogHealthPage() {
 
   const runStockSync = async () => {
     setStockSyncLoading(true);
+    setStockSyncAccepted(false);
     try {
       const res = await fetch('/api/admin/catalog/stock-sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+      if (res.status === 202) {
+        setStockSyncAccepted(true);
+        setStockSyncData(null);
+        return;
+      }
       if (!res.ok) throw new Error('Stock sync failed');
       const result = await res.json();
       setStockSyncData(result);
@@ -188,6 +195,19 @@ export default function CatalogHealthPage() {
           </button>
         </div>
       </div>
+
+      {/* Stock sync accepted (background) banner */}
+      {stockSyncAccepted && !stockSyncData && (
+        <div className="bg-white border border-green-200 rounded-2xl p-5 shadow-sm mb-6">
+          <div className="flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <div>
+              <h3 className="text-sm font-semibold text-[#1a1a2e]">Stock Sync Started</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Running in background. Results will be emailed when complete.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stock sync result banner */}
       {stockSyncData && (
