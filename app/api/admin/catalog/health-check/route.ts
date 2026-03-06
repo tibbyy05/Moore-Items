@@ -329,6 +329,33 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // ─── CHECK 11: Price Drift (MEDIUM) ───
+  {
+    const data = await fetchAll<any>(supabase, 'mi_products', 'id, name, price_drift_details', (q: any) =>
+      q.eq('price_drift_flagged', true)
+    );
+
+    const items = data.map((p: any) => {
+      const details = p.price_drift_details;
+      const variant = details?.variants?.[0];
+      let suffix = '';
+      if (variant) {
+        suffix = ` — $${variant.storedPrice.toFixed(2)} → $${variant.currentPrice.toFixed(2)} (${variant.driftPct > 0 ? '+' : ''}${variant.driftPct}%)`;
+      } else if (details?.maxDriftPct !== undefined) {
+        suffix = ` — ${details.maxDriftPct > 0 ? '+' : ''}${details.maxDriftPct}% drift`;
+      }
+      return { id: p.id, name: p.name + suffix };
+    });
+
+    checks.push({
+      name: 'Price Drift',
+      severity: 'MEDIUM',
+      found: items.length,
+      autoFixed: 0,
+      items,
+    });
+  }
+
   // ─── Summary ───
   const totalIssues = checks.reduce((sum, c) => sum + c.found, 0);
   const totalAutoFixed = checks.reduce((sum, c) => sum + c.autoFixed, 0);

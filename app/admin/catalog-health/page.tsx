@@ -49,6 +49,7 @@ interface StockSyncData {
   reactivated: number;
   stock_updated: number;
   errors: number;
+  drift_flagged: number;
   duration_seconds: number;
 }
 
@@ -198,7 +199,7 @@ export default function CatalogHealthPage() {
               {new Date(stockSyncData.timestamp).toLocaleString()} &middot; {stockSyncData.duration_seconds}s
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center">
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-lg font-bold text-[#1a1a2e]">{stockSyncData.total_checked}</p>
               <p className="text-xs text-gray-500">Checked</p>
@@ -214,6 +215,10 @@ export default function CatalogHealthPage() {
             <div className="bg-blue-50 rounded-lg p-3">
               <p className="text-lg font-bold text-blue-600">{stockSyncData.stock_updated}</p>
               <p className="text-xs text-gray-500">Updated</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3">
+              <p className="text-lg font-bold text-purple-600">{stockSyncData.drift_flagged ?? 0}</p>
+              <p className="text-xs text-gray-500">Price Drift</p>
             </div>
             <div className="bg-amber-50 rounded-lg p-3">
               <p className="text-lg font-bold text-amber-600">{stockSyncData.errors}</p>

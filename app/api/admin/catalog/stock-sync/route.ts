@@ -103,6 +103,11 @@ export async function POST(request: NextRequest) {
   let errors = 0;
   const changedCategoryIds = new Set<string>();
 
+  // Price drift tracking
+  let driftFlagged = 0;
+  const driftProducts: { name: string; maxDriftPct: number }[] = [];
+  const productDriftUpdates: { id: string; flagged: boolean; details: any }[] = [];
+
   // Fetch all CJ products that are active or out_of_stock
   const products = await fetchAll<any>(
     supabase,
@@ -206,6 +211,64 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+
+      // ─── Price drift detection ───
+      try {
+        const cjProductData = await cjClient.getProduct(product.cj_pid);
+        const cjVariants = cjProductData?.variants || [];
+
+        const { data: ourVariants } = await supabase
+          .from('mi_product_variants')
+          .select('id, cj_vid, cj_price, name')
+          .eq('product_id', product.id)
+          .eq('is_active', true);
+
+        const cjPriceMap = new Map<string, number>();
+        for (const v of cjVariants) {
+          if (v.vid && typeof v.variantSellPrice === 'number') {
+            cjPriceMap.set(v.vid, v.variantSellPrice);
+          }
+        }
+
+        let hasDrift = false;
+        let maxDriftPct = 0;
+        const driftDetails: { variantName: string; storedPrice: number; currentPrice: number; driftPct: number }[] = [];
+
+        for (const v of ourVariants || []) {
+          const currentPrice = cjPriceMap.get(v.cj_vid);
+          if (currentPrice === undefined || !v.cj_price) continue;
+          const storedPrice = Number(v.cj_price);
+          if (storedPrice <= 0) continue;
+
+          const pct = ((currentPrice - storedPrice) / storedPrice) * 100;
+          if (Math.abs(pct) > 10) {
+            hasDrift = true;
+            driftDetails.push({
+              variantName: v.name || v.cj_vid,
+              storedPrice,
+              currentPrice,
+              driftPct: Math.round(pct * 10) / 10,
+            });
+          }
+          if (Math.abs(pct) > Math.abs(maxDriftPct)) {
+            maxDriftPct = pct;
+          }
+        }
+
+        const roundedMaxDrift = Math.round(maxDriftPct * 10) / 10;
+        productDriftUpdates.push({
+          id: product.id,
+          flagged: hasDrift,
+          details: hasDrift ? { maxDriftPct: roundedMaxDrift, variants: driftDetails } : null,
+        });
+
+        if (hasDrift) {
+          driftFlagged++;
+          driftProducts.push({ name: product.name, maxDriftPct: roundedMaxDrift });
+        }
+      } catch (driftErr: any) {
+        console.error(`[stock-sync] Drift check error for ${product.name}:`, driftErr?.message);
+      }
     } catch (err: any) {
       errors++;
       changes.push({
@@ -246,12 +309,29 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ─── Update price drift flags ───
+  if (productDriftUpdates.length > 0) {
+    for (const upd of productDriftUpdates.filter((p) => p.flagged)) {
+      await supabase
+        .from('mi_products')
+        .update({ price_drift_flagged: true, price_drift_details: upd.details })
+        .eq('id', upd.id);
+    }
+    const clearedIds = productDriftUpdates.filter((p) => !p.flagged).map((p) => p.id);
+    if (clearedIds.length > 0) {
+      await supabase
+        .from('mi_products')
+        .update({ price_drift_flagged: false, price_drift_details: null })
+        .in('id', clearedIds);
+    }
+  }
+
   const duration = Math.round((Date.now() - startTime) / 1000);
   const timestamp = new Date().toISOString();
   const totalChanges = hidden + reactivated + stockUpdated;
 
-  // Send alert email only when changes occurred (fire-and-forget)
-  if (totalChanges > 0) {
+  // Send alert email when changes or drift detected (fire-and-forget)
+  if (totalChanges > 0 || driftFlagged > 0) {
     sendStockSyncAlert({
       totalChecked,
       hidden,
@@ -261,6 +341,8 @@ export async function POST(request: NextRequest) {
       duration,
       timestamp,
       changes,
+      driftFlagged,
+      driftProducts,
     }).catch((err) => console.error('[stock-sync] Failed to send alert email:', err));
   }
 
@@ -271,6 +353,7 @@ export async function POST(request: NextRequest) {
     reactivated,
     stock_updated: stockUpdated,
     errors,
+    drift_flagged: driftFlagged,
     duration_seconds: duration,
     changes: changes.slice(0, 50),
   });

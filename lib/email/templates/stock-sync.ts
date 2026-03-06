@@ -83,6 +83,31 @@ export function stockSyncTemplate(data: StockSyncAlertData): string {
       ${moreText}`;
   }
 
+  // Price drift section
+  const driftFlaggedCount = data.driftFlagged ?? 0;
+  const driftItems = data.driftProducts ?? [];
+  let driftHtml = '';
+  if (driftFlaggedCount > 0 && driftItems.length > 0) {
+    const rows = driftItems
+      .slice(0, 20)
+      .map(
+        (d) => `
+      <tr>
+        <td style="padding:8px 12px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;color:#0a0e1a;border-bottom:1px solid #efede8;">${d.name}</td>
+        <td style="padding:8px 12px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;color:#7c3aed;border-bottom:1px solid #efede8;text-align:right;font-weight:600;">${d.maxDriftPct > 0 ? '+' : ''}${d.maxDriftPct}%</td>
+      </tr>`
+      )
+      .join('');
+    const moreText = driftItems.length > 20 ? `<p style="margin:4px 0 0 12px;font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#888;">...and ${driftItems.length - 20} more</p>` : '';
+
+    driftHtml = `
+      <h3 style="margin:32px 0 12px;font-family:'DM Sans',Arial,sans-serif;font-size:18px;color:#7c3aed;font-weight:700;">Price Drift (${driftFlaggedCount} product${driftFlaggedCount !== 1 ? 's' : ''} flagged)</h3>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:8px;overflow:hidden;border:1px solid #efede8;">
+        ${rows}
+      </table>
+      ${moreText}`;
+  }
+
   // Errors section
   let errorsHtml = '';
   if (errors > 0) {
@@ -187,6 +212,7 @@ export function stockSyncTemplate(data: StockSyncAlertData): string {
             <p style="margin:16px 0 0;text-align:center;font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#888;">Completed in ${duration}s</p>
 
             ${changesHtml}
+            ${driftHtml}
             ${errorsHtml}
 
             <!-- CTA -->

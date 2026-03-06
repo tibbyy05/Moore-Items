@@ -192,6 +192,8 @@ export interface StockSyncAlertData {
   duration: number;
   timestamp: string;
   changes: StockSyncChange[];
+  driftFlagged: number;
+  driftProducts: { name: string; maxDriftPct: number }[];
 }
 
 export async function sendStockSyncAlert(data: StockSyncAlertData) {
