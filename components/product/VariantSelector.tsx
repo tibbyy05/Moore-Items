@@ -189,7 +189,7 @@ export default function VariantSelector({
                   key={color}
                   onClick={() => isAvailable && handleColorClick(color)}
                   disabled={!isAvailable}
-                  title={isAvailable ? color : `${color} (not available in ${selectedSize})`}
+                  title={isAvailable ? color : `${color} (out of stock)`}
                   className={`
                     w-9 h-9 rounded-full border-2 transition-all relative
                     ${isSelected

@@ -58,14 +58,29 @@ async function fetchAll<T>(
   return all;
 }
 
-function getTotalStock(stockData: any): number {
+// Returns product-level total across all warehouses (for hide/reactivate decisions)
+function getProductTotalStock(stockData: any): number {
   const payload = stockData?.data || stockData;
   const inventories = payload?.inventories || (Array.isArray(payload) ? payload : []);
-  let total = 0;
-  for (const inv of inventories) {
-    total += inv.totalInventoryNum || 0;
+  return inventories.reduce((sum: number, inv: any) => sum + (inv.totalInventoryNum || 0), 0);
+}
+
+// Returns Map<vid, {us: number, cn: number}> from variantInventories
+function buildVariantStockMap(stockData: any): Map<string, { us: number; cn: number }> {
+  const payload = stockData?.data || stockData;
+  const variantInventories: any[] = payload?.variantInventories || [];
+  const map = new Map<string, { us: number; cn: number }>();
+  for (const v of variantInventories) {
+    const vid = v.vid as string;
+    if (!vid) continue;
+    const entry = { us: 0, cn: 0 };
+    for (const inv of v.inventory || []) {
+      if (inv.countryCode === 'US') entry.us += inv.totalInventory || 0;
+      else if (inv.countryCode === 'CN') entry.cn += inv.totalInventory || 0;
+    }
+    map.set(vid, entry);
   }
-  return total;
+  return map;
 }
 
 function delay(ms: number): Promise<void> {
@@ -103,7 +118,8 @@ export async function POST(request: NextRequest) {
 
     try {
       const stockData = await cjClient.getProductStock(product.cj_pid);
-      const totalStock = getTotalStock(stockData);
+      const totalStock = getProductTotalStock(stockData);
+      const variantStockMap = buildVariantStockMap(stockData);
 
       // ─── Case 1: Zero stock on active product → hide it ───
       if (totalStock === 0 && product.status === 'active') {
@@ -127,11 +143,20 @@ export async function POST(request: NextRequest) {
           .eq('id', product.id);
 
         if (!updateError) {
-          await supabase
+          const { data: variants } = await supabase
             .from('mi_product_variants')
-            .update({ stock_count: totalStock })
+            .select('id, cj_vid')
             .eq('product_id', product.id)
             .eq('is_active', true);
+
+          for (const v of variants || []) {
+            const cjStock = variantStockMap.get(v.cj_vid);
+            const usStock = cjStock?.us ?? 0;
+            await supabase
+              .from('mi_product_variants')
+              .update({ stock_count: usStock })
+              .eq('id', v.id);
+          }
 
           reactivated++;
           if (product.category_id) changedCategoryIds.add(product.category_id);
@@ -139,31 +164,45 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // ─── Case 3: Active product with stock change >= threshold → update counts ───
+      // ─── Case 3: Active product — update per-variant stock where changed ───
       else if (totalStock > 0 && product.status === 'active') {
         const { data: variants } = await supabase
           .from('mi_product_variants')
-          .select('id, stock_count')
+          .select('id, cj_vid, stock_count')
           .eq('product_id', product.id)
-          .eq('is_active', true)
-          .limit(1);
+          .eq('is_active', true);
 
-        const currentStock = variants?.[0]?.stock_count ?? 100;
-        const diff = Math.abs(totalStock - currentStock);
+        let variantsUpdated = 0;
+        let sampleOld = 0;
+        let sampleNew = 0;
 
-        if (diff >= STOCK_CHANGE_THRESHOLD) {
-          await supabase
-            .from('mi_product_variants')
-            .update({ stock_count: totalStock })
-            .eq('product_id', product.id)
-            .eq('is_active', true);
+        for (const v of variants || []) {
+          const cjStock = variantStockMap.get(v.cj_vid);
+          const usStock = cjStock?.us ?? 0;
+          const currentStock = v.stock_count ?? 0;
+          const diff = Math.abs(usStock - currentStock);
 
+          if (usStock === 0 || diff >= STOCK_CHANGE_THRESHOLD) {
+            await supabase
+              .from('mi_product_variants')
+              .update({ stock_count: usStock })
+              .eq('id', v.id);
+
+            if (variantsUpdated === 0) {
+              sampleOld = currentStock;
+              sampleNew = usStock;
+            }
+            variantsUpdated++;
+          }
+        }
+
+        if (variantsUpdated > 0) {
           stockUpdated++;
           changes.push({
             name: product.name,
             action: 'stock_updated',
-            oldStock: currentStock,
-            newStock: totalStock,
+            oldStock: sampleOld,
+            newStock: sampleNew,
           });
         }
       }

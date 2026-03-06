@@ -185,15 +185,15 @@ export interface VariantCombo {
   }
   
   /**
-   * Get which colors are available for a given size.
-   * Returns all colors if no size selected.
+   * Get which colors are globally available (have at least one in-stock variant
+   * in any size). Colors are never filtered by the currently selected size —
+   * clicking a color that lacks the current size auto-snaps to a valid size.
    */
   export function getAvailableColors(
     matrix: AvailabilityMatrix,
-    selectedSize: string | null
+    _selectedSize: string | null
   ): Set<string> {
-    if (!selectedSize) return new Set(matrix.allColors);
-    return new Set(matrix.colorsBySize.get(selectedSize) || []);
+    return new Set(matrix.allColors);
   }
   
   /**
