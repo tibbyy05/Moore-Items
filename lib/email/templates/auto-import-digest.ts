@@ -12,38 +12,52 @@ function scoreBadge(score: number): string {
   return `<span style="display:inline-block;padding:4px 12px;border-radius:12px;background:${bg};color:${text};font-family:'DM Sans',Arial,sans-serif;font-size:14px;font-weight:700;">${score}</span>`;
 }
 
+function hasValidImage(url: string | null | undefined): url is string {
+  return typeof url === 'string' && url.startsWith('http');
+}
+
+function productCard(s: AutoImportDigestData['suggestions'][number]): string {
+  const img = hasValidImage(s.productImage)
+    ? `<img src="${s.productImage}" alt="" width="80" height="80" style="border-radius:8px;object-fit:cover;display:block;" />`
+    : `<div style="width:80px;height:80px;border-radius:8px;background:#f0ede8;display:block;"></div>`;
+
+  return `<table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td width="80" valign="top" style="padding-right:16px;">${img}</td>
+      <td valign="top">
+        <p style="margin:0 0 4px;font-family:'DM Sans',Arial,sans-serif;font-size:15px;font-weight:600;color:#0a0e1a;">${s.productName}</p>
+        <p style="margin:0 0 8px;font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#888;">
+          CJ $${s.cjPrice.toFixed(2)} &rarr; Retail $${s.retailPrice.toFixed(2)} &middot; ${s.marginPercent.toFixed(1)}% margin
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0"><tr>
+          <td style="padding-right:12px;">${scoreBadge(s.aiScore)}</td>
+          <td style="font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#555;max-width:280px;">${s.aiReasoning.slice(0, 120)}${s.aiReasoning.length > 120 ? '...' : ''}</td>
+        </tr></table>
+      </td>
+    </tr>
+  </table>`;
+}
+
 export function autoImportDigestTemplate(data: AutoImportDigestData): string {
   const { batchDate, suggestionCount, suggestions } = data;
 
-  const productRows = suggestions
-    .map(
-      (s) => `
-      <tr>
-        <td style="padding:16px 0;border-bottom:1px solid #efede8;">
-          <table width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr>
-              <td width="80" valign="top" style="padding-right:16px;">
-                ${s.productImage
-                  ? `<img src="${s.productImage}" alt="" width="80" height="80" style="border-radius:8px;object-fit:cover;display:block;" />`
-                  : `<div style="width:80px;height:80px;border-radius:8px;background:#f0ede8;"></div>`
-                }
-              </td>
-              <td valign="top">
-                <p style="margin:0 0 4px;font-family:'DM Sans',Arial,sans-serif;font-size:15px;font-weight:600;color:#0a0e1a;">${s.productName}</p>
-                <p style="margin:0 0 8px;font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#888;">
-                  CJ $${s.cjPrice.toFixed(2)} → Retail $${s.retailPrice.toFixed(2)} &middot; ${s.marginPercent.toFixed(1)}% margin
-                </p>
-                <table cellpadding="0" cellspacing="0" border="0"><tr>
-                  <td style="padding-right:12px;">${scoreBadge(s.aiScore)}</td>
-                  <td style="font-family:'DM Sans',Arial,sans-serif;font-size:13px;color:#555;max-width:360px;">${s.aiReasoning.slice(0, 120)}${s.aiReasoning.length > 120 ? '...' : ''}</td>
-                </tr></table>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>`
-    )
-    .join('');
+  // Build 2-column grid rows (pairs of products side by side)
+  const gridRows: string[] = [];
+  for (let i = 0; i < suggestions.length; i += 2) {
+    const left = suggestions[i];
+    const right = suggestions[i + 1];
+    gridRows.push(`<tr>
+      <td width="50%" valign="top" style="padding:12px 8px 12px 0;border-bottom:1px solid #efede8;">
+        ${productCard(left)}
+      </td>
+      ${right
+        ? `<td width="50%" valign="top" style="padding:12px 0 12px 8px;border-bottom:1px solid #efede8;">
+            ${productCard(right)}
+          </td>`
+        : `<td width="50%" style="padding:12px 0 12px 8px;border-bottom:1px solid #efede8;"></td>`
+      }
+    </tr>`);
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -52,11 +66,12 @@ export function autoImportDigestTemplate(data: AutoImportDigestData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Auto-Import Suggestions - MooreItems</title>
   <style>
-    @media only screen and (max-width: 640px) {
+    @media only screen and (max-width: 820px) {
       .inner-table { width: 100% !important; }
       .body-cell { padding: 32px 20px !important; }
       .header-cell { padding: 32px 20px !important; }
       .footer-cell { padding: 24px 20px !important; }
+      .product-cell { display: block !important; width: 100% !important; padding: 12px 0 !important; }
     }
   </style>
 </head>
@@ -70,7 +85,7 @@ export function autoImportDigestTemplate(data: AutoImportDigestData): string {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0f1629" style="background:#0f1629;">
   <tr>
     <td align="center" class="header-cell" style="padding:44px 20px;">
-      <table width="640" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:640px;">
+      <table width="800" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:800px;">
         <tr>
           <td align="center">
             <h1 style="margin:0;font-family:'Playfair Display',Georgia,serif;font-size:38px;color:#c8a45e;letter-spacing:2px;">MooreItems</h1>
@@ -86,7 +101,7 @@ export function autoImportDigestTemplate(data: AutoImportDigestData): string {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background:#ffffff;">
   <tr>
     <td align="center" class="body-cell" style="padding:48px 20px;">
-      <table width="640" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:640px;">
+      <table width="800" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:800px;">
         <tr>
           <td>
 
@@ -97,9 +112,9 @@ export function autoImportDigestTemplate(data: AutoImportDigestData): string {
               <p style="margin:8px 0 0;font-family:'DM Sans',Arial,sans-serif;font-size:15px;color:#888;">${batchDate}</p>
             </div>
 
-            <!-- Product List -->
+            <!-- Product Grid (2-column on desktop) -->
             <table width="100%" cellpadding="0" cellspacing="0" border="0">
-              ${productRows}
+              ${gridRows.join('')}
             </table>
 
             <!-- CTA -->
@@ -122,7 +137,7 @@ export function autoImportDigestTemplate(data: AutoImportDigestData): string {
 <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0f1629" style="background:#0f1629;">
   <tr>
     <td align="center" class="footer-cell" style="padding:36px 20px;">
-      <table width="640" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:640px;">
+      <table width="800" cellpadding="0" cellspacing="0" border="0" class="inner-table" style="max-width:800px;">
         <tr>
           <td align="center">
             <p style="margin:0 0 12px;font-family:'DM Sans',Arial,sans-serif;font-size:14px;color:#5a6178;">
