@@ -38,13 +38,22 @@ function v2Price(item: any): number | null {
 }
 
 async function checkAuth(request: NextRequest): Promise<{ authorized: boolean }> {
+  const cronSecret = process.env.AUTO_IMPORT_SECRET;
+
+  // Method 1: Query param (used by Netlify scheduled function)
   const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
-  const cronSecret = process.env.AUTO_IMPORT_SECRET;
   if (cronSecret && key === cronSecret) {
     return { authorized: true };
   }
 
+  // Method 2: Header (used by cron-job.org)
+  const headerSecret = request.headers.get('x-auto-import-secret');
+  if (cronSecret && headerSecret === cronSecret) {
+    return { authorized: true };
+  }
+
+  // Method 3: Admin session (used by admin UI)
   try {
     const supabase = await createServerSupabaseClient();
     const {
