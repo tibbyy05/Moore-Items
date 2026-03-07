@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
@@ -11,6 +12,23 @@ interface CJWebhookPayload {
 }
 
 export async function POST(request: NextRequest) {
+  // --- Webhook secret validation ---
+  if (!process.env.CJ_WEBHOOK_SECRET) {
+    console.warn('[CJ Webhook] CJ_WEBHOOK_SECRET not set — rejecting all requests');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const incomingSecret = searchParams.get('secret');
+
+  const expected = Buffer.from(process.env.CJ_WEBHOOK_SECRET, 'utf-8');
+  const incoming = Buffer.from(incomingSecret ?? '', 'utf-8');
+  const valid = expected.length === incoming.length && timingSafeEqual(expected, incoming);
+
+  if (!valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let payload: CJWebhookPayload;
   try {
     payload = await request.json();
