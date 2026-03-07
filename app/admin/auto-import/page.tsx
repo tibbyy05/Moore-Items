@@ -113,7 +113,7 @@ export default function AutoImportPage() {
 
     if (productIds.length === 0) return;
 
-    const unique = [...new Set(productIds)];
+    const unique = Array.from(new Set(productIds));
     supabaseRef.current
       .from('mi_products')
       .select('id, slug')
