@@ -17,7 +17,8 @@ type StatusType =
   | 'refunded'
   | 'paused'
   | 'ended'
-  | 'draft';
+  | 'draft'
+  | 'live';
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -88,6 +89,10 @@ const STATUS_CONFIG: Record<StatusType, { label: string; className: string }> = 
   draft: {
     label: 'Draft',
     className: 'bg-gray-100 text-gray-600 border-gray-200',
+  },
+  live: {
+    label: 'Live',
+    className: 'bg-success/15 text-success border-success/30',
   },
 };
 

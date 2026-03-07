@@ -235,6 +235,13 @@ export async function POST(request: NextRequest) {
         } catch (trackError) {
           console.error('[Webhook] Promo code tracking failed (non-fatal):', trackError);
         }
+
+        // Track landing page conversion if promo code matches a landing page
+        try {
+          await trackLandingPageConversion(supabase, discountCode);
+        } catch (lpError) {
+          console.error('[Webhook] Landing page conversion tracking failed (non-fatal):', lpError);
+        }
       }
     }
 
@@ -372,4 +379,28 @@ async function trackPromoCodeUsage(
     p_revenue: orderTotal,
     p_discount: discountAmount,
   });
+}
+
+async function trackLandingPageConversion(
+  supabase: ReturnType<typeof createAdminClient>,
+  discountCode: string
+) {
+  // Find landing pages where promo_codes jsonb contains this code as a value
+  const { data: pages } = await supabase
+    .from('mi_landing_pages')
+    .select('id, promo_codes, conversions');
+
+  if (!pages || pages.length === 0) return;
+
+  for (const lp of pages) {
+    const promoCodes: Record<string, string> = lp.promo_codes || {};
+    const codeValues = Object.values(promoCodes);
+    if (codeValues.includes(discountCode)) {
+      await supabase
+        .from('mi_landing_pages')
+        .update({ conversions: (lp.conversions || 0) + 1 })
+        .eq('id', lp.id);
+      break;
+    }
+  }
 }

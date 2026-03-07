@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { X, Loader2, Truck, Globe, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -22,8 +24,10 @@ interface DiscountState {
 }
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, subtotal } = useCart();
+  const { items, addItem, updateQuantity, removeItem, subtotal } = useCart();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [discountCode, setDiscountCode] = useState('');
   const [discount, setDiscount] = useState<DiscountState | null>(null);
   const [discountError, setDiscountError] = useState('');
@@ -32,6 +36,49 @@ export default function CartPage() {
   const [checkoutError, setCheckoutError] = useState('');
   const [unavailableProducts, setUnavailableProducts] = useState<{ id: string; name: string }[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const deepLinkProcessed = useRef(false);
+
+  // Deep-link support: ?add=productId&qty=n&promo=CODE
+  useEffect(() => {
+    if (deepLinkProcessed.current) return;
+    const addId = searchParams.get('add');
+    if (!addId) return;
+    deepLinkProcessed.current = true;
+
+    const qty = parseInt(searchParams.get('qty') || '1', 10) || 1;
+    const promo = searchParams.get('promo');
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/products/${addId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const p = data.product;
+        if (!p) return;
+
+        addItem({
+          productId: p.id,
+          variantId: '',
+          slug: p.slug,
+          name: p.name,
+          price: p.retail_price,
+          quantity: qty,
+          image: p.images?.[0] || '/placeholder.webp',
+          warehouse: p.warehouse || 'CN',
+        });
+
+        if (promo) {
+          setDiscountCode(promo);
+        }
+
+        toast.success('Item added from your link!');
+      } catch {
+        // silently fail
+      }
+    })();
+
+    router.replace('/cart', { scroll: false });
+  }, [searchParams, router, addItem]);
 
   useEffect(() => {
     if (!discount) return;

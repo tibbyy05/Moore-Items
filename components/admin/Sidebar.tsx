@@ -60,6 +60,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, count: null },
       { href: '/admin/customers', label: 'Customers', icon: Users, count: null },
       { href: '/admin/promo-codes', label: 'Promo Codes', icon: Tag, count: null },
+      { href: '/admin/landing-pages', label: 'Landing Pages', icon: Layers, count: null },
     ],
   },
   {
@@ -76,7 +77,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [],
     comingSoon: [
       { label: 'Analytics', icon: BarChart3, badge: 'Beta' },
-      { label: 'Landing Pages', icon: Layers, badge: 'Coming Soon' },
       { label: 'Ad Campaigns', icon: Zap, badge: 'Coming Soon' },
     ],
   },
