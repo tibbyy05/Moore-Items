@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Loader2,
@@ -11,7 +11,10 @@ import {
   Check,
   X,
   AlertTriangle,
+  Clipboard,
+  ExternalLink,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 interface Suggestion {
   id: string;
@@ -96,6 +99,41 @@ export default function AutoImportPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [approveProgress, setApproveProgress] = useState('');
+  const [slugMap, setSlugMap] = useState<Record<string, string>>({});
+  const [copiedPid, setCopiedPid] = useState<string | null>(null);
+  const supabaseRef = useRef(createClient());
+
+  // Fetch slugs for imported products
+  useEffect(() => {
+    const productIds = batches
+      .flatMap((b) => b.items)
+      .filter((s) => s.status === 'imported' && s.imported_product_id)
+      .map((s) => s.imported_product_id!)
+      .filter((id) => !slugMap[id]);
+
+    if (productIds.length === 0) return;
+
+    const unique = [...new Set(productIds)];
+    supabaseRef.current
+      .from('mi_products')
+      .select('id, slug')
+      .in('id', unique)
+      .then(({ data }) => {
+        if (!data) return;
+        setSlugMap((prev) => {
+          const next = { ...prev };
+          for (const p of data) next[p.id] = p.slug;
+          return next;
+        });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batches]);
+
+  const copyPid = (pid: string) => {
+    navigator.clipboard.writeText(pid);
+    setCopiedPid(pid);
+    setTimeout(() => setCopiedPid(null), 1500);
+  };
 
   const fetchSuggestions = useCallback(async () => {
     setLoading(true);
@@ -392,11 +430,11 @@ export default function AutoImportPage() {
                             <img
                               src={s.product_image}
                               alt={s.product_name}
-                              className="w-20 h-20 object-cover rounded-lg bg-gray-100"
+                              className="w-40 h-40 object-cover rounded-lg bg-gray-100"
                             />
                           ) : (
-                            <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center">
-                              <Package className="w-8 h-8 text-gray-300" />
+                            <div className="w-40 h-40 rounded-lg bg-gray-100 flex items-center justify-center">
+                              <Package className="w-10 h-10 text-gray-300" />
                             </div>
                           )}
                         </div>
@@ -411,6 +449,22 @@ export default function AutoImportPage() {
                               <ScoreBadge score={s.ai_score} />
                               <StatusBadge status={s.status} />
                             </div>
+                          </div>
+
+                          {/* CJ PID */}
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="text-xs text-gray-400">PID: {s.cj_pid}</span>
+                            <button
+                              onClick={() => copyPid(s.cj_pid)}
+                              className="p-0.5 rounded hover:bg-gray-100 transition-colors"
+                              title="Copy PID"
+                            >
+                              {copiedPid === s.cj_pid ? (
+                                <Check className="w-3 h-3 text-green-500" />
+                              ) : (
+                                <Clipboard className="w-3 h-3 text-gray-400" />
+                              )}
+                            </button>
                           </div>
 
                           {s.cj_category && (
@@ -458,6 +512,18 @@ export default function AutoImportPage() {
                               <AlertTriangle className="w-3 h-3" />
                               {s.error_message}
                             </div>
+                          )}
+
+                          {/* View Product link for imported products */}
+                          {s.status === 'imported' && s.imported_product_id && slugMap[s.imported_product_id] && (
+                            <a
+                              href={`https://mooreitems.com/product/${slugMap[s.imported_product_id]}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-purple-600 hover:text-purple-700"
+                            >
+                              View Product <ExternalLink className="w-3 h-3" />
+                            </a>
                           )}
                         </div>
                       </div>
