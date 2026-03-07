@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { LRUCache } from 'lru-cache';
 
-const rateLimiter = new LRUCache<string, number[]>({
-  max: 500,
-  ttl: 60 * 1000,
-});
+const rateLimiter = new Map<string, number[]>();
 
 const SYSTEM_PROMPT = `You are the MooreItems Shopping Assistant — a friendly, knowledgeable shopping helper for MooreItems.com, a curated online store with 3,000+ products across fashion, home & garden, health & beauty, electronics, jewelry, kitchen, pet supplies, and kids & toys. Products ship from US warehouses (2-5 business days) or internationally (7-15 business days). Check each product for its shipping estimate. Free shipping on orders over $50.
 
@@ -208,6 +204,13 @@ export async function POST(request: NextRequest) {
 
     recent.push(now);
     rateLimiter.set(ip, recent);
+
+    // Cleanup: remove IPs with no recent activity to prevent memory leak
+    if (rateLimiter.size > 500) {
+      for (const [key, times] of rateLimiter.entries()) {
+        if (times.every((t) => now - t >= windowMs)) rateLimiter.delete(key);
+      }
+    }
 
     const body = await request.json();
     const message = String(body?.message || '').trim();
