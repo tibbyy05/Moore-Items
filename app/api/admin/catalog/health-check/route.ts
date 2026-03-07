@@ -371,6 +371,27 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // ─── CHECK 12: Placeholder price products (HIGH) ───
+  {
+    const data = await fetchAll<any>(
+      supabase, 'mi_products', 'id, name, cj_price',
+      (q: any) => q.eq('status', 'active').gte('cj_price', 999)
+    );
+
+    const items = data.map((p: any) => ({
+      id: p.id,
+      name: `${p.name} — CJ $${Number(p.cj_price).toFixed(2)}`,
+    }));
+
+    checks.push({
+      name: 'Placeholder price products',
+      severity: 'HIGH',
+      found: items.length,
+      autoFixed: 0,
+      items,
+    });
+  }
+
   // ─── Summary ───
   const totalIssues = checks.reduce((sum, c) => sum + c.found, 0);
   const totalAutoFixed = checks.reduce((sum, c) => sum + c.autoFixed, 0);

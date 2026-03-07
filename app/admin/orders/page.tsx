@@ -50,6 +50,7 @@ interface Order {
   carrier: string | null;
   cj_status: string | null;
   notes: string | null;
+  refund_status: string | null;
   mi_order_items: OrderItem[];
 }
 
@@ -151,6 +152,7 @@ export default function AdminOrdersPage() {
   const [editStatus, setEditStatus] = useState<Record<string, string>>({});
   const [editTracking, setEditTracking] = useState<Record<string, string>>({});
   const [updateLoading, setUpdateLoading] = useState<Record<string, boolean>>({});
+  const [refundLoading, setRefundLoading] = useState<Record<string, boolean>>({});
   const [syncLoading, setSyncLoading] = useState(false);
   const limit = 20;
 
@@ -334,6 +336,28 @@ export default function AdminOrdersPage() {
       toast.error(error?.message || 'Unable to clear notes');
     } finally {
       setUpdateLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleRefund = async (orderId: string, total: number, orderNumber: string) => {
+    if (!window.confirm(`Issue a full refund of ${formatCurrency(total)} for order #${orderNumber}? This cannot be undone.`)) {
+      return;
+    }
+    setRefundLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await fetch('/api/admin/orders/refund', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Refund failed');
+      toast.success('Refund issued successfully');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to process refund');
+    } finally {
+      setRefundLoading((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -597,7 +621,14 @@ export default function AdminOrdersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <PaymentBadge status={order.payment_status} />
+                          {order.refund_status === 'refunded' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                              <XCircle className="w-3 h-3" />
+                              Refunded
+                            </span>
+                          ) : (
+                            <PaymentBadge status={order.payment_status} />
+                          )}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <FulfillmentBadge status={order.fulfillment_status} />
@@ -728,6 +759,28 @@ export default function AdminOrdersPage() {
                                         Session: {order.stripe_session_id}
                                       </p>
                                     )}
+                                    {order.refund_status === 'refunded' ? (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-700 border-red-200">
+                                        <XCircle className="w-3 h-3" />
+                                        Refunded
+                                      </span>
+                                    ) : order.payment_status === 'paid' && order.stripe_payment_intent_id ? (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRefund(order.id, order.total, order.order_number);
+                                        }}
+                                        disabled={Boolean(refundLoading[order.id])}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {refundLoading[order.id] ? (
+                                          <RefreshCw className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <XCircle className="w-3 h-3" />
+                                        )}
+                                        Refund
+                                      </button>
+                                    ) : null}
                                   </div>
                                 </div>
 

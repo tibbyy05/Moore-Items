@@ -107,6 +107,7 @@ export default function ProductsPage() {
   const [verifyStockLoading, setVerifyStockLoading] = useState(false);
   const [verifyStockQty, setVerifyStockQty] = useState<number | null>(null);
   const [verifyStockError, setVerifyStockError] = useState<string | null>(null);
+  const [verifyLocalVariantCount, setVerifyLocalVariantCount] = useState<number | null>(null);
   const [previewProduct, setPreviewProduct] = useState<AdminProductRow | null>(null);
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [generatingReviews, setGeneratingReviews] = useState<string | null>(null);
@@ -382,7 +383,7 @@ export default function ProductsPage() {
     }
   };
 
-  const handleVerifyOnCJ = async (pid: string | null) => {
+  const handleVerifyOnCJ = async (pid: string | null, localVariantCount?: number | null) => {
     if (!pid) {
       setVerifyError('Product no longer available on CJ');
       return;
@@ -394,6 +395,7 @@ export default function ProductsPage() {
     setVerifyStockLoading(true);
     setVerifyStockQty(null);
     setVerifyStockError(null);
+    setVerifyLocalVariantCount(localVariantCount ?? null);
     try {
       const response = await fetch(`/api/admin/verify-product?pid=${encodeURIComponent(pid)}`);
       const data = await response.json();
@@ -440,15 +442,14 @@ export default function ProductsPage() {
     previewImages[previewImageIndex] || previewImages[0] || '/placeholder.svg';
   const verifyDetail = verifyData?.data || null;
   const verifyName = verifyDetail?.productNameEn || verifyDetail?.productName || 'Unknown product';
-  const verifyPrice = verifyDetail?.sellPrice || verifyDetail?.productSellPrice || 'N/A';
-  const verifyStatusRaw = verifyDetail?.status;
-  const verifyIsActive = String(verifyStatusRaw) === '3';
+  const verifyPriceRaw = verifyDetail?.sellPrice || verifyDetail?.productSellPrice;
+  const verifyPrice = verifyPriceRaw ? `$${parseFloat(verifyPriceRaw).toFixed(2)}` : 'N/A';
+  const verifyStatusRaw = verifyDetail?.saleStatus ?? verifyDetail?.status;
+  const verifyIsActive = verifyStatusRaw != null ? String(verifyStatusRaw) === '3' : null;
   const verifyImageSetCount = Array.isArray(verifyDetail?.productImageSet)
     ? verifyDetail.productImageSet.length
     : 0;
-  const verifyVariantCount = Array.isArray(verifyDetail?.variants)
-    ? verifyDetail.variants.length
-    : 0;
+  const verifyVariantCount = verifyLocalVariantCount;
 
   return (
     <>
@@ -679,7 +680,7 @@ export default function ProductsPage() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleVerifyOnCJ(product.cj_pid)}
+                              onClick={() => handleVerifyOnCJ(product.cj_pid, product.mi_product_variants?.[0]?.count)}
                               className="ml-2 px-2 py-1 text-xs font-semibold text-gold-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                             >
                               Verify
@@ -916,64 +917,6 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {verifyPid && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[#1a1a2e]">Verify on CJ</h3>
-              <button
-                onClick={() => {
-                  setVerifyPid(null);
-                  setVerifyError(null);
-                  setVerifyData(null);
-                  setVerifyStockQty(null);
-                  setVerifyStockError(null);
-                }}
-                className="text-gray-500 hover:text-[#1a1a2e]"
-              >
-                ×
-              </button>
-            </div>
-
-            {verifyLoading ? (
-              <div className="flex items-center gap-3 text-gray-500">
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Checking CJ product details...
-              </div>
-            ) : verifyError ? (
-              <div className="text-danger font-semibold">Product no longer available on CJ</div>
-            ) : (
-              <div className="space-y-3 text-sm text-gray-700">
-                <div className="text-[#1a1a2e] font-semibold">{verifyName}</div>
-                <div>Wholesale Price: {verifyPrice}</div>
-                <div>Images: {verifyImageSetCount}</div>
-                <div>Variants: {verifyVariantCount}</div>
-                <div>
-                  Status:{' '}
-                  <span className={verifyIsActive ? 'text-success' : 'text-danger'}>
-                    {verifyIsActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-                <div>
-                  US Stock:{' '}
-                  {verifyStockLoading ? (
-                    <span className="text-gray-500">Checking...</span>
-                  ) : verifyStockError ? (
-                    <span className="text-amber-600">Stock check failed</span>
-                  ) : (
-                    <span
-                      className={(verifyStockQty || 0) > 0 ? 'text-success' : 'text-danger'}
-                    >
-                      {verifyStockQty ?? 0} units
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {preview ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -1143,7 +1086,7 @@ export default function ProductsPage() {
                   </button>
                   {preview.cj_pid && (
                     <button
-                      onClick={() => handleVerifyOnCJ(preview.cj_pid)}
+                      onClick={() => handleVerifyOnCJ(preview.cj_pid, preview.mi_product_variants?.[0]?.count)}
                       className="px-4 py-2 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-sm font-semibold rounded-lg transition-colors"
                     >
                       Verify on CJ
@@ -1186,6 +1129,65 @@ export default function ProductsPage() {
           </div>
         </div>
       ) : null}
+
+      {verifyPid && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="bg-white border border-gray-200 rounded-2xl w-full max-w-lg p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-[#1a1a2e]">Verify on CJ</h3>
+              <button
+                onClick={() => {
+                  setVerifyPid(null);
+                  setVerifyError(null);
+                  setVerifyData(null);
+                  setVerifyStockQty(null);
+                  setVerifyStockError(null);
+                  setVerifyLocalVariantCount(null);
+                }}
+                className="text-gray-500 hover:text-[#1a1a2e]"
+              >
+                ×
+              </button>
+            </div>
+
+            {verifyLoading ? (
+              <div className="flex items-center gap-3 text-gray-500">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Checking CJ product details...
+              </div>
+            ) : verifyError ? (
+              <div className="text-danger font-semibold">Product no longer available on CJ</div>
+            ) : (
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="text-[#1a1a2e] font-semibold">{verifyName}</div>
+                <div>Wholesale Price: {verifyPrice}</div>
+                <div>Images: {verifyImageSetCount}</div>
+                <div>Variants (local): {verifyVariantCount != null ? verifyVariantCount : '\u2014'}</div>
+                <div>
+                  Status:{' '}
+                  <span className={verifyIsActive === null ? 'text-gray-500' : verifyIsActive ? 'text-success' : 'text-danger'}>
+                    {verifyIsActive === null ? 'Unknown' : verifyIsActive ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+                <div>
+                  US Stock:{' '}
+                  {verifyStockLoading ? (
+                    <span className="text-gray-500">Checking...</span>
+                  ) : verifyStockError ? (
+                    <span className="text-amber-600">Stock check failed</span>
+                  ) : (
+                    <span
+                      className={(verifyStockQty || 0) > 0 ? 'text-success' : 'text-danger'}
+                    >
+                      {verifyStockQty ?? 0} units
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <PolishModal
         product={polishProduct}

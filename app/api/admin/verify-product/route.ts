@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     try {
       const stockResponse = await cjClient.getProductStock(pid);
-      stockData = stockResponse?.data || stockResponse;
+      stockData = stockResponse;
     } catch (error: any) {
       stockError = error?.message || 'Stock lookup failed';
     }

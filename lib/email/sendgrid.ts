@@ -5,6 +5,7 @@ import { healthCheckTemplate } from './templates/health-check';
 import { stockSyncTemplate } from './templates/stock-sync';
 import { newOrderAdminTemplate, type AdminOrderNotificationData } from './templates/new-order-admin';
 import { autoImportDigestTemplate } from './templates/auto-import-digest';
+import { contactFormAdminTemplate, contactFormAutoReplyTemplate, type ContactFormData } from './templates/contact-form';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -21,9 +22,10 @@ interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
+  replyTo?: string;
 }
 
-async function sendEmail({ to, subject, html }: SendEmailParams): Promise<{ success: boolean; error?: string }> {
+async function sendEmail({ to, subject, html, replyTo }: SendEmailParams): Promise<{ success: boolean; error?: string }> {
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) {
     console.error('[SendGrid] Missing SENDGRID_API_KEY');
@@ -34,18 +36,23 @@ async function sendEmail({ to, subject, html }: SendEmailParams): Promise<{ succ
   const fromName = process.env.SENDGRID_FROM_NAME || 'MooreItems';
 
   try {
+    const payload: Record<string, unknown> = {
+      personalizations: [{ to: [{ email: to }] }],
+      from: { email: fromEmail, name: fromName },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    };
+    if (replyTo) {
+      payload.reply_to = { email: replyTo };
+    }
+
     const response = await fetch(SENDGRID_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }] }],
-        from: { email: fromEmail, name: fromName },
-        subject,
-        content: [{ type: 'text/html', value: html }],
-      }),
+      body: JSON.stringify(payload),
     });
 
     // SendGrid returns 202 on success (accepted for delivery)
@@ -251,6 +258,31 @@ export async function sendAutoImportDigest(data: AutoImportDigestData) {
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
     subject: `MooreItems Auto-Import — ${data.suggestionCount} new product suggestion${data.suggestionCount !== 1 ? 's' : ''}`,
+    html,
+  });
+}
+
+// ============================================================
+// Contact Form Emails
+// ============================================================
+
+export type { ContactFormData };
+
+export async function sendContactFormAdmin(data: ContactFormData) {
+  const html = contactFormAdminTemplate(data);
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `MooreItems Contact: ${data.subject}`,
+    html,
+    replyTo: data.email,
+  });
+}
+
+export async function sendContactFormAutoReply(data: ContactFormData) {
+  const html = contactFormAutoReplyTemplate(data.name);
+  return sendEmail({
+    to: data.email,
+    subject: 'We received your message — MooreItems',
     html,
   });
 }

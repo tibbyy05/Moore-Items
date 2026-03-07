@@ -11,6 +11,7 @@ import { AbortErrorSuppressor } from '@/components/system/AbortErrorSuppressor';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { CategoriesProvider } from '@/components/providers/CategoriesProvider';
 import { EmailPopup } from '@/components/storefront/EmailPopup';
+import CookieConsent from '@/components/CookieConsent';
 import { WebSiteJsonLd, OrganizationJsonLd } from '@/lib/seo/json-ld';
 
 const playfair = Playfair_Display({
@@ -96,6 +97,7 @@ export default function RootLayout({
             </CategoriesProvider>
           </AuthProvider>
         </ToastProvider>
+        <CookieConsent />
       </body>
     </html>
   );
