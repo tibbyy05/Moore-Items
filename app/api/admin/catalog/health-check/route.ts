@@ -80,39 +80,54 @@ export async function POST(request: NextRequest) {
 
   const totalActiveProducts = totalActive || 0;
 
-  // ─── CHECK 1: Zero-stock variants (HIGH) ─── AUTO-FIX ───
+  // ─── CHECK 1: Zero-stock products (HIGH) ─── AUTO-FIX ───
+  // A product is zero-stock ONLY if status='active', it has active variants,
+  // and NO variant has stock_count > 0. Products already out_of_stock/hidden
+  // are excluded — they're already handled.
   {
-    const affected = await fetchAll<any>(
-      supabase,
-      'mi_product_variants',
-      'id, product_id, mi_products!inner(id, name, status)',
-      (q: any) => q.eq('is_active', true).eq('stock_count', 0).eq('mi_products.status', 'active')
+    const activeProducts = await fetchAll<any>(
+      supabase, 'mi_products', 'id, name',
+      (q: any) => q.eq('status', 'active')
     );
+
+    // Products that have at least one active variant with stock > 0
+    const variantsWithStock = await fetchAll<any>(
+      supabase, 'mi_product_variants', 'product_id',
+      (q: any) => q.eq('is_active', true).gt('stock_count', 0)
+    );
+    const productsWithStock = new Set(variantsWithStock.map((v: any) => v.product_id));
+
+    // Products that have any active variant at all (those without are caught by CHECK 8)
+    const allActiveVariants = await fetchAll<any>(
+      supabase, 'mi_product_variants', 'product_id',
+      (q: any) => q.eq('is_active', true)
+    );
+    const productsWithVariants = new Set(allActiveVariants.map((v: any) => v.product_id));
+
+    // Zero-stock = has active variants but none with stock > 0
+    const zeroStockProducts = activeProducts.filter(
+      (p: any) => productsWithVariants.has(p.id) && !productsWithStock.has(p.id)
+    );
+
     let autoFixed = 0;
 
-    if (affected.length > 0) {
-      const variantIds = affected.map((v) => v.id);
+    // Auto-fix: mark these products as out_of_stock so they don't accumulate
+    if (zeroStockProducts.length > 0) {
+      const productIds = zeroStockProducts.map((p: any) => p.id);
       const { error } = await supabase
-        .from('mi_product_variants')
-        .update({ stock_count: 100 })
-        .in('id', variantIds);
+        .from('mi_products')
+        .update({ status: 'out_of_stock' })
+        .in('id', productIds);
 
-      if (!error) autoFixed = variantIds.length;
-    }
-
-    // Dedupe by product
-    const productMap = new Map<string, string>();
-    for (const v of affected) {
-      const p = v.mi_products;
-      if (p && !productMap.has(p.id)) productMap.set(p.id, p.name);
+      if (!error) autoFixed = productIds.length;
     }
 
     checks.push({
-      name: 'Zero-stock variants',
+      name: 'Zero-stock products',
       severity: 'HIGH',
-      found: affected.length,
+      found: zeroStockProducts.length,
       autoFixed,
-      items: Array.from(productMap, ([id, name]) => ({ id, name })),
+      items: zeroStockProducts.map((p: any) => ({ id: p.id, name: p.name })),
     });
   }
 
