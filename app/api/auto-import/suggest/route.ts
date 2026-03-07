@@ -353,21 +353,29 @@ Score ALL products. Be selective — only give 70+ to genuinely good fits.`,
       year: 'numeric',
     });
 
-    await sendAutoImportDigest({
-      batchDate,
-      suggestionCount: top10.length,
-      suggestions: top10.map((c) => ({
-        productName: c.name,
-        productImage: c.image,
-        cjPrice: c.cjPrice,
-        retailPrice: c.retailPrice,
-        marginPercent: c.marginPercent,
-        aiScore: c.score,
-        aiReasoning: c.reasoning,
-      })),
-    }).catch((err) => {
-      console.error('[auto-import] Email send error:', err);
-    });
+    console.log(`[auto-import] Sending digest email with ${top10.length} suggestions...`);
+    try {
+      const emailResult = await sendAutoImportDigest({
+        batchDate,
+        suggestionCount: top10.length,
+        suggestions: top10.map((c) => ({
+          productName: c.name,
+          productImage: c.image,
+          cjPrice: c.cjPrice,
+          retailPrice: c.retailPrice,
+          marginPercent: c.marginPercent,
+          aiScore: c.score,
+          aiReasoning: c.reasoning,
+        })),
+      });
+      if (emailResult.success) {
+        console.log('[auto-import] Digest email sent successfully');
+      } else {
+        console.error('[auto-import] Digest email failed:', emailResult.error);
+      }
+    } catch (emailErr) {
+      console.error('[auto-import] Digest email threw:', emailErr);
+    }
 
     console.log(`[auto-import] Batch ${batchId}: ${top10.length} suggestions saved`);
 
