@@ -6,6 +6,8 @@ import { calculateShippingCost, calculateFlatRateShipping, ShippingItem } from '
 import { getShippingConfig } from '@/lib/config/shipping';
 import { cjClient } from '@/lib/cj/client';
 
+const checkoutRateLimiter = new Map<string, number[]>();
+
 interface CheckoutItemInput {
   productId: string;
   variantId?: string | null;
@@ -14,6 +16,33 @@ interface CheckoutItemInput {
 
 export async function POST(request: NextRequest) {
   try {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
+    const now = Date.now();
+    const windowMs = 10 * 60 * 1000;
+    const maxRequests = 5;
+
+    const timestamps = checkoutRateLimiter.get(ip) ?? [];
+    const recent = timestamps.filter((t) => now - t < windowMs);
+
+    if (recent.length >= maxRequests) {
+      return NextResponse.json(
+        { error: 'Too many checkout attempts. Please wait a few minutes before trying again.' },
+        { status: 429 }
+      );
+    }
+
+    recent.push(now);
+    checkoutRateLimiter.set(ip, recent);
+
+    // Cleanup: remove IPs with no recent activity to prevent memory leak
+    if (checkoutRateLimiter.size > 500) {
+      Array.from(checkoutRateLimiter.entries()).forEach(([key, times]) => {
+        if (times.every((t) => now - t >= windowMs)) checkoutRateLimiter.delete(key);
+      });
+    }
+
     const body = await request.json();
     const items = (body?.items || []) as CheckoutItemInput[];
     const discountCode = body?.discountCode ? String(body.discountCode).trim().toUpperCase() : '';

@@ -3,8 +3,37 @@ import { sendContactFormAdmin, sendContactFormAutoReply } from '@/lib/email/send
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const contactRateLimiter = new Map<string, number[]>();
+
 export async function POST(req: NextRequest) {
   try {
+    const forwarded = req.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
+    const now = Date.now();
+    const windowMs = 60 * 60 * 1000;
+    const maxRequests = 3;
+
+    const timestamps = contactRateLimiter.get(ip) ?? [];
+    const recent = timestamps.filter((t) => now - t < windowMs);
+
+    if (recent.length >= maxRequests) {
+      return NextResponse.json(
+        { error: 'Too many messages sent. Please wait before sending another.' },
+        { status: 429 }
+      );
+    }
+
+    recent.push(now);
+    contactRateLimiter.set(ip, recent);
+
+    // Cleanup: remove IPs with no recent activity to prevent memory leak
+    if (contactRateLimiter.size > 500) {
+      Array.from(contactRateLimiter.entries()).forEach(([key, times]) => {
+        if (times.every((t) => now - t >= windowMs)) contactRateLimiter.delete(key);
+      });
+    }
+
     const body = await req.json();
     const { name, email, subject, message } = body;
 
