@@ -29,15 +29,15 @@ export async function POST(request: NextRequest) {
 
     if (orderError || !order) {
       return NextResponse.json(
-        { error: 'No paid order found with that order number and email. Please check and try again.' },
+        { error: 'We couldn\'t find that order. Please check your order number and email.' },
         { status: 404 }
       );
     }
 
     if (order.payment_status !== 'paid') {
       return NextResponse.json(
-        { error: 'This order has not been paid yet.' },
-        { status: 403 }
+        { error: 'We couldn\'t find that order. Please check your order number and email.' },
+        { status: 404 }
       );
     }
 
