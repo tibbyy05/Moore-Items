@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame } from 'lucide-react';
+import { Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame, Star, ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -228,6 +228,13 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
   >([]);
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [reviewName, setReviewName] = useState('');
+  const [reviewEmail, setReviewEmail] = useState('');
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewResult, setReviewResult] = useState<{success: boolean; message: string} | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -846,6 +853,12 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                           )}
                         </div>
                         <StarRating rating={Number(review.rating || 0)} size="sm" />
+                        {review.verified_purchase === true && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+                            <ShieldCheck size={11} />
+                            Verified Purchase
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm text-warm-500">
                         {timeAgo(review.created_at)}
@@ -887,6 +900,157 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 </CustomButton>
               </div>
             )}
+
+            <div className="mt-10 border-t border-gray-200 pt-8">
+              <h3 style={{fontFamily: 'Playfair Display, serif'}} className="text-xl font-semibold text-[#0f1629] mb-1">
+                Write a Review
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Only verified purchasers can leave a review.
+              </p>
+
+              {!reviewFormOpen && !reviewResult?.success && (
+                <button
+                  onClick={() => setReviewFormOpen(true)}
+                  className="text-sm font-medium text-[#c8a45e] hover:underline"
+                >
+                  Leave a Review &darr;
+                </button>
+              )}
+
+              {reviewFormOpen && !reviewResult?.success && (
+                <div className="space-y-4 max-w-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f1629] mb-1">
+                      Rating <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(star => (
+                        <button
+                          key={star}
+                          onClick={() => setReviewRating(star)}
+                          className="p-0.5 focus:outline-none"
+                          aria-label={`Rate ${star} stars`}
+                        >
+                          <Star
+                            size={24}
+                            className={star <= reviewRating
+                              ? 'text-[#c8a45e] fill-[#c8a45e]'
+                              : 'text-gray-300'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f1629] mb-1">
+                      Your Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={reviewName}
+                      onChange={e => setReviewName(e.target.value)}
+                      maxLength={50}
+                      placeholder="First name or nickname"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#c8a45e]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f1629] mb-1">
+                      Order Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={reviewEmail}
+                      onChange={e => setReviewEmail(e.target.value)}
+                      placeholder="Email used at checkout"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#c8a45e]"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Must match the email from your order confirmation.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f1629] mb-1">
+                      Your Review <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={reviewText}
+                      onChange={e => setReviewText(e.target.value.slice(0, 1000))}
+                      rows={4}
+                      placeholder="What did you think of this product?"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#c8a45e] resize-none"
+                    />
+                    <p className="text-xs text-gray-400 text-right mt-0.5">
+                      {reviewText.length} / 1000
+                    </p>
+                  </div>
+
+                  {reviewResult && !reviewResult.success && (
+                    <p className="text-sm text-red-600">{reviewResult.message}</p>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={async () => {
+                        if (!reviewRating) { setReviewResult({success: false, message: 'Please select a star rating.'}); return; }
+                        if (reviewText.trim().length < 10) { setReviewResult({success: false, message: 'Review must be at least 10 characters.'}); return; }
+                        if (!reviewName.trim()) { setReviewResult({success: false, message: 'Please enter your name.'}); return; }
+                        if (!reviewEmail.trim()) { setReviewResult({success: false, message: 'Please enter your order email.'}); return; }
+
+                        setReviewSubmitting(true);
+                        setReviewResult(null);
+
+                        try {
+                          const res = await fetch('/api/reviews/submit', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                              productId: product.id,
+                              rating: reviewRating,
+                              reviewText: reviewText.trim(),
+                              reviewerName: reviewName.trim(),
+                              reviewerEmail: reviewEmail.trim()
+                            })
+                          });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setReviewResult({success: true, message: 'Your review has been submitted. Thank you!'});
+                            setReviewFormOpen(false);
+                          } else {
+                            setReviewResult({success: false, message: data.error || 'Something went wrong. Please try again.'});
+                          }
+                        } catch {
+                          setReviewResult({success: false, message: 'Something went wrong. Please try again.'});
+                        } finally {
+                          setReviewSubmitting(false);
+                        }
+                      }}
+                      disabled={reviewSubmitting}
+                      className="flex-1 bg-[#0f1629] text-[#f7f6f3] text-sm font-medium py-2.5 rounded-lg hover:bg-[#1a2540] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                    <button
+                      onClick={() => { setReviewFormOpen(false); setReviewResult(null); }}
+                      className="px-4 text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {reviewResult?.success && (
+                <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm max-w-lg">
+                  <ShieldCheck size={16} />
+                  {reviewResult.message}
+                </div>
+              )}
+            </div>
           </section>
 
           {relatedProducts.length > 0 && (

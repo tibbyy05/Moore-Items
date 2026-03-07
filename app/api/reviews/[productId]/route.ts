@@ -11,16 +11,15 @@ export async function GET(
   const limit = parseInt(searchParams.get('limit') || '10', 10);
   const sort = searchParams.get('sort') || 'newest';
 
-  let query = supabase
-    .from('mi_reviews')
-    .select('*', { count: 'exact' })
-    .eq('product_id', params.productId)
-    .eq('is_approved', true);
+  const { data: rows, error } = await supabase.rpc('get_product_reviews', {
+    p_product_id: params.productId,
+    p_limit: limit,
+    p_offset: (page - 1) * limit,
+    p_sort: sort === 'newest' ? 'newest' : 'oldest',
+  });
 
-  query = query.order('created_at', { ascending: sort !== 'newest' });
-  query = query.range((page - 1) * limit, page * limit - 1);
-
-  const { data, error, count } = await query;
+  const data = rows || [];
+  const count = data.length > 0 ? Number(data[0].total_count) : 0;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
