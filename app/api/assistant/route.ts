@@ -207,9 +207,9 @@ export async function POST(request: NextRequest) {
 
     // Cleanup: remove IPs with no recent activity to prevent memory leak
     if (rateLimiter.size > 500) {
-      for (const [key, times] of rateLimiter.entries()) {
+      Array.from(rateLimiter.entries()).forEach(([key, times]) => {
         if (times.every((t) => now - t >= windowMs)) rateLimiter.delete(key);
-      }
+      });
     }
 
     const body = await request.json();
