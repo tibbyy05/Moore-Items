@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { LRUCache } from 'lru-cache';
+
+const rateLimiter = new LRUCache<string, number[]>({
+  max: 500,
+  ttl: 60 * 1000,
+});
 
 const SYSTEM_PROMPT = `You are the MooreItems Shopping Assistant — a friendly, knowledgeable shopping helper for MooreItems.com, a curated online store with 3,000+ products across fashion, home & garden, health & beauty, electronics, jewelry, kitchen, pet supplies, and kids & toys. Products ship from US warehouses (2-5 business days) or internationally (7-15 business days). Check each product for its shipping estimate. Free shipping on orders over $50.
 
@@ -183,6 +189,26 @@ function parseAssistantResponse(text: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+
+    const now = Date.now();
+    const windowMs = 60 * 1000;
+    const maxRequests = 10;
+
+    const timestamps = rateLimiter.get(ip) ?? [];
+    const recent = timestamps.filter((t) => now - t < windowMs);
+
+    if (recent.length >= maxRequests) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment before trying again.' },
+        { status: 429 }
+      );
+    }
+
+    recent.push(now);
+    rateLimiter.set(ip, recent);
+
     const body = await request.json();
     const message = String(body?.message || '').trim();
     const history = Array.isArray(body?.history) ? body.history : [];
