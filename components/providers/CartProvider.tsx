@@ -35,7 +35,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const normalized = parsed.map((item) => ({
           ...item,
           variantId: item.variantId ?? null,
-          warehouse: (item.warehouse || 'CN') as 'US' | 'CN' | 'CA',
+          warehouse: (item.warehouse || 'US') as 'US' | 'CN' | 'CA',
+          // Existing items without originalPrice: fall back to current price
+          originalPrice: item.originalPrice ?? undefined,
+          bundleDiscount: item.bundleDiscount ?? undefined,
         }));
         setItems(normalized);
       }
@@ -64,13 +67,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingItemIndex > -1) {
         const updatedItems = [...currentItems];
+        const existing = updatedItems[existingItemIndex];
+        const mergedQty = existing.quantity + newItem.quantity;
         updatedItems[existingItemIndex] = {
-          ...updatedItems[existingItemIndex],
-          quantity: updatedItems[existingItemIndex].quantity + newItem.quantity,
+          ...existing,
+          quantity: mergedQty,
+          // Adopt bundle metadata from new item if it has it
+          ...(newItem.originalPrice ? {
+            price: newItem.price,
+            originalPrice: newItem.originalPrice,
+            bundleDiscount: newItem.bundleDiscount,
+          } : {}),
         };
         toastMessage = {
           title: 'Cart updated',
-          description: `${newItem.name} quantity increased to ${updatedItems[existingItemIndex].quantity}`,
+          description: `${newItem.name} quantity increased to ${mergedQty}`,
         };
         return updatedItems;
       }
@@ -140,11 +151,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       setItems((currentItems) =>
-        currentItems.map((item) =>
-          item.productId === productId && (item.variantId ?? null) === (variantId ?? null)
-            ? { ...item, quantity }
-            : item
-        )
+        currentItems.map((item) => {
+          if (item.productId !== productId || (item.variantId ?? null) !== (variantId ?? null)) {
+            return item;
+          }
+
+          // If this item has bundle pricing, recalculate price based on new quantity
+          if (item.bundleDiscount && item.originalPrice) {
+            const meetsThreshold = quantity >= item.bundleDiscount.qty;
+            const newPrice = meetsThreshold
+              ? Math.round(item.originalPrice * (1 - item.bundleDiscount.pct / 100) * 100) / 100
+              : item.originalPrice;
+            return { ...item, quantity, price: newPrice };
+          }
+
+          return { ...item, quantity };
+        })
       );
     },
     [removeItem]

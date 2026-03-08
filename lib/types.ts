@@ -51,6 +51,11 @@ export interface Review {
   verified: boolean;
 }
 
+export interface BundleDiscount {
+  qty: number;
+  pct: number;
+}
+
 export interface CartItem {
   productId: string;
   slug: string;
@@ -58,6 +63,8 @@ export interface CartItem {
   name: string;
   variantName?: string;
   price: number;
+  originalPrice?: number;
+  bundleDiscount?: BundleDiscount | null;
   quantity: number;
   image: string;
   warehouse: 'US' | 'CN' | 'CA';

@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
         image,
         unitPrice,
         quantity,
-        warehouse: (product.warehouse || 'CN') as 'US' | 'CN',
+        warehouse: (product.warehouse || 'US') as 'US' | 'CN',
         variantName,
         isDigital: !!product.digital_file_path,
         cjVid,

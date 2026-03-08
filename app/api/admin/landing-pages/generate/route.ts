@@ -166,14 +166,16 @@ export async function POST(request: NextRequest) {
       for (const tier of tiersWithDiscount) {
         const code = `LP-${slugBase}-${tier.qty}`;
 
-        await supabase.from('mi_promo_codes').upsert(
+        await supabase.from('mi_discount_codes').upsert(
           {
             code,
             type: 'percentage',
             value: tier.discount_pct,
             is_active: true,
             max_uses: 9999,
-            notes: 'Auto-created for landing page quantity discount',
+            min_order_amount: 0,
+            code_type: 'general',
+            notes: `Auto-created for landing page quantity discount (${tier.qty}-pack, ${tier.discount_pct}% off)`,
             used_count: 0,
             total_uses: 0,
             total_revenue: 0,

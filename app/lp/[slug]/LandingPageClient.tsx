@@ -144,6 +144,10 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
       name: product.name,
       variantName: selectedVariant?.name || undefined,
       price: unitPrice,
+      originalPrice: product.retail_price,
+      bundleDiscount: selectedTier.discount_pct > 0
+        ? { qty: selectedTier.qty, pct: selectedTier.discount_pct }
+        : null,
       quantity: selectedTier.qty,
       image: product.images?.[0] || '',
       warehouse: (product.warehouse || 'US') as 'US' | 'CN' | 'CA',
