@@ -114,6 +114,13 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     { qty: 3, label: '3 Items', discount_pct: 20, badge: 'Best Value' },
   ]);
 
+  // Image selections
+  const [imageSelections, setImageSelections] = useState<{ hero: string; feature1: string; feature2: string }>({
+    hero: '',
+    feature1: '',
+    feature2: '',
+  });
+
   // AI sections
   const [sections, setSections] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -131,14 +138,20 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     if (!initialData) return;
 
     if (initialData.product) {
+      const imgs = initialData.product.images || [];
       setSelectedProduct({
         id: initialData.product.id,
         name: initialData.product.name,
         retail_price: initialData.product.retail_price,
-        images: initialData.product.images || [],
+        images: imgs,
         description: initialData.product.description || '',
         category: '',
         slug: initialData.product.slug,
+      });
+      setImageSelections({
+        hero: (initialData as any).hero_image_url || imgs[0] || '',
+        feature1: initialData.sections?.feature1_image || imgs[1] || imgs[0] || '',
+        feature2: initialData.sections?.feature2_image || imgs[2] || imgs[0] || '',
       });
     }
 
@@ -204,6 +217,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     };
     setSelectedProduct(prod);
     autoFillSettings(prod);
+    setDefaultImages(prod.images);
     setSearchQuery('');
     setSearchResults([]);
   };
@@ -221,6 +235,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     });
   };
 
+  const setDefaultImages = (images: string[]) => {
+    setImageSelections({
+      hero: images[0] || '',
+      feature1: images[1] || images[0] || '',
+      feature2: images[2] || images[0] || '',
+    });
+  };
+
   /* ─── CJ Import ────────────────────────────────────────────── */
 
   const handleCjPreview = async () => {
@@ -232,7 +254,11 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     setCjPreview(null);
 
     try {
-      const res = await fetch(`/api/admin/verify-product?pid=${encodeURIComponent(trimmed)}`);
+      const res = await fetch('/api/admin/products/import-cj', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid: trimmed, preview: true }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Product not found on CJ');
       setCjPreview(data);
@@ -272,6 +298,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       };
       setSelectedProduct(prod);
       autoFillSettings(prod);
+      setDefaultImages(prod.images);
       setCjPreview(null);
       setCjPid('');
       toast.success(`Imported "${imported.name}" and selected`);
@@ -299,6 +326,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           product_price: selectedProduct.retail_price,
           category: selectedProduct.category,
           quantity_discounts: discountTiers,
+          product_images: selectedProduct.images,
         }),
       });
       const data = await res.json();
@@ -306,6 +334,13 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
       setSections(data.sections);
       setGeneratedPromoCodes(data.promo_codes || {});
+      if (data.image_selections) {
+        setImageSelections({
+          hero: data.image_selections.hero || imageSelections.hero,
+          feature1: data.image_selections.feature1 || imageSelections.feature1,
+          feature2: data.image_selections.feature2 || imageSelections.feature2,
+        });
+      }
       toast.success('Landing page copy generated!');
     } catch (err: any) {
       toast.error(err.message || 'Failed to generate content');
@@ -359,7 +394,12 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         product_id: selectedProduct.id,
         meta_title: pageSettings.metaTitle,
         meta_description: pageSettings.metaDescription,
-        sections,
+        hero_image_url: imageSelections.hero || null,
+        sections: {
+          ...sections,
+          feature1_image: imageSelections.feature1 || null,
+          feature2_image: imageSelections.feature2 || null,
+        },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
         headline: sections?.hero?.headline || '',
@@ -659,7 +699,63 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         </div>
       </div>
 
-      {/* ── CARD 3: Quantity Discount Tiers ────────────────────── */}
+      {/* ── CARD 3: Page Images ─────────────────────────────────── */}
+      {selectedProduct && selectedProduct.images.length > 0 && (
+        <div className={CARD}>
+          <h2 className={TITLE}>Page Images</h2>
+          <p className="text-xs text-gray-400 -mt-2 mb-5">
+            Choose which product images to use for each section
+          </p>
+
+          <div className="space-y-6">
+            {([
+              { key: 'hero' as const, label: 'Hero Image' },
+              { key: 'feature1' as const, label: 'Feature Section 1 Image' },
+              { key: 'feature2' as const, label: 'Feature Section 2 Image' },
+            ]).map(({ key, label }) => (
+              <div key={key}>
+                <label className={LABEL}>{label}</label>
+                <div className="flex items-start gap-4">
+                  {/* Current selection preview */}
+                  {imageSelections[key] ? (
+                    <img
+                      src={imageSelections[key]}
+                      alt=""
+                      className="w-[120px] h-[120px] rounded-lg object-cover border border-gray-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-[120px] h-[120px] rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <Package className="w-8 h-8 text-gray-300" />
+                    </div>
+                  )}
+                  {/* Scrollable image picker */}
+                  <div className="flex-1 overflow-x-auto">
+                    <div className="flex gap-2 pb-1">
+                      {selectedProduct.images.map((img, i) => {
+                        const isActive = imageSelections[key] === img;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
+                            className={`flex-shrink-0 w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
+                              isActive ? 'border-gold-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <img src={img} alt="" className="w-full h-full object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── CARD 4: Quantity Discount Tiers ────────────────────── */}
       <div className={CARD}>
         <h2 className={TITLE}>Quantity Discounts</h2>
         <p className="text-xs text-gray-400 -mt-2 mb-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, startTransition } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Check, ChevronDown } from 'lucide-react';
 import { useCart } from '@/components/providers/CartProvider';
@@ -25,6 +25,7 @@ interface LandingPageProps {
     sections: any;
     quantity_discounts: DiscountTier[];
     promo_codes: Record<string, string> | null;
+    hero_image_url?: string | null;
     meta_title: string;
     meta_description: string;
   };
@@ -79,6 +80,37 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   );
   const [addedToCart, setAddedToCart] = useState(false);
 
+  // Crossfade gallery state
+  const [galleryBase, setGalleryBase] = useState(product.images?.[0] || '');
+  const [galleryNext, setGalleryNext] = useState<string | null>(null);
+  const [fadeIn, setFadeIn] = useState(false);
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleGallerySelect = (img: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (img === galleryBase && !galleryNext) return;
+    if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    startTransition(() => {
+      setGalleryNext(img);
+      setFadeIn(false);
+    });
+    // Trigger fade-in on next frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setFadeIn(true);
+      });
+    });
+    // After transition, swap base and clear overlay
+    fadeTimer.current = setTimeout(() => {
+      setGalleryBase(img);
+      setGalleryNext(null);
+      setFadeIn(false);
+    }, 420);
+  };
+
+  const activeGalleryImg = galleryNext || galleryBase;
+
   // Track view on mount (fire-and-forget)
   useEffect(() => {
     fetch('/api/lp/track-view', {
@@ -121,9 +153,9 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     ? `/cart?promo=${encodeURIComponent(promoCode)}`
     : '/cart';
 
-  const heroImg = product.images?.[0] || '';
-  const featureImg1 = product.images?.[1] || product.images?.[0] || '';
-  const featureImg2 = product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
+  const heroImg = page.hero_image_url || product.images?.[0] || '';
+  const featureImg1 = sections.feature1_image || product.images?.[1] || product.images?.[0] || '';
+  const featureImg2 = sections.feature2_image || product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
 
   return (
     <>
@@ -191,129 +223,236 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ── SECTION 2: QUANTITY SELECTOR ────────────────────────── */}
-      <section id="quantity-selector" className="bg-white py-16">
-        <div className="max-w-3xl mx-auto px-4">
-          <p
-            className="text-center text-xs font-semibold uppercase tracking-widest mb-8"
-            style={{ color: GOLD }}
-          >
-            Choose Your Package
-          </p>
+      {/* ── SECTION 2: QUANTITY SELECTOR (IMMERSIVE) ────────────── */}
+      <section id="quantity-selector" className="min-h-screen" style={{ backgroundColor: CREAM }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen">
 
-          {/* Tier cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {tiers.map((tier, i) => {
-              const tierUnit = Math.round(product.retail_price * (1 - tier.discount_pct / 100) * 100) / 100;
-              const tierTotal = Math.round(tierUnit * tier.qty * 100) / 100;
-              const tierSaved = Math.round((product.retail_price * tier.qty - tierTotal) * 100) / 100;
-              const isSelected = selectedTierIdx === i;
-
-              return (
-                <button
-                  key={tier.qty}
-                  type="button"
-                  onClick={() => setSelectedTierIdx(i)}
-                  className={`relative rounded-xl p-5 text-center transition-all border-2 ${
-                    isSelected ? 'shadow-lg' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  style={isSelected ? { borderColor: GOLD } : undefined}
-                >
-                  {tier.badge && (
-                    <span
-                      className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 text-[11px] font-bold rounded-full whitespace-nowrap"
-                      style={{ backgroundColor: GOLD, color: NAVY }}
-                    >
-                      {tier.badge}
-                    </span>
-                  )}
-                  <p className="text-lg font-bold mt-1" style={{ color: NAVY }}>{tier.label}</p>
-                  <p className="text-2xl font-bold mt-2" style={{ color: NAVY }}>
-                    ${tierUnit.toFixed(2)}
-                    <span className="text-sm font-normal text-gray-500"> each</span>
-                  </p>
-                  {tier.qty > 1 && (
-                    <p className="text-sm text-gray-500 mt-1">${tierTotal.toFixed(2)} total</p>
-                  )}
-                  {tier.discount_pct > 0 && (
-                    <p className="text-sm font-semibold text-green-600 mt-1">
-                      You save ${tierSaved.toFixed(2)}
-                    </p>
-                  )}
-                </button>
-              );
-            })}
+          {/* Left column — fixed-height image gallery with crossfade */}
+          <div className="relative h-[500px] md:h-screen overflow-hidden">
+            {/* Base image layer */}
+            <img
+              src={galleryBase || heroImg}
+              alt={product.name}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ transition: 'opacity 0.4s ease', opacity: galleryNext ? 0 : 1 }}
+            />
+            {/* Overlay image layer (crossfade) */}
+            {galleryNext && (
+              <img
+                src={galleryNext}
+                alt={product.name}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{ transition: 'opacity 0.4s ease', opacity: fadeIn ? 1 : 0 }}
+              />
+            )}
+            {/* Thumbnail strip — pinned to bottom */}
+            {product.images && product.images.length > 1 && (
+              <div
+                className="absolute bottom-0 left-0 right-0 flex gap-2 px-3 py-3 overflow-x-auto"
+                style={{ background: 'rgba(15, 22, 41, 0.7)' }}
+              >
+                {product.images.map((img, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={(e) => handleGallerySelect(img, e)}
+                    className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-opacity"
+                    style={{
+                      outline: activeGalleryImg === img ? `2px solid ${GOLD}` : '2px solid transparent',
+                      outlineOffset: 2,
+                      opacity: activeGalleryImg === img ? 1 : 0.6,
+                    }}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Variant selector */}
-          {variants.length > 0 && (colors.length > 0 || sizes.length > 0) && (
-            <div className="mt-6 flex flex-wrap gap-4">
-              {colors.length > 0 && (
-                <div className="flex-1 min-w-[140px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                  <select
-                    value={selectedVariant?.color || ''}
-                    onChange={(e) => {
-                      const match = variants.find(
-                        (v) => v.color === e.target.value && (selectedVariant?.size ? v.size === selectedVariant.size : true)
-                      );
-                      if (match) setSelectedVariantId(match.id);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
-                  >
-                    {colors.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {sizes.length > 0 && (
-                <div className="flex-1 min-w-[140px]">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                  <select
-                    value={selectedVariant?.size || ''}
-                    onChange={(e) => {
-                      const match = variants.find(
-                        (v) => v.size === e.target.value && (selectedVariant?.color ? v.color === selectedVariant.color : true)
-                      );
-                      if (match) setSelectedVariantId(match.id);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
-                  >
-                    {sizes.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Right column — purchase panel */}
+          <div className="flex flex-col justify-center px-6 md:px-12 py-12">
 
-          {/* Add to Cart button */}
-          <button
-            onClick={handleAddToCart}
-            disabled={addedToCart}
-            className="w-full mt-6 py-4 text-sm font-semibold rounded-lg transition-all disabled:opacity-80 flex items-center justify-center gap-2"
-            style={{ backgroundColor: addedToCart ? '#16a34a' : GOLD, color: addedToCart ? '#fff' : NAVY }}
-          >
-            {addedToCart ? (
-              <><Check className="w-5 h-5" /> Added to cart!</>
-            ) : (
-              <>Add {selectedTier.qty > 1 ? `${selectedTier.qty}` : ''} to Cart &mdash; ${totalPrice.toFixed(2)}</>
-            )}
-          </button>
+            {/* Product name */}
+            <h2 className="font-playfair text-2xl md:text-3xl font-bold" style={{ color: NAVY }}>
+              {product.name}
+            </h2>
 
-          {addedToCart && (
-            <div className="text-center mt-3">
-              <Link
-                href={cartUrl}
-                className="text-sm font-semibold underline underline-offset-2 transition-colors"
-                style={{ color: GOLD }}
+            {/* Star rating */}
+            <p className="mt-2 text-sm" style={{ color: GOLD }}>
+              {'★★★★★'}{' '}
+              <span className="text-gray-500">4.8 (2,100+ reviews)</span>
+            </p>
+
+            {/* Divider */}
+            <div className="h-px my-5" style={{ backgroundColor: `${GOLD}40` }} />
+
+            {/* "BUNDLE & SAVE" header */}
+            <div className="flex items-center gap-4 mb-5">
+              <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
+              <span
+                className="text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                style={{ color: NAVY }}
               >
-                View Cart &rarr;
-              </Link>
+                Bundle &amp; Save
+              </span>
+              <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
             </div>
-          )}
+
+            {/* Tier rows */}
+            <div className="space-y-3">
+              {tiers.map((tier, i) => {
+                const tierUnit = Math.round(product.retail_price * (1 - tier.discount_pct / 100) * 100) / 100;
+                const tierTotal = Math.round(tierUnit * tier.qty * 100) / 100;
+                const tierOriginal = Math.round(product.retail_price * tier.qty * 100) / 100;
+                const tierSaved = Math.round((tierOriginal - tierTotal) * 100) / 100;
+                const isSelected = selectedTierIdx === i;
+
+                return (
+                  <button
+                    key={tier.qty}
+                    type="button"
+                    onClick={() => setSelectedTierIdx(i)}
+                    className={`w-full rounded-xl px-4 py-3.5 text-left transition-all border-2 ${
+                      isSelected ? 'shadow-md bg-white' : 'bg-white/60 border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={isSelected ? { borderColor: GOLD } : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Radio circle */}
+                      <span
+                        className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
+                        style={{ borderColor: isSelected ? GOLD : '#d1d5db' }}
+                      >
+                        {isSelected && (
+                          <span
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: GOLD }}
+                          />
+                        )}
+                      </span>
+
+                      {/* Label + badge */}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="text-sm font-bold" style={{ color: NAVY }}>
+                          {tier.label}
+                        </span>
+                        {tier.badge && (
+                          <span
+                            className="px-2 py-0.5 text-[10px] font-bold rounded-full whitespace-nowrap"
+                            style={{ backgroundColor: GOLD, color: NAVY }}
+                          >
+                            {tier.badge}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Price */}
+                      <div className="text-right flex-shrink-0">
+                        <span className="text-base font-bold" style={{ color: NAVY }}>
+                          ${tierTotal.toFixed(2)}
+                        </span>
+                        {tier.discount_pct > 0 && (
+                          <span className="text-xs text-gray-400 line-through ml-2">
+                            ${tierOriginal.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Savings line */}
+                    {tier.discount_pct > 0 && (
+                      <p className="text-xs font-semibold text-green-600 mt-1 ml-8">
+                        You save ${tierSaved.toFixed(2)}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Variant selector */}
+            {variants.length > 0 && (colors.length > 0 || sizes.length > 0) && (
+              <div className="mt-5 flex flex-wrap gap-4">
+                {colors.length > 0 && (
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                    <select
+                      value={selectedVariant?.color || ''}
+                      onChange={(e) => {
+                        const match = variants.find(
+                          (v) => v.color === e.target.value && (selectedVariant?.size ? v.size === selectedVariant.size : true)
+                        );
+                        if (match) setSelectedVariantId(match.id);
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
+                    >
+                      {colors.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {sizes.length > 0 && (
+                  <div className="flex-1 min-w-[140px]">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                    <select
+                      value={selectedVariant?.size || ''}
+                      onChange={(e) => {
+                        const match = variants.find(
+                          (v) => v.size === e.target.value && (selectedVariant?.color ? v.color === selectedVariant.color : true)
+                        );
+                        if (match) setSelectedVariantId(match.id);
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
+                    >
+                      {sizes.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Add to Cart button */}
+            <button
+              onClick={handleAddToCart}
+              disabled={addedToCart}
+              className="w-full mt-6 py-4 text-sm font-semibold rounded-lg transition-all disabled:opacity-80 flex items-center justify-center gap-2"
+              style={{ backgroundColor: addedToCart ? '#16a34a' : GOLD, color: addedToCart ? '#fff' : NAVY }}
+            >
+              {addedToCart ? (
+                <><Check className="w-5 h-5" /> Added to cart!</>
+              ) : (
+                <>Add {selectedTier.label} to Cart &mdash; ${totalPrice.toFixed(2)}</>
+              )}
+            </button>
+
+            {addedToCart && (
+              <div className="text-center mt-3">
+                <Link
+                  href={cartUrl}
+                  className="text-sm font-semibold underline underline-offset-2 transition-colors"
+                  style={{ color: GOLD }}
+                >
+                  View Cart &rarr;
+                </Link>
+              </div>
+            )}
+
+            {/* Trust badges */}
+            <div className="flex items-center justify-center gap-6 mt-6 text-xs text-gray-500">
+              <span>🔒 Secure Checkout</span>
+              <span>🚚 Free Shipping</span>
+              <span>↩️ 30-Day Returns</span>
+            </div>
+
+            {/* Stock notice */}
+            <p className="text-center text-xs font-medium text-green-600 mt-4">
+              ✓ In stock — delivered in 2–5 business days
+            </p>
+          </div>
         </div>
       </section>
 
@@ -440,7 +579,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               className="mt-8 px-10 py-4 text-sm font-semibold rounded-lg transition-opacity hover:opacity-90"
               style={{ backgroundColor: GOLD, color: NAVY }}
             >
-              {sections.closing_cta.cta_text || 'Shop Now'}
+              {sections.closing_cta.cta_text || 'Order Now'}
             </button>
             <p className="mt-4 text-sm" style={{ color: `${CREAM}b3` }}>
               &#10003; Free US Shipping &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout

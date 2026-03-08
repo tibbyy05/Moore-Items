@@ -39,13 +39,27 @@ export async function POST(request: NextRequest) {
   if (error) return error;
 
   const body = await request.json();
-  const { pid } = body;
+  const { pid, preview } = body;
 
   if (!pid || typeof pid !== 'string') {
     return NextResponse.json({ error: 'Missing or invalid CJ product ID' }, { status: 400 });
   }
 
   const trimmedPid = pid.trim();
+
+  try {
+    // Fetch product details from CJ
+    const detail = await cjClient.getProduct(trimmedPid);
+    const payload = (detail as any)?.data ? (detail as any).data : detail;
+
+    if (!payload) {
+      return NextResponse.json({ error: 'Product not found on CJ' }, { status: 404 });
+    }
+
+    // Preview mode: return CJ data without importing
+    if (preview) {
+      return NextResponse.json({ data: payload });
+    }
 
   // Check if product already exists
   const { data: existing } = await supabase
@@ -60,15 +74,6 @@ export async function POST(request: NextRequest) {
       { status: 409 }
     );
   }
-
-  try {
-    // Fetch product details from CJ
-    const detail = await cjClient.getProduct(trimmedPid);
-    const payload = (detail as any)?.data ? (detail as any).data : detail;
-
-    if (!payload) {
-      return NextResponse.json({ error: 'Product not found on CJ' }, { status: 404 });
-    }
 
     const productName = payload.productNameEn || payload.productName;
     if (!productName) {

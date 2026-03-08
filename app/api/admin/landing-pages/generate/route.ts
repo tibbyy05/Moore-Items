@@ -49,8 +49,13 @@ function buildUserPrompt(
   category: string,
   price: number,
   description: string,
-  dealsString: string
+  dealsString: string,
+  productImages: string[]
 ): string {
+  const imageList = productImages.length > 0
+    ? productImages.map((url, i) => `  ${i + 1}. ${url}`).join('\n')
+    : '  (no images provided)';
+
   return `Write a complete landing page for this product:
 Name: ${productName}
 Category: ${category}
@@ -73,9 +78,18 @@ Return JSON with EXACTLY this structure:
   "faq": [
     { "q": "", "a": "" }
   ],
-  "closing_cta": { "headline": "", "urgency_line": "", "cta_text": "" }
+  "closing_cta": { "headline": "", "urgency_line": "", "cta_text": "" },
+  "image_selections": { "hero": "", "feature1": "", "feature2": "" }
 }
-Include exactly 4 benefits, 3 testimonials with realistic American names, 5 FAQ items.`;
+Include exactly 4 benefits, 3 testimonials with realistic American names, 5 FAQ items.
+
+You are also given these product image URLs:
+${imageList}
+Select the best image for each slot:
+- hero: most eye-catching, lifestyle or glamour shot
+- feature1: detail, closeup, or alternate angle
+- feature2: different context or angle (can repeat if limited images)
+Only use URLs from the provided list. If only 1 image exists use it for all three.`;
 }
 
 export async function POST(request: NextRequest) {
@@ -91,7 +105,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { product_id, product_name, product_description, product_price, category, quantity_discounts } = body;
+    const { product_id, product_name, product_description, product_price, category, quantity_discounts, product_images } = body;
 
     if (!product_name || !product_price) {
       return NextResponse.json({ error: 'product_name and product_price are required' }, { status: 400 });
@@ -99,12 +113,14 @@ export async function POST(request: NextRequest) {
 
     const discounts: QuantityDiscount[] = Array.isArray(quantity_discounts) ? quantity_discounts : [];
     const dealsString = formatDeals(product_price, discounts);
+    const images: string[] = Array.isArray(product_images) ? product_images : [];
     const userPrompt = buildUserPrompt(
       product_name,
       category || 'General',
       product_price,
       product_description || '',
-      dealsString
+      dealsString,
+      images
     );
 
     const anthropic = new Anthropic({ apiKey });
@@ -171,7 +187,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ sections, promo_codes: promoCodes });
+    const imageSelections = (sections as any).image_selections || null;
+    delete (sections as any).image_selections;
+
+    return NextResponse.json({ sections, promo_codes: promoCodes, image_selections: imageSelections });
   } catch (err: any) {
     console.error('Landing page generate error:', err);
     return NextResponse.json(

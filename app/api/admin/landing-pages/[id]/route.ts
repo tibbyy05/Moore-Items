@@ -89,6 +89,7 @@ export async function PUT(
   if (body.sections !== undefined) updateData.sections = body.sections;
   if (body.quantity_discounts !== undefined) updateData.quantity_discounts = body.quantity_discounts;
   if (body.promo_codes !== undefined) updateData.promo_codes = body.promo_codes;
+  if (body.hero_image_url !== undefined) updateData.hero_image_url = body.hero_image_url;
   if (body.meta_title !== undefined) updateData.meta_title = body.meta_title;
   if (body.meta_description !== undefined) updateData.meta_description = body.meta_description;
 

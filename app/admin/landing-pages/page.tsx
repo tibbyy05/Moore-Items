@@ -247,7 +247,7 @@ export default function LandingPagesPage() {
                     <td className="py-4 px-4">
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/admin/landing-pages/${page.id}`}
+                          href={`/admin/landing-pages/${page.id}/edit`}
                           className="p-2 text-gray-400 hover:text-[#1a1a2e] hover:bg-gray-100 rounded-lg transition-colors"
                           title="Edit"
                         >

@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
 
   const { name, slug, product_id, template, sections, quantity_discounts,
-    promo_codes, meta_title, meta_description, status, headline, subheadline } = body;
+    promo_codes, meta_title, meta_description, status, headline, subheadline,
+    hero_image_url } = body;
 
   if (!name || !slug) {
     return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
     promo_codes: promo_codes || null,
     headline: headline || null,
     subheadline: subheadline || null,
+    hero_image_url: hero_image_url || null,
     meta_title: meta_title || null,
     meta_description: meta_description || null,
     is_active: status === 'live',
