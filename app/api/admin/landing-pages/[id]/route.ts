@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
@@ -113,6 +114,12 @@ export async function PUT(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Bust Next.js cache for the landing page
+  if (data?.slug) {
+    revalidatePath(`/lp/${data.slug}`);
+  }
+  revalidatePath('/lp/[slug]', 'page');
 
   return NextResponse.json({ page: data });
 }
