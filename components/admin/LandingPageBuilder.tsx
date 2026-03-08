@@ -15,6 +15,7 @@ import {
   X,
   Upload,
   Loader2,
+  ZoomIn,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -126,10 +127,12 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
   // Extra images (uploaded or pasted URLs)
   const [extraImages, setExtraImages] = useState<string[]>([]);
+  const [removedProductImages, setRemovedProductImages] = useState<Set<string>>(new Set());
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [pasteUrls, setPasteUrls] = useState<{ hero: string; feature1: string; feature2: string }>({ hero: '', feature1: '', feature2: '' });
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({ hero: null, feature1: null, feature2: null });
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   // AI sections
   const [sections, setSections] = useState<any>(null);
@@ -285,9 +288,20 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     setExtraImages((prev) => prev.filter((u) => u !== url));
     setImageSelections((prev) => {
       const next = { ...prev };
-      if (next.hero === url) next.hero = selectedProduct?.images[0] || '';
-      if (next.feature1 === url) next.feature1 = selectedProduct?.images[1] || selectedProduct?.images[0] || '';
-      if (next.feature2 === url) next.feature2 = selectedProduct?.images[2] || selectedProduct?.images[0] || '';
+      if (next.hero === url) next.hero = '';
+      if (next.feature1 === url) next.feature1 = '';
+      if (next.feature2 === url) next.feature2 = '';
+      return next;
+    });
+  };
+
+  const removeProductImage = (url: string) => {
+    setRemovedProductImages((prev) => new Set(prev).add(url));
+    setImageSelections((prev) => {
+      const next = { ...prev };
+      if (next.hero === url) next.hero = '';
+      if (next.feature1 === url) next.feature1 = '';
+      if (next.feature2 === url) next.feature2 = '';
       return next;
     });
   };
@@ -768,11 +782,16 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                 <div className="flex items-start gap-4">
                   {/* Current selection preview */}
                   {imageSelections[key] ? (
-                    <img
-                      src={imageSelections[key]}
-                      alt=""
-                      className="w-[120px] h-[120px] rounded-lg object-cover border border-gray-200 flex-shrink-0"
-                    />
+                    <div className="relative flex-shrink-0 group/preview cursor-pointer" onClick={() => setLightboxUrl(imageSelections[key])}>
+                      <img
+                        src={imageSelections[key]}
+                        alt=""
+                        className="w-[120px] h-[120px] rounded-lg object-cover border border-gray-200"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover/preview:bg-black/20 rounded-lg transition-colors flex items-center justify-center">
+                        <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover/preview:opacity-100 transition-opacity drop-shadow-md" />
+                      </div>
+                    </div>
                   ) : (
                     <div className="w-[120px] h-[120px] rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                       <Package className="w-8 h-8 text-gray-300" />
@@ -781,19 +800,34 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                   {/* Scrollable image picker */}
                   <div className="flex-1 overflow-x-auto">
                     <div className="flex gap-2 pb-1">
-                      {selectedProduct.images.map((img, i) => {
+                      {selectedProduct.images.filter((img) => !removedProductImages.has(img)).map((img, i) => {
                         const isActive = imageSelections[key] === img;
                         return (
-                          <button
-                            key={`prod-${i}`}
-                            type="button"
-                            onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
-                            className={`flex-shrink-0 w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
-                              isActive ? 'border-gold-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <img src={img} alt="" className="w-full h-full object-cover" />
-                          </button>
+                          <div key={`prod-${i}`} className="relative flex-shrink-0 group">
+                            <button
+                              type="button"
+                              onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
+                              className={`w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
+                                isActive ? 'border-gold-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <img src={img} alt="" className="w-full h-full object-cover" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeProductImage(img)}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLightboxUrl(img)}
+                              className="absolute bottom-1 right-1 w-5 h-5 bg-black/50 text-white rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ZoomIn className="w-3 h-3" />
+                            </button>
+                          </div>
                         );
                       })}
                       {extraImages.map((img, i) => {
@@ -812,9 +846,16 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                             <button
                               type="button"
                               onClick={() => removeExtraImage(img)}
-                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                             >
                               <X className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setLightboxUrl(img)}
+                              className="absolute bottom-1 right-1 w-5 h-5 bg-black/50 text-white rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ZoomIn className="w-3 h-3" />
                             </button>
                           </div>
                         );
@@ -1236,6 +1277,28 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           </div>
         </div>
       </div>
+
+      {/* Lightbox overlay */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-8"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-6 right-6 w-10 h-10 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt=""
+            className="max-w-2xl max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
