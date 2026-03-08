@@ -13,6 +13,8 @@ import {
   Plus,
   Package,
   X,
+  Upload,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
@@ -121,6 +123,13 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     feature1: '',
     feature2: '',
   });
+
+  // Extra images (uploaded or pasted URLs)
+  const [extraImages, setExtraImages] = useState<string[]>([]);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pasteUrls, setPasteUrls] = useState<{ hero: string; feature1: string; feature2: string }>({ hero: '', feature1: '', feature2: '' });
+  const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({ hero: null, feature1: null, feature2: null });
 
   // AI sections
   const [sections, setSections] = useState<any>(null);
@@ -243,6 +252,43 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       hero: images[0] || '',
       feature1: images[1] || images[0] || '',
       feature2: images[2] || images[0] || '',
+    });
+  };
+
+  const handleImageUpload = async (key: 'hero' | 'feature1' | 'feature2', file: File) => {
+    setUploadingFor(key);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch('/api/admin/landing-pages/upload-image', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setExtraImages((prev) => [...prev, data.url]);
+      setImageSelections((prev) => ({ ...prev, [key]: data.url }));
+    } catch (err: any) {
+      setUploadError(err?.message || 'Upload failed');
+    } finally {
+      setUploadingFor(null);
+    }
+  };
+
+  const handlePasteUrl = (key: 'hero' | 'feature1' | 'feature2') => {
+    const url = pasteUrls[key].trim();
+    if (!url.startsWith('http')) return;
+    setExtraImages((prev) => [...prev, url]);
+    setImageSelections((prev) => ({ ...prev, [key]: url }));
+    setPasteUrls((prev) => ({ ...prev, [key]: '' }));
+  };
+
+  const removeExtraImage = (url: string) => {
+    setExtraImages((prev) => prev.filter((u) => u !== url));
+    setImageSelections((prev) => {
+      const next = { ...prev };
+      if (next.hero === url) next.hero = selectedProduct?.images[0] || '';
+      if (next.feature1 === url) next.feature1 = selectedProduct?.images[1] || selectedProduct?.images[0] || '';
+      if (next.feature2 === url) next.feature2 = selectedProduct?.images[2] || selectedProduct?.images[0] || '';
+      return next;
     });
   };
 
@@ -704,7 +750,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       </div>
 
       {/* ── CARD 3: Page Images ─────────────────────────────────── */}
-      {selectedProduct && selectedProduct.images.length > 0 && (
+      {selectedProduct && (selectedProduct.images.length > 0 || extraImages.length > 0) && (
         <div className={CARD}>
           <h2 className={TITLE}>Page Images</h2>
           <p className="text-xs text-gray-400 -mt-2 mb-5">
@@ -739,7 +785,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                         const isActive = imageSelections[key] === img;
                         return (
                           <button
-                            key={i}
+                            key={`prod-${i}`}
                             type="button"
                             onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
                             className={`flex-shrink-0 w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
@@ -750,9 +796,77 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                           </button>
                         );
                       })}
+                      {extraImages.map((img, i) => {
+                        const isActive = imageSelections[key] === img;
+                        return (
+                          <div key={`extra-${i}`} className="relative flex-shrink-0 group">
+                            <button
+                              type="button"
+                              onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
+                              className={`w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
+                                isActive ? 'border-gold-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              <img src={img} alt="" className="w-full h-full object-cover" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeExtraImage(img)}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
+
+                {/* Upload / paste URL row */}
+                <div className="flex items-center gap-3 mt-2 ml-[136px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={(el) => { uploadRefs.current[key] = el; }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(key, file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => uploadRefs.current[key]?.click()}
+                    disabled={uploadingFor === key}
+                    className="px-3 py-1.5 bg-white border border-gold-500 text-gold-600 text-xs font-semibold rounded-lg hover:bg-gold-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {uploadingFor === key ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                    {uploadingFor === key ? 'Uploading...' : 'Upload Image'}
+                  </button>
+                  <div className="flex-1 flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Or paste image URL..."
+                      value={pasteUrls[key]}
+                      onChange={(e) => setPasteUrls((prev) => ({ ...prev, [key]: e.target.value }))}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePasteUrl(key)}
+                      className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handlePasteUrl(key)}
+                      disabled={!pasteUrls[key].trim().startsWith('http')}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                {uploadError && uploadingFor === null && (
+                  <p className="text-xs text-red-500 mt-1 ml-[136px]">{uploadError}</p>
+                )}
               </div>
             ))}
           </div>
