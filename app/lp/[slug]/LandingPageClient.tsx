@@ -81,7 +81,10 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   const [addedToCart, setAddedToCart] = useState(false);
 
   // Crossfade gallery state
-  const [galleryBase, setGalleryBase] = useState(product.images?.[0] || '');
+  const galleryImgs: string[] = Array.isArray(sections.gallery_images) && sections.gallery_images.length > 0
+    ? sections.gallery_images
+    : product.images || [];
+  const [galleryBase, setGalleryBase] = useState(galleryImgs[0] || '');
   const [galleryNext, setGalleryNext] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(false);
   const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -246,12 +249,12 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               />
             )}
             {/* Thumbnail strip — pinned to bottom */}
-            {product.images && product.images.length > 1 && (
+            {galleryImgs.length > 1 && (
               <div
                 className="absolute bottom-0 left-0 right-0 flex gap-2 px-3 py-3 overflow-x-auto"
                 style={{ background: 'rgba(15, 22, 41, 0.7)' }}
               >
-                {product.images.map((img, i) => (
+                {galleryImgs.map((img, i) => (
                   <button
                     key={i}
                     type="button"

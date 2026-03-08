@@ -127,6 +127,9 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     feature2: '',
   });
 
+  // Hero gallery image selection (null = all selected, default behavior)
+  const [galleryImages, setGalleryImages] = useState<string[] | null>(null);
+
   // Extra images (uploaded or pasted URLs)
   const [extraImages, setExtraImages] = useState<string[]>([]);
   const [removedProductImages, setRemovedProductImages] = useState<Set<string>>(new Set());
@@ -164,11 +167,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         category: '',
         slug: initialData.product.slug,
       });
-      setImageSelections({
+      const hydratedImages = {
         hero: initialData.hero_image_url || imgs[0] || '',
         feature1: initialData.sections?.feature1_image || imgs[1] || imgs[0] || '',
         feature2: initialData.sections?.feature2_image || imgs[2] || imgs[0] || '',
-      });
+      };
+      console.log('[Hydration] Setting imageSelections from initialData:', JSON.stringify(hydratedImages));
+      console.log('[Hydration] initialData.hero_image_url:', initialData.hero_image_url);
+      setImageSelections(hydratedImages);
     }
 
     setPageSettings({
@@ -184,6 +190,9 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
     if (initialData.sections) {
       setSections(initialData.sections);
+      if (Array.isArray(initialData.sections.gallery_images)) {
+        setGalleryImages(initialData.sections.gallery_images);
+      }
     }
 
     if (initialData.promo_codes) {
@@ -452,6 +461,8 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     if (!pageSettings.name.trim()) { toast.error('Landing page name is required'); return; }
     if (!pageSettings.slug.trim()) { toast.error('URL slug is required'); return; }
 
+    console.log('[Save] imageSelections at save time:', JSON.stringify(imageSelections));
+    console.log('[Save] hero_image_url being sent:', imageSelections.hero || null);
     setSaving(true);
     try {
       const payload = {
@@ -465,6 +476,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           ...sections,
           feature1_image: imageSelections.feature1 || null,
           feature2_image: imageSelections.feature2 || null,
+          gallery_images: galleryImages,
         },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
@@ -765,6 +777,59 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         </div>
       </div>
 
+      {/* ── Hero Gallery Images ─────────────────────────────────── */}
+      {selectedProduct && selectedProduct.images.length > 1 && (() => {
+        const allImgs = [...selectedProduct.images.filter((img) => !removedProductImages.has(img)), ...extraImages];
+        const selected = galleryImages ?? allImgs;
+
+        const toggleImage = (img: string) => {
+          if (galleryImages === null) {
+            // First toggle — start from "all selected" and remove this one
+            setGalleryImages(allImgs.filter((u) => u !== img));
+          } else if (galleryImages.includes(img)) {
+            // Don't allow deselecting the last image
+            if (galleryImages.length <= 1) return;
+            setGalleryImages(galleryImages.filter((u) => u !== img));
+          } else {
+            setGalleryImages([...galleryImages, img]);
+          }
+        };
+
+        return (
+          <div className={CARD}>
+            <h2 className={TITLE}>Hero Gallery Images</h2>
+            <p className="text-xs text-gray-400 -mt-2 mb-4">
+              Choose which images appear in the crossfade gallery. Deselect any you don&apos;t want shown.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {allImgs.map((img, i) => {
+                const isSelected = selected.includes(img);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => toggleImage(img)}
+                    className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border-2 transition-all ${
+                      isSelected ? 'border-gold-500' : 'border-gray-200 opacity-40'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-gold-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-2">
+              {selected.length} of {allImgs.length} images selected
+            </p>
+          </div>
+        );
+      })()}
+
       {/* ── CARD 3: Page Images ─────────────────────────────────── */}
       {selectedProduct && (selectedProduct.images.length > 0 || extraImages.length > 0) && (
         <div className={CARD}>
@@ -808,7 +873,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                           <div key={`prod-${i}`} className="relative flex-shrink-0 group">
                             <button
                               type="button"
-                              onClick={() => setImageSelections((prev) => ({ ...prev, [key]: img }))}
+                              onClick={() => {
+                                console.log(`[ImagePicker] Setting ${key} to:`, img);
+                                setImageSelections((prev) => {
+                                  const next = { ...prev, [key]: img };
+                                  console.log(`[ImagePicker] imageSelections updated:`, next);
+                                  return next;
+                                });
+                              }}
                               className={`w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-colors ${
                                 isActive ? 'border-gold-500 shadow-sm' : 'border-gray-200 hover:border-gray-300'
                               }`}
