@@ -139,6 +139,13 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({ hero: null, feature1: null, feature2: null });
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+  // Inline price editing on pricing reference bar
+  const [editingSellPrice, setEditingSellPrice] = useState(false);
+  const [editSellPrice, setEditSellPrice] = useState('');
+  const [editingCost, setEditingCost] = useState(false);
+  const [editCost, setEditCost] = useState('');
+  const [priceSavedField, setPriceSavedField] = useState<'sell' | 'cost' | null>(null);
+
   // AI sections
   const [sections, setSections] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -149,6 +156,42 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
   // Debounce ref
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleSaveSellPrice = async () => {
+    setEditingSellPrice(false);
+    const val = parseFloat(editSellPrice);
+    if (!selectedProduct || isNaN(val) || val <= 0) return;
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedProduct.id, retail_price: val }),
+      });
+      if (res.ok) {
+        setSelectedProduct((prev) => prev ? { ...prev, retail_price: val } : prev);
+        setPriceSavedField('sell');
+        setTimeout(() => setPriceSavedField(null), 1500);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleSaveCost = async () => {
+    setEditingCost(false);
+    const val = parseFloat(editCost);
+    if (!selectedProduct || isNaN(val) || val < 0) return;
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedProduct.id, cj_price: val }),
+      });
+      if (res.ok) {
+        setSelectedProduct((prev) => prev ? { ...prev, cj_price: val } : prev);
+        setPriceSavedField('cost');
+        setTimeout(() => setPriceSavedField(null), 1500);
+      }
+    } catch { /* ignore */ }
+  };
 
   /* ─── Hydrate from initialData ──────────────────────────────── */
 
@@ -1002,9 +1045,47 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           const marginPct = sp > 0 ? Math.round((margin / sp) * 1000) / 10 : 0;
           return (
             <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 rounded-lg text-xs text-gray-600 mb-4 flex-wrap">
-              <span>Sell Price: <span className="font-semibold text-[#1a1a2e]">${sp.toFixed(2)}</span></span>
+              <span className="inline-flex items-center gap-1">Sell Price:{' '}
+                {editingSellPrice ? (
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    autoFocus
+                    value={editSellPrice}
+                    onChange={(e) => setEditSellPrice(e.target.value)}
+                    onBlur={handleSaveSellPrice}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveSellPrice(); if (e.key === 'Escape') setEditingSellPrice(false); }}
+                    className="w-20 px-1.5 py-0.5 border border-gold-500 rounded text-xs text-[#1a1a2e] font-semibold focus:outline-none"
+                  />
+                ) : (
+                  <button type="button" onClick={() => { setEditSellPrice(sp.toFixed(2)); setEditingSellPrice(true); }} className="font-semibold text-[#1a1a2e] hover:text-gold-600 underline decoration-dotted underline-offset-2 cursor-pointer">
+                    ${sp.toFixed(2)}
+                  </button>
+                )}
+                {priceSavedField === 'sell' && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+              </span>
               <span className="text-gray-300">|</span>
-              <span>Your Cost: <span className="font-semibold text-[#1a1a2e]">${cp.toFixed(2)}</span></span>
+              <span className="inline-flex items-center gap-1">Your Cost:{' '}
+                {editingCost ? (
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    autoFocus
+                    value={editCost}
+                    onChange={(e) => setEditCost(e.target.value)}
+                    onBlur={handleSaveCost}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCost(); if (e.key === 'Escape') setEditingCost(false); }}
+                    className="w-20 px-1.5 py-0.5 border border-gold-500 rounded text-xs text-[#1a1a2e] font-semibold focus:outline-none"
+                  />
+                ) : (
+                  <button type="button" onClick={() => { setEditCost(cp.toFixed(2)); setEditingCost(true); }} className="font-semibold text-[#1a1a2e] hover:text-gold-600 underline decoration-dotted underline-offset-2 cursor-pointer">
+                    ${cp.toFixed(2)}
+                  </button>
+                )}
+                {priceSavedField === 'cost' && <Check className="w-3.5 h-3.5 text-emerald-500" />}
+              </span>
               <span className="text-gray-300">|</span>
               <span>Margin: <span className={`font-semibold ${marginPct >= 40 ? 'text-emerald-600' : marginPct >= 25 ? 'text-amber-600' : 'text-red-600'}`}>${margin.toFixed(2)} ({marginPct}%)</span></span>
             </div>

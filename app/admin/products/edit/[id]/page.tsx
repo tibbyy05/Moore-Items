@@ -34,11 +34,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [existingFilePath, setExistingFilePath] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [originalProduct, setOriginalProduct] = useState<any>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadImageError, setUploadImageError] = useState<string | null>(null);
+  const [pasteUrl, setPasteUrl] = useState('');
+  const imageUploadRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: '',
     description: '',
     category_id: '',
     retail_price: '',
+    cj_price: '',
     status: 'pending' as 'active' | 'pending' | 'hidden',
   });
 
@@ -61,6 +66,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             description: product.description || '',
             category_id: product.category_id || '',
             retail_price: String(product.retail_price || ''),
+            cj_price: String(product.cj_price || ''),
             status: product.status || 'pending',
           });
           setImageUrls(
@@ -144,6 +150,51 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     });
   };
 
+  const handleImageUpload = async (file: File) => {
+    setUploadImageError(null);
+    setUploadingImage(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await fetch('/api/admin/landing-pages/upload-image', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      setImageUrls((prev) => {
+        // Replace the first empty slot, or append
+        const emptyIdx = prev.findIndex((u) => !u.trim());
+        if (emptyIdx >= 0) {
+          const next = [...prev];
+          next[emptyIdx] = data.url;
+          return next;
+        }
+        return [...prev, data.url];
+      });
+    } catch (err: any) {
+      setUploadImageError(err.message || 'Upload failed');
+    } finally {
+      setUploadingImage(false);
+      if (imageUploadRef.current) imageUploadRef.current.value = '';
+    }
+  };
+
+  const handleAddPasteUrl = () => {
+    const url = pasteUrl.trim();
+    if (!url.startsWith('http')) return;
+    setImageUrls((prev) => {
+      const emptyIdx = prev.findIndex((u) => !u.trim());
+      if (emptyIdx >= 0) {
+        const next = [...prev];
+        next[emptyIdx] = url;
+        return next;
+      }
+      return [...prev, url];
+    });
+    setPasteUrl('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -187,10 +238,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       }
 
       const images = imageUrls.map((u) => u.trim()).filter(Boolean);
+      const cjPrice = parseFloat(form.cj_price) || 0;
       const stripeFee = Math.round((retailPrice * 0.029 + 0.3) * 100) / 100;
-      const baseCost =
-        parseFloat(String(originalProduct?.cj_price || 0)) +
-        parseFloat(String(originalProduct?.shipping_cost || 0));
+      const baseCost = cjPrice + parseFloat(String(originalProduct?.shipping_cost || 0));
       const totalCost = Math.round((baseCost + stripeFee) * 100) / 100;
       const marginDollars = Math.round((retailPrice - totalCost) * 100) / 100;
       const marginPercent =
@@ -202,6 +252,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         description: form.description.trim(),
         category_id: form.category_id || null,
         images: images.length > 0 ? images : null,
+        cj_price: cjPrice,
         retail_price: retailPrice,
         stripe_fee: stripeFee,
         total_cost: totalCost,
@@ -354,29 +405,48 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         {/* Pricing */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Pricing</h2>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Retail Price <span className="text-danger">*</span>
-            </label>
-            <div className="relative w-48">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="number"
-                name="retail_price"
-                value={form.retail_price}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-              />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Retail Price <span className="text-danger">*</span>
+              </label>
+              <div className="relative w-48">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="retail_price"
+                  value={form.retail_price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
             </div>
-            {originalProduct?.cj_pid && (
-              <p className="text-xs text-gray-400 mt-1">
-                CJ cost: ${Number(originalProduct.cj_price || 0).toFixed(2)} + $
-                {Number(originalProduct.shipping_cost || 0).toFixed(2)} shipping
-              </p>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Cost
+              </label>
+              <div className="relative w-48">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="cj_price"
+                  value={form.cj_price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
+              {originalProduct?.shipping_cost > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  + ${Number(originalProduct.shipping_cost || 0).toFixed(2)} shipping
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -490,6 +560,59 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 <ImagePlus className="w-4 h-4" />
                 Add another image
               </button>
+            )}
+          </div>
+
+          {/* Upload + Paste */}
+          <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+            <input
+              ref={imageUploadRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => imageUploadRef.current?.click()}
+              disabled={uploadingImage}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gold-500 text-gold-600 text-sm font-medium rounded-lg hover:bg-gold-50 transition-colors disabled:opacity-50"
+            >
+              {uploadingImage ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="w-3.5 h-3.5" />
+                  Upload Image
+                </>
+              )}
+            </button>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={pasteUrl}
+                onChange={(e) => setPasteUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPasteUrl(); } }}
+                placeholder="Or paste image URL..."
+                className="w-56 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+              />
+              <button
+                type="button"
+                onClick={handleAddPasteUrl}
+                disabled={!pasteUrl.trim().startsWith('http')}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
+              >
+                Add
+              </button>
+            </div>
+            {uploadImageError && (
+              <p className="text-xs text-danger w-full">{uploadImageError}</p>
             )}
           </div>
         </div>
