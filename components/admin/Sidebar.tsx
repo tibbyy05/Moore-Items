@@ -21,6 +21,7 @@ import {
   Activity,
   Radar,
   Sparkles,
+  Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, count: null },
       { href: '/admin/products', label: 'Products', icon: Package, count: null },
       { href: '/admin/products/add', label: 'Add Product', icon: Plus, count: null },
+      { href: '/admin/import-url', label: 'Import from URL', icon: Link2, count: null },
       { href: '/admin/pricing', label: 'Pricing', icon: DollarSign, count: null },
       { href: '/admin/shipping', label: 'Shipping', icon: Truck, count: null },
     ],
