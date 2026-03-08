@@ -23,6 +23,7 @@ interface SelectedProduct {
   id: string;
   name: string;
   retail_price: number;
+  cj_price: number;
   images: string[];
   description: string;
   category: string;
@@ -143,6 +144,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         id: initialData.product.id,
         name: initialData.product.name,
         retail_price: initialData.product.retail_price,
+        cj_price: (initialData.product as any).cj_price || 0,
         images: imgs,
         description: initialData.product.description || '',
         category: '',
@@ -186,7 +188,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     try {
       const { data } = await supabase
         .from('mi_products')
-        .select('id, name, slug, retail_price, images, description, warehouse, mi_categories(name, slug)')
+        .select('id, name, slug, retail_price, cj_price, images, description, warehouse, mi_categories(name, slug)')
         .eq('status', 'active')
         .ilike('name', `%${query}%`)
         .limit(12);
@@ -209,6 +211,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       id: product.id,
       name: product.name,
       retail_price: product.retail_price,
+      cj_price: product.cj_price || 0,
       images: product.images || [],
       description: product.description || '',
       category: cat?.slug || cat?.name || '',
@@ -290,6 +293,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         id: imported.id,
         name: imported.name,
         retail_price: imported.retail_price,
+        cj_price: imported.cj_price || 0,
         images: imported.images || [],
         description: imported.description || '',
         category: '',
@@ -761,6 +765,22 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         <p className="text-xs text-gray-400 -mt-2 mb-4">
           Customers who buy more save more &mdash; increases average order value
         </p>
+
+        {selectedProduct && selectedProduct.retail_price > 0 && (() => {
+          const sp = selectedProduct.retail_price;
+          const cp = selectedProduct.cj_price;
+          const margin = Math.round((sp - cp) * 100) / 100;
+          const marginPct = sp > 0 ? Math.round((margin / sp) * 1000) / 10 : 0;
+          return (
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 rounded-lg text-xs text-gray-600 mb-4 flex-wrap">
+              <span>Sell Price: <span className="font-semibold text-[#1a1a2e]">${sp.toFixed(2)}</span></span>
+              <span className="text-gray-300">|</span>
+              <span>Your Cost: <span className="font-semibold text-[#1a1a2e]">${cp.toFixed(2)}</span></span>
+              <span className="text-gray-300">|</span>
+              <span>Margin: <span className={`font-semibold ${marginPct >= 40 ? 'text-emerald-600' : marginPct >= 25 ? 'text-amber-600' : 'text-red-600'}`}>${margin.toFixed(2)} ({marginPct}%)</span></span>
+            </div>
+          );
+        })()}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
