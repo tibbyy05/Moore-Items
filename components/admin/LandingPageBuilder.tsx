@@ -358,6 +358,8 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       if (next.feature2 === url) next.feature2 = '';
       return next;
     });
+    // Also remove from gallery selection
+    setGalleryImages((prev) => prev ? prev.filter((u) => u !== url) : prev);
   };
 
   /* ─── CJ Import ────────────────────────────────────────────── */
@@ -506,6 +508,11 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
     console.log('[Save] imageSelections at save time:', JSON.stringify(imageSelections));
     console.log('[Save] hero_image_url being sent:', imageSelections.hero || null);
+    // Filter removed images from gallery before saving
+    const cleanGalleryImages = galleryImages
+      ? galleryImages.filter((img) => !removedProductImages.has(img))
+      : galleryImages;
+    console.log('[Gallery Save]', cleanGalleryImages);
     setSaving(true);
     try {
       const payload = {
@@ -519,7 +526,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           ...sections,
           feature1_image: imageSelections.feature1 || null,
           feature2_image: imageSelections.feature2 || null,
-          gallery_images: galleryImages,
+          gallery_images: cleanGalleryImages,
         },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
@@ -823,7 +830,9 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       {/* ── Hero Gallery Images ─────────────────────────────────── */}
       {selectedProduct && selectedProduct.images.length > 1 && (() => {
         const allImgs = [...selectedProduct.images.filter((img) => !removedProductImages.has(img)), ...extraImages];
-        const selected = galleryImages ?? allImgs;
+        const selected = galleryImages
+          ? galleryImages.filter((img) => allImgs.includes(img))
+          : allImgs;
 
         const toggleImage = (img: string) => {
           if (galleryImages === null) {
