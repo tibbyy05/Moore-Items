@@ -21,6 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: page?.meta_title || 'MooreItems',
     description: page?.meta_description || '',
+    robots: { index: false, follow: false },
   };
 }
 

@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { FaInstagram, FaFacebookF, FaTiktok, FaLinkedin, FaCcVisa, FaCcMastercard, FaCcAmex, FaCcDiscover, FaCcApplePay, FaGooglePay } from 'react-icons/fa';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useCategories } from '@/components/providers/CategoriesProvider';
@@ -33,14 +32,9 @@ export function Footer() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
           <div className="text-center lg:text-left">
             <Link href="/" className="inline-block mb-4">
-              <Image
-                src="/TransparentLogo.png"
-                alt="MooreItems"
-                width={560}
-                height={190}
-                className="w-auto h-24"
-                priority
-              />
+              <span style={{ fontFamily: 'var(--font-playfair)' }} className="text-2xl font-bold text-white tracking-wide">
+                Moore<span className="text-[#c8a45e]">Items</span>
+              </span>
             </Link>
             <p className="text-base text-warm-100/80 mb-6 leading-relaxed">
               Curated finds for modern living.

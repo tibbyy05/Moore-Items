@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { Truck, Flag, RotateCcw, Shield, Package, Star, ShieldCheck } from 'lucide-react';
+import { Truck, Package, Star, Sparkles } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -11,6 +10,7 @@ import { Product } from '@/lib/types';
 import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { CategoryShowcase } from '@/components/storefront/CategoryShowcase';
+import { HeroGrid } from '@/components/storefront/HeroGrid';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,14 +48,19 @@ function mapProduct(product: any): Product {
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
+  const heroAllowedCategories = [
+    'fashion', 'jewelry', 'home-furniture', 'kitchen-dining',
+    'pet-supplies', 'kids-toys', 'health-beauty', 'garden-outdoor',
+  ];
   const { data: heroPool } = await supabase
     .from('mi_products')
-    .select('*, mi_categories(name, slug), mi_product_variants(*)')
+    .select('*, mi_categories!inner(name, slug), mi_product_variants(*)')
     .eq('status', 'active')
     .is('digital_file_path', null)
     .not('images', 'is', null)
+    .in('mi_categories.slug', heroAllowedCategories)
     .order('sales_count', { ascending: false })
-    .limit(24);
+    .limit(40);
 
   const heroWithImages = (heroPool || []).filter(
     (p) => Array.isArray(p.images) && p.images.length > 0
@@ -65,7 +70,6 @@ export default async function Home() {
     const j = Math.floor(Math.random() * (i + 1));
     [heroWithImages[i], heroWithImages[j]] = [heroWithImages[j], heroWithImages[i]];
   }
-  const heroProducts = heroWithImages.slice(0, 4);
 
   const { data: bestSellers } = await supabase
     .from('mi_products')
@@ -89,7 +93,12 @@ export default async function Home() {
     .order('compare_at_price', { ascending: false })
     .limit(20);
 
-  const mappedHero = heroProducts.map(mapProduct);
+  const heroGridPool = heroWithImages.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    image: (p.images as string[])[0],
+  }));
   const mappedBestSellers = (bestSellers || []).map(mapProduct);
   const mappedNewArrivals = (newArrivals || []).map(mapProduct);
 
@@ -111,16 +120,20 @@ export default async function Home() {
       <CartDrawer />
 
       <main className="bg-white">
-        <section className="bg-[#f7f6f3]">
-          <div className="max-w-[1600px] mx-auto px-4 py-16 lg:py-24">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
+        <section className="bg-[#f7f6f3] min-h-screen max-h-screen overflow-hidden">
+          <div className="max-w-[1600px] mx-auto px-4 h-screen flex items-center">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center w-full">
               <div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-semibold text-warm-900 mb-6">
-                  Discover Moore.
+                  <span className="block">Moore Items.</span>
+                  <span className="block">More Savings.</span>
                 </h1>
-                <p className="text-lg text-warm-700 mb-8 max-w-xl">
+                <p className="text-lg text-warm-700 mb-2 max-w-xl">
                   3,000+ curated products. Free US shipping on orders over $50. Delivered in 2-5
                   days.
+                </p>
+                <p className="text-sm text-[#c9a96e] mb-8">
+                  ★★★★★ Trusted by 10,000+ happy shoppers
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <CustomButton variant="primary" asChild>
@@ -131,25 +144,7 @@ export default async function Home() {
                   </CustomButton>
                 </div>
               </div>
-              <div className="grid grid-cols-2 max-[360px]:grid-cols-1 gap-4">
-                {mappedHero.map((product) => (
-                  <Link
-                    key={product.id}
-                    href={`/product/${product.slug}`}
-                    className="relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition"
-                  >
-                    <Image
-                      src={product.images?.[0] || '/placeholder.svg'}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1024px) 50vw, 25vw"
-                      unoptimized
-                      priority
-                    />
-                  </Link>
-                ))}
-              </div>
+              <HeroGrid pool={heroGridPool} />
             </div>
           </div>
         </section>
@@ -203,9 +198,9 @@ export default async function Home() {
                 <p className="text-sm text-warm-500 mt-1">Fast US Delivery</p>
               </div>
               <div className="text-center">
-                <ShieldCheck className="w-6 h-6 text-gold-600 mx-auto mb-3" />
-                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">100%</p>
-                <p className="text-sm text-warm-500 mt-1">Secure Checkout</p>
+                <Sparkles className="w-6 h-6 text-gold-600 mx-auto mb-3" />
+                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">AI</p>
+                <p className="text-sm text-warm-500 mt-1">Shopping Assistant</p>
               </div>
             </div>
           </div>
