@@ -96,7 +96,17 @@ export default function ImportUrlPage() {
       setExtractData(data);
       setName(data.polished.title || data.raw.title || '');
       setDescription(data.polished.description || data.raw.description || '');
-      setCategorySlug(data.polished.suggested_category || '');
+
+      // Fuzzy match suggested category to actual category slugs
+      const suggested = (data.polished.suggested_category || '').toLowerCase();
+      const matched = categories.find(
+        (cat) =>
+          cat.slug === suggested ||
+          cat.slug.includes(suggested) ||
+          suggested.includes(cat.slug) ||
+          cat.name.toLowerCase().includes(suggested)
+      );
+      setCategorySlug(matched?.slug || suggested);
       setSellPrice(data.pricing.retail_price);
       setCompareAtPrice(data.pricing.compare_at_price);
       setCost(data.pricing.cost);
@@ -324,9 +334,13 @@ export default function ImportUrlPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Cost / Your Price</label>
-                    <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
-                      ${cost.toFixed(2)}
-                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={cost}
+                      onChange={(e) => setCost(parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                    />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">Sell Price</label>

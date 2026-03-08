@@ -41,7 +41,7 @@ async function handleExtract(url: string) {
   }
 
   const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
-  const scraperUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&render=true`;
+  const scraperUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}`;
 
   const res = await fetch(scraperUrl);
 
@@ -82,7 +82,7 @@ async function handleExtract(url: string) {
 - variants: array of { name: string } if any options exist, else empty array
 - polished_title: string (clean benefit-focused title, max 60 chars, remove brand names)
 - polished_description: string (3 paragraphs: hook sentence, key features, why buy. ~150 words, conversational)
-- suggested_category: string (pick ONE slug from this list exactly: electronics, home-garden, fashion, beauty, sports-outdoors, pets, kitchen, toys-games, office, automotive, health-wellness, jewelry)
+- suggested_category: string (pick ONE slug from this list exactly: electronics, home-garden, fashion, beauty, sports-outdoors, pets, kitchen, toys-games, office, automotive, health-wellness, jewelry. For travel/luggage/storage/organization products use home-garden)
 
 HTML: ${htmlTruncated}`,
       },
@@ -168,7 +168,7 @@ async function handleSave(data: Record<string, any>) {
       delivery_time: data.delivery_time || 'Delivered in 3-7 days',
       shipping_days: '3-7',
       status: 'active',
-      badge: 'New',
+      badge: null,
       supplier: 'aliexpress',
       source_url: data.source_url,
     })
