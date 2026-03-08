@@ -54,6 +54,7 @@ interface LandingPageData {
   slug: string;
   headline: string;
   subheadline: string;
+  hero_image_url: string | null;
   meta_title: string;
   meta_description: string;
   is_active: boolean;
@@ -65,6 +66,7 @@ interface LandingPageData {
     name: string;
     slug: string;
     retail_price: number;
+    cj_price: number;
     images: string[];
     description: string;
   } | null;
@@ -156,14 +158,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         id: initialData.product.id,
         name: initialData.product.name,
         retail_price: initialData.product.retail_price,
-        cj_price: (initialData.product as any).cj_price || 0,
+        cj_price: initialData.product.cj_price || 0,
         images: imgs,
         description: initialData.product.description || '',
         category: '',
         slug: initialData.product.slug,
       });
       setImageSelections({
-        hero: (initialData as any).hero_image_url || imgs[0] || '',
+        hero: initialData.hero_image_url || imgs[0] || '',
         feature1: initialData.sections?.feature1_image || imgs[1] || imgs[0] || '',
         feature2: initialData.sections?.feature2_image || imgs[2] || imgs[0] || '',
       });
@@ -399,11 +401,11 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       setSections(data.sections);
       setGeneratedPromoCodes(data.promo_codes || {});
       if (data.image_selections) {
-        setImageSelections({
-          hero: data.image_selections.hero || imageSelections.hero,
-          feature1: data.image_selections.feature1 || imageSelections.feature1,
-          feature2: data.image_selections.feature2 || imageSelections.feature2,
-        });
+        setImageSelections((prev) => ({
+          hero: data.image_selections.hero || prev.hero,
+          feature1: data.image_selections.feature1 || prev.feature1,
+          feature2: data.image_selections.feature2 || prev.feature2,
+        }));
       }
       toast.success('Landing page copy generated!');
     } catch (err: any) {

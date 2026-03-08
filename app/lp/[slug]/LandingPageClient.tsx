@@ -349,13 +349,19 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
 
                       {/* Price */}
                       <div className="text-right flex-shrink-0">
-                        <span className="text-base font-bold" style={{ color: NAVY }}>
-                          ${tierTotal.toFixed(2)}
+                        <span className="text-lg font-bold" style={{ color: NAVY }}>
+                          ${tierUnit.toFixed(2)}
                         </span>
+                        <span className="text-xs text-gray-500 ml-0.5">each</span>
                         {tier.discount_pct > 0 && (
                           <span className="text-xs text-gray-400 line-through ml-2">
-                            ${tierOriginal.toFixed(2)}
+                            ${product.retail_price.toFixed(2)}
                           </span>
+                        )}
+                        {tier.qty > 1 && (
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            Total ${tierTotal.toFixed(2)}
+                          </p>
                         )}
                       </div>
                     </div>

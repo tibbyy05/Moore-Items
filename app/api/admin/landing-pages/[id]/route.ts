@@ -46,7 +46,7 @@ export async function GET(
   if (productIds.length > 0) {
     const { data: products } = await supabase
       .from('mi_products')
-      .select('id, name, slug, retail_price, images, description')
+      .select('id, name, slug, retail_price, cj_price, images, description')
       .in('id', productIds);
     product = products?.[0] || null;
   }
