@@ -233,6 +233,7 @@ export async function PATCH(request: NextRequest) {
 
   // Clean up stale image references in landing pages that use this product
   if (updates.images) {
+    console.log('[LP Cleanup] Product images updated, cleaning up LPs. New images:', updates.images);
     try {
       const { createAdminClient } = await import('@/lib/supabase/admin');
       const adminSupabase = createAdminClient();

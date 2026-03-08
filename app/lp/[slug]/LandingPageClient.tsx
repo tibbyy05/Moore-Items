@@ -235,12 +235,12 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 min-h-screen">
 
           {/* Left column — fixed-height image gallery with crossfade */}
-          <div className="relative h-[500px] md:h-screen overflow-hidden">
+          <div className="relative h-[500px] md:h-screen overflow-hidden bg-[#f7f6f3]">
             {/* Base image layer */}
             <img
               src={galleryBase || heroImg}
               alt={product.name}
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-contain"
               style={{ transition: 'opacity 0.4s ease', opacity: galleryNext ? 0 : 1 }}
             />
             {/* Overlay image layer (crossfade) */}
@@ -248,7 +248,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               <img
                 src={galleryNext}
                 alt={product.name}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-contain"
                 style={{ transition: 'opacity 0.4s ease', opacity: fadeIn ? 1 : 0 }}
               />
             )}
@@ -270,7 +270,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                       opacity: activeGalleryImg === img ? 1 : 0.6,
                     }}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={img} alt="" className="w-full h-full object-contain bg-[#f7f6f3]" />
                   </button>
                 ))}
               </div>

@@ -270,6 +270,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         updates.digital_file_path = digitalFilePath;
       }
 
+      console.log('[Product Save] Payload:', JSON.stringify(updates));
+
       const response = await fetch('/api/admin/products', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
