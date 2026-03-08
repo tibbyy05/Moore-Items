@@ -63,8 +63,6 @@ export default async function Home() {
     .order('sales_count', { ascending: false })
     .limit(40);
 
-  console.log('[hero] products fetched:', heroPool?.length, heroPool?.[0]?.name);
-
   const heroWithImages = (heroPool || []).filter(
     (p) => Array.isArray(p.images) && p.images.length > 0
   );

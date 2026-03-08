@@ -140,8 +140,8 @@ async function main() {
   const withImages = products.filter(p => Array.isArray(p.images) && p.images.length > 0);
   console.log(`${withImages.length} products have at least one image\n`);
 
-  // Process in batches of 20
-  const BATCH_SIZE = 20;
+  const BATCH_SIZE = 5;
+  const BATCH_DELAY = 15000; // 15 seconds
   let eligible = 0;
   let notEligible = 0;
   let errors = 0;
@@ -186,7 +186,7 @@ async function main() {
 
     // Delay between batches
     if (i + BATCH_SIZE < withImages.length) {
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, BATCH_DELAY));
     }
   }
 
