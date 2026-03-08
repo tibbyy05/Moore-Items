@@ -89,7 +89,7 @@ export default function SearchPage() {
         variants: [],
         description: '',
         shippingDays: product.shipping_estimate || '7-12 days',
-        warehouse: 'CN',
+        warehouse: product.warehouse || 'CN',
         inStock: true,
         stockCount: 0,
       }));

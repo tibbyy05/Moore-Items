@@ -165,12 +165,12 @@ export function ProductCard({ product, priority = false, className }: ProductCar
               <Truck className="w-3 h-3" />
               <span>Delivered in 2-5 days</span>
             </div>
-          ) : product.warehouse === 'CN' ? (
+          ) : (
             <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
               <Globe className="w-3 h-3" />
               <span>Delivered in 7-15 days</span>
             </div>
-          ) : null}
+          )}
         </div>
       </Link>
 

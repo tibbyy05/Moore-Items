@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('mi_products')
-    .select('id, name, slug, retail_price, images, mi_categories(name, slug)')
+    .select('id, name, slug, retail_price, images, warehouse, mi_categories(name, slug)')
     .eq('status', 'active')
     .ilike('name', `%${query}%`)
     .limit(6);
