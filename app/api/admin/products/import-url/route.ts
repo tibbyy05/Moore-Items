@@ -36,6 +36,10 @@ function parseJsonResponse(raw: string): Record<string, unknown> | null {
 }
 
 async function handleExtract(url: string) {
+  if (!process.env.SCRAPER_API_KEY) {
+    return NextResponse.json({ error: 'SCRAPER_API_KEY not configured' }, { status: 500 });
+  }
+
   const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
   const scraperUrl = `http://api.scraperapi.com?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(url)}&render=true`;
 
@@ -45,7 +49,15 @@ async function handleExtract(url: string) {
     return NextResponse.json({ error: 'Failed to fetch URL' }, { status: 400 });
   }
 
-  const html = (await res.text()).slice(0, 15000);
+  const contentType = res.headers.get('content-type') || '';
+  const html = await res.text();
+  console.log(html.substring(0, 500));
+
+  if (!contentType.includes('text/html') && html.trim().startsWith('<')) {
+    return NextResponse.json({ error: 'ScraperAPI returned an error page - check API key' }, { status: 400 });
+  }
+
+  const htmlTruncated = html.slice(0, 15000);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -72,7 +84,7 @@ async function handleExtract(url: string) {
 - polished_description: string (3 paragraphs: hook sentence, key features, why buy. ~150 words, conversational)
 - suggested_category: string (pick ONE slug from this list exactly: electronics, home-garden, fashion, beauty, sports-outdoors, pets, kitchen, toys-games, office, automotive, health-wellness, jewelry)
 
-HTML: ${html}`,
+HTML: ${htmlTruncated}`,
       },
     ],
   });
@@ -84,7 +96,7 @@ HTML: ${html}`,
 
   const extracted = parseJsonResponse(rawText);
   if (!extracted) {
-    return NextResponse.json({ error: 'AI extraction failed' }, { status: 400 });
+    return NextResponse.json({ error: 'AI could not extract product data from this page' }, { status: 400 });
   }
 
   const cost = Number(extracted.price) || 0;
