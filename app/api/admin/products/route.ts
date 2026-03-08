@@ -231,6 +231,58 @@ export async function PATCH(request: NextRequest) {
     revalidatePath(`/product/${data.slug}`);
   }
 
+  // Clean up stale image references in landing pages that use this product
+  if (updates.images) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/admin');
+      const adminSupabase = createAdminClient();
+      const newImages: string[] = Array.isArray(updates.images) ? updates.images : [];
+
+      const { data: landingPages } = await adminSupabase
+        .from('mi_landing_pages')
+        .select('id, slug, sections')
+        .contains('product_ids', [id]);
+
+      if (landingPages && landingPages.length > 0) {
+        for (const lp of landingPages) {
+          const sections = lp.sections || {};
+          let needsUpdate = false;
+          const updatedSections = { ...sections };
+
+          // Clear gallery_images so LP falls back to fresh product images
+          if (Array.isArray(updatedSections.gallery_images) && updatedSections.gallery_images.length > 0) {
+            updatedSections.gallery_images = [];
+            needsUpdate = true;
+          }
+
+          // Clear feature images only if the stored URL is no longer in the product's images
+          if (updatedSections.feature1_image && !newImages.includes(updatedSections.feature1_image)) {
+            updatedSections.feature1_image = null;
+            needsUpdate = true;
+          }
+          if (updatedSections.feature2_image && !newImages.includes(updatedSections.feature2_image)) {
+            updatedSections.feature2_image = null;
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            await adminSupabase
+              .from('mi_landing_pages')
+              .update({ sections: updatedSections })
+              .eq('id', lp.id);
+
+            if (lp.slug) {
+              revalidatePath(`/lp/${lp.slug}`);
+            }
+          }
+        }
+      }
+    } catch (lpError) {
+      // Non-critical — log but don't fail the product update
+      console.error('[products PATCH] Landing page image cleanup failed:', lpError);
+    }
+  }
+
   return NextResponse.json({ product: data });
 }
 
