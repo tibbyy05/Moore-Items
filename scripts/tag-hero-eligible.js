@@ -126,7 +126,7 @@ async function main() {
   // Fetch active products where hero_eligible is null
   const products = await supabaseGet(
     'mi_products',
-    'select=id,name,images&status=eq.active&images=not.is.null&limit=2000'
+    'select=id,name,images&status=eq.active&hero_checked_at=is.null&images=not.is.null&limit=2000'
   );
 
   console.log(`Found ${products.length} products to evaluate\n`);
@@ -168,6 +168,7 @@ async function main() {
       if (!isDryRun) {
         const ok = await supabaseUpdate('mi_products', product.id, {
           hero_eligible: result.eligible,
+          hero_checked_at: new Date().toISOString(),
         });
         if (!ok) {
           console.error(`    DB update failed for ${product.id}`);

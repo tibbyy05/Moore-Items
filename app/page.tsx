@@ -63,6 +63,8 @@ export default async function Home() {
     .order('sales_count', { ascending: false })
     .limit(40);
 
+  console.log('[hero] products fetched:', heroPool?.length, heroPool?.[0]?.name);
+
   const heroWithImages = (heroPool || []).filter(
     (p) => Array.isArray(p.images) && p.images.length > 0
   );
@@ -121,9 +123,9 @@ export default async function Home() {
       <CartDrawer />
 
       <main className="bg-white">
-        <section className="bg-[#f7f6f3] min-h-screen max-h-screen overflow-hidden">
-          <div className="max-w-[1600px] mx-auto px-4 h-screen flex items-center">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-center w-full">
+        <section className="bg-[#f7f6f3] min-h-[calc(100vh-120px)] flex items-center overflow-hidden">
+          <div className="max-w-[1600px] mx-auto px-4 w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center w-full">
               <div>
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-semibold text-warm-900 mb-6">
                   <span className="block">Moore Items.</span>
@@ -145,7 +147,9 @@ export default async function Home() {
                   </CustomButton>
                 </div>
               </div>
-              <HeroGrid pool={heroGridPool} />
+              <div className="w-full h-[560px]">
+                <HeroGrid pool={heroGridPool} />
+              </div>
             </div>
           </div>
         </section>

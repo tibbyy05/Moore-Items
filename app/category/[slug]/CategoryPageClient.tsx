@@ -146,6 +146,7 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs, 
   const [subcategoryTags, setSubcategoryTags] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const fetchingRef = useRef(false);
 
   const filterButtonClass = (isActive: boolean) =>
@@ -545,9 +546,25 @@ export function CategoryPageClient({ params, categoryDescription, categoryFaqs, 
 
         {categoryDescription && (
           <div className="max-w-[1600px] mx-auto px-4 pt-6">
-            <p className="text-warm-600 leading-relaxed max-w-4xl">
-              {categoryDescription}
-            </p>
+            <div className="relative max-w-4xl">
+              <p
+                className={cn(
+                  'text-warm-600 leading-relaxed',
+                  !descExpanded && 'line-clamp-1 sm:line-clamp-2'
+                )}
+              >
+                {categoryDescription}
+              </p>
+              {categoryDescription.length > 80 && (
+                <button
+                  onClick={() => setDescExpanded(!descExpanded)}
+                  className="text-sm font-medium mt-1 hover:underline"
+                  style={{ color: '#c8a45e' }}
+                >
+                  {descExpanded ? 'Read less' : 'Read more'}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
