@@ -528,6 +528,29 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
         </section>
       )}
 
+      {/* ── WHAT'S INCLUDED ─────────────────────────────────────── */}
+      {sections.whats_included_enabled && Array.isArray(sections.whats_included) && sections.whats_included.length > 0 && (
+        <section className="bg-white py-16">
+          <div className="max-w-5xl mx-auto px-4">
+            <h2
+              className="font-playfair text-3xl font-bold text-center mb-10"
+              style={{ color: NAVY }}
+            >
+              What&apos;s Included
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {sections.whats_included.map((item: any, i: number) => (
+                <div key={i} className="bg-[#f7f6f3] rounded-xl p-5 border border-gray-100">
+                  <p className="text-2xl">{item.icon}</p>
+                  <p className="font-semibold text-sm mt-2" style={{ color: NAVY }}>{item.title}</p>
+                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── SECTION 6: FEATURE BLOCK 2 ──────────────────────────── */}
       {sections.feature_block_2 && (
         <FeatureBlock

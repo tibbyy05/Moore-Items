@@ -68,6 +68,11 @@ export async function PUT(
   const supabase = createAdminClient();
   const body = await request.json();
 
+  console.log('[PUT Received]', JSON.stringify({
+    gallery_images: body.sections?.gallery_images,
+    hero_image_url: body.hero_image_url,
+  }));
+
   // Fetch existing for status comparison
   const { data: existing } = await supabase
     .from('mi_landing_pages')

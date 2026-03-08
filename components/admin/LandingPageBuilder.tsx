@@ -151,6 +151,12 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPromoCodes, setGeneratedPromoCodes] = useState<Record<string, string>>({});
 
+  // What's Included
+  const [whatsIncludedEnabled, setWhatsIncludedEnabled] = useState(false);
+  const [whatsIncludedItems, setWhatsIncludedItems] = useState<Array<{ icon: string; title: string; description: string }>>([]);
+  const [whatsIncludedRaw, setWhatsIncludedRaw] = useState('');
+  const [polishingIncluded, setPolishingIncluded] = useState(false);
+
   // Save
   const [saving, setSaving] = useState(false);
 
@@ -195,6 +201,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
   /* ─── Hydrate from initialData ──────────────────────────────── */
 
+  // Check if a URL is a custom upload (always preserve) vs a supplier URL (purge if stale)
+  const isCustomUpload = (url: string) =>
+    url.includes('supabase') || url.includes('mooreitems');
+
+  // Check if a stored image URL is still valid (exists in current product images or is a custom upload)
+  const isValidImageUrl = (url: string, productImages: string[]) =>
+    productImages.includes(url) || isCustomUpload(url);
+
   useEffect(() => {
     if (!initialData) return;
 
@@ -210,10 +224,17 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         category: '',
         slug: initialData.product.slug,
       });
+
+      // Validate stored feature images against current product images
+      const storedFeature1 = initialData.sections?.feature1_image || '';
+      const storedFeature2 = initialData.sections?.feature2_image || '';
+      const validFeature1 = storedFeature1 && isValidImageUrl(storedFeature1, imgs) ? storedFeature1 : '';
+      const validFeature2 = storedFeature2 && isValidImageUrl(storedFeature2, imgs) ? storedFeature2 : '';
+
       const hydratedImages = {
         hero: initialData.hero_image_url || imgs[0] || '',
-        feature1: initialData.sections?.feature1_image || imgs[1] || imgs[0] || '',
-        feature2: initialData.sections?.feature2_image || imgs[2] || imgs[0] || '',
+        feature1: validFeature1 || imgs[1] || imgs[0] || '',
+        feature2: validFeature2 || imgs[2] || imgs[0] || '',
       };
       console.log('[Hydration] Setting imageSelections from initialData:', JSON.stringify(hydratedImages));
       console.log('[Hydration] initialData.hero_image_url:', initialData.hero_image_url);
@@ -233,8 +254,24 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
     if (initialData.sections) {
       setSections(initialData.sections);
-      if (Array.isArray(initialData.sections.gallery_images)) {
-        setGalleryImages(initialData.sections.gallery_images);
+
+      // Purge stale supplier URLs from saved gallery, keep custom uploads + current product images
+      const savedGallery = initialData.sections.gallery_images as string[] | undefined;
+      const currentProductImages = initialData.product?.images || [];
+      if (Array.isArray(savedGallery)) {
+        const validGallery = savedGallery.filter((url) =>
+          isValidImageUrl(url, currentProductImages)
+        );
+        console.log('[Hydration] gallery_images purged:', savedGallery.length, '→', validGallery.length);
+        setGalleryImages(validGallery.length > 0 ? validGallery : null);
+      }
+
+      // What's Included hydration
+      if (initialData.sections.whats_included_enabled) {
+        setWhatsIncludedEnabled(true);
+      }
+      if (Array.isArray(initialData.sections.whats_included)) {
+        setWhatsIncludedItems(initialData.sections.whats_included);
       }
     }
 
@@ -508,9 +545,12 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
     console.log('[Save] imageSelections at save time:', JSON.stringify(imageSelections));
     console.log('[Save] hero_image_url being sent:', imageSelections.hero || null);
-    // Filter removed images from gallery before saving
+    // Filter removed images AND stale supplier URLs from gallery before saving
+    const currentProductImages = selectedProduct.images || [];
     const cleanGalleryImages = galleryImages
-      ? galleryImages.filter((img) => !removedProductImages.has(img))
+      ? galleryImages.filter((img) =>
+          !removedProductImages.has(img) && isValidImageUrl(img, currentProductImages)
+        )
       : galleryImages;
     console.log('[Gallery Save]', cleanGalleryImages);
     setSaving(true);
@@ -527,6 +567,8 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           feature1_image: imageSelections.feature1 || null,
           feature2_image: imageSelections.feature2 || null,
           gallery_images: cleanGalleryImages,
+          whats_included_enabled: whatsIncludedEnabled,
+          whats_included: whatsIncludedItems,
         },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
@@ -534,6 +576,13 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         subheadline: sections?.hero?.subheadline || '',
         status,
       };
+
+      console.log('[Full Save Payload]', JSON.stringify({
+        gallery_images: cleanGalleryImages,
+        hero_image_url: imageSelections.hero,
+        feature1_image: imageSelections.feature1,
+        feature2_image: imageSelections.feature2,
+      }));
 
       const isEdit = !!initialData?.id;
       const url = isEdit
@@ -1258,6 +1307,134 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                   <button type="button" onClick={() => addArrayItem('benefits', { icon: '', title: '', body: '' })} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-500 transition-colors">
                     <Plus className="w-4 h-4" /> Add Benefit
                   </button>
+                </div>
+              </fieldset>
+
+              {/* What's Included */}
+              <fieldset className="border border-gray-200 rounded-xl p-4">
+                <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">What&apos;s Included</legend>
+                <div className="space-y-4">
+                  {/* Toggle */}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={whatsIncludedEnabled}
+                      onChange={(e) => setWhatsIncludedEnabled(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-gold-500 focus:ring-gold-500/40"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Show &quot;What&apos;s Included&quot; section</span>
+                  </label>
+
+                  {whatsIncludedEnabled && (
+                    <>
+                      {/* Paste & Polish */}
+                      <div>
+                        <label className={LABEL}>Paste raw product features</label>
+                        <textarea
+                          rows={4}
+                          value={whatsIncludedRaw}
+                          onChange={(e) => setWhatsIncludedRaw(e.target.value)}
+                          placeholder="Paste raw product features from supplier listing..."
+                          className={`${INPUT} resize-y`}
+                        />
+                        <button
+                          type="button"
+                          disabled={polishingIncluded || !whatsIncludedRaw.trim()}
+                          onClick={async () => {
+                            setPolishingIncluded(true);
+                            try {
+                              const res = await fetch('/api/admin/landing-pages/polish-included', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ raw: whatsIncludedRaw, productName: selectedProduct?.name || '' }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data?.error || 'Polish failed');
+                              setWhatsIncludedItems(data.items);
+                              toast.success('Features polished!');
+                            } catch (err: any) {
+                              toast.error(err.message || 'Failed to polish features');
+                            } finally {
+                              setPolishingIncluded(false);
+                            }
+                          }}
+                          className={`${GOLD_BTN} mt-2`}
+                        >
+                          {polishingIncluded ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          Polish with AI
+                        </button>
+                      </div>
+
+                      {/* Items Editor */}
+                      {whatsIncludedItems.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</p>
+                          {whatsIncludedItems.map((item, i) => (
+                            <div key={i} className="grid grid-cols-[60px_1fr_28px] gap-3 items-start">
+                              <div>
+                                <label className={LABEL}>Icon</label>
+                                <input
+                                  type="text"
+                                  maxLength={3}
+                                  value={item.icon}
+                                  onChange={(e) => {
+                                    const next = [...whatsIncludedItems];
+                                    next[i] = { ...next[i], icon: e.target.value };
+                                    setWhatsIncludedItems(next);
+                                  }}
+                                  className={`${INPUT} text-center`}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <div>
+                                  <label className={LABEL}>Title</label>
+                                  <input
+                                    type="text"
+                                    value={item.title}
+                                    onChange={(e) => {
+                                      const next = [...whatsIncludedItems];
+                                      next[i] = { ...next[i], title: e.target.value };
+                                      setWhatsIncludedItems(next);
+                                    }}
+                                    className={INPUT}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={LABEL}>Description</label>
+                                  <textarea
+                                    rows={2}
+                                    value={item.description}
+                                    onChange={(e) => {
+                                      const next = [...whatsIncludedItems];
+                                      next[i] = { ...next[i], description: e.target.value };
+                                      setWhatsIncludedItems(next);
+                                    }}
+                                    className={`${INPUT} resize-y`}
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setWhatsIncludedItems((prev) => prev.filter((_, idx) => idx !== i))}
+                                className="mt-6 p-1 text-red-400 hover:text-red-600 transition-colors"
+                                title="Remove item"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setWhatsIncludedItems((prev) => [...prev, { icon: '', title: '', description: '' }])}
+                        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-500 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" /> Add Item
+                      </button>
+                    </>
+                  )}
                 </div>
               </fieldset>
 
