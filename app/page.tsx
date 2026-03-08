@@ -59,6 +59,7 @@ export default async function Home() {
     .is('digital_file_path', null)
     .not('images', 'is', null)
     .in('mi_categories.slug', heroAllowedCategories)
+    .eq('hero_eligible', true)
     .order('sales_count', { ascending: false })
     .limit(40);
 

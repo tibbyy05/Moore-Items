@@ -44,18 +44,18 @@ export function HeroGrid({ pool }: { pool: HeroProduct[] }) {
   }, [cycleSlot]);
 
   return (
-    <div className="grid grid-cols-2 max-[360px]:grid-cols-1 gap-4 h-full">
+    <div className="grid grid-cols-2 max-[360px]:grid-cols-1 gap-4 h-full max-h-screen overflow-hidden">
       {slots.map((product, i) => (
         <Link
           key={`hero-slot-${i}`}
           href={`/product/${product.slug}`}
-          className="relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition"
+          className="relative aspect-square rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition bg-warm-50"
         >
           <Image
             src={product.image}
             alt={product.name}
             fill
-            className="object-cover transition-opacity duration-[400ms]"
+            className="object-contain object-center transition-opacity duration-[400ms]"
             style={{ opacity: fadingSlot === i ? 0 : 1 }}
             sizes="(max-width: 1024px) 50vw, 25vw"
             unoptimized
