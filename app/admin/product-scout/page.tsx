@@ -217,6 +217,35 @@ function SearchCJTab() {
   const [countryFilter, setCountryFilter] = useState('');
   const pageSize = 20;
 
+  const scoreByRelevance = useCallback(
+    (items: ScoutProduct[], searchQuery: string): ScoutProduct[] => {
+      const phrase = searchQuery.toLowerCase().trim();
+      const words = phrase.split(/\s+/).filter(Boolean);
+      if (!phrase || words.length === 0) return items;
+
+      const scored = items.map((item, originalIndex) => {
+        let score = 0;
+        const name = item.name.toLowerCase();
+
+        if (name.includes(phrase)) score += 10;
+
+        for (const word of words) {
+          const idx = name.indexOf(word);
+          if (idx !== -1) {
+            score += 3;
+            score += Math.max(0, 1 - idx / name.length);
+          }
+        }
+
+        return { item, score, originalIndex };
+      });
+
+      scored.sort((a, b) => b.score - a.score || a.originalIndex - b.originalIndex);
+      return scored.map((s) => s.item);
+    },
+    []
+  );
+
   const handleSearch = useCallback(
     async (searchPage = 1) => {
       if (!query.trim()) return;
@@ -242,10 +271,12 @@ function SearchCJTab() {
         const data = await safeJson(res);
         if (!res.ok) throw new Error(data.error || 'Search failed');
 
+        const sorted = scoreByRelevance(data.results || [], query);
+
         if (searchPage === 1) {
-          setResults(data.results || []);
+          setResults(sorted);
         } else {
-          setResults((prev) => [...prev, ...(data.results || [])]);
+          setResults((prev) => scoreByRelevance([...prev, ...sorted], query));
         }
         setTotal(data.total || 0);
         setPage(searchPage);
@@ -255,7 +286,7 @@ function SearchCJTab() {
         setLoading(false);
       }
     },
-    [query, countryFilter]
+    [query, countryFilter, scoreByRelevance]
   );
 
   const handleImport = async (product: ScoutProduct) => {
