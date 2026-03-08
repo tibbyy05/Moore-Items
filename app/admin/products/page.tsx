@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Copy,
   Sparkles,
+  Check,
+  Pencil,
 } from 'lucide-react';
 import { StarRating } from '@/components/ui/star-rating';
 import { toast } from 'sonner';
@@ -33,6 +35,7 @@ interface AdminProductRow {
   margin_percent: number | null;
   markup_multiplier: number | null;
   stock_count: number | null;
+  supplier: string | null;
   warehouse: 'US' | 'CN' | 'CA' | null;
   rating: number | null;
   average_rating?: number | null;
@@ -112,6 +115,9 @@ export default function ProductsPage() {
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [generatingReviews, setGeneratingReviews] = useState<string | null>(null);
   const [polishProduct, setPolishProduct] = useState<any>(null);
+  const [editingShippingId, setEditingShippingId] = useState<string | null>(null);
+  const [editShipping, setEditShipping] = useState('');
+  const [savedShippingId, setSavedShippingId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -267,6 +273,30 @@ export default function ProductsPage() {
       }
     }
     setEditingPriceId(null);
+  };
+
+  const handleStartEditShipping = (product: AdminProductRow) => {
+    setEditingShippingId(product.id);
+    setEditShipping(product.shipping_days || product.shipping_estimate || '');
+  };
+
+  const handleSaveShipping = async (productId: string) => {
+    const trimmed = editShipping.trim();
+    if (trimmed) {
+      const response = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, shipping_days: trimmed }),
+      });
+
+      if (response.ok) {
+        const { product: updated } = await response.json();
+        setProducts((prev) => prev.map((item) => (item.id === productId ? updated : item)));
+        setSavedShippingId(productId);
+        setTimeout(() => setSavedShippingId(null), 1500);
+      }
+    }
+    setEditingShippingId(null);
   };
 
   const handleDelete = async (productId: string, productName: string) => {
@@ -607,6 +637,9 @@ export default function ProductsPage() {
                 <SortableHeader field="margin_percent" label="Margin" align="right" />
                 <SortableHeader field="availability" label="Availability" align="right" />
                 <SortableHeader field="warehouse" label="Warehouse" />
+                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                  Source
+                </th>
                 <SortableHeader field="rating" label="Rating" />
                 <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Reviews
@@ -796,6 +829,42 @@ export default function ProductsPage() {
                     )}
                   </td>
                   <td className="py-4 px-4">
+                    {(() => {
+                      const s = (product.supplier || '').toLowerCase();
+                      if (s === 'cj' || s === 'cjdropshipping')
+                        return (
+                          <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-200 text-[11px] font-semibold rounded">
+                            CJ
+                          </span>
+                        );
+                      if (s === 'aliexpress' || s === 'ali')
+                        return (
+                          <span className="inline-block px-2 py-0.5 bg-orange-100 text-orange-700 border border-orange-200 text-[11px] font-semibold rounded">
+                            AliExpress
+                          </span>
+                        );
+                      if (s === 'manual')
+                        return (
+                          <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 border border-gray-200 text-[11px] font-semibold rounded">
+                            Manual
+                          </span>
+                        );
+                      if (s === 'digital')
+                        return (
+                          <span className="inline-block px-2 py-0.5 bg-violet-100 text-violet-700 border border-violet-200 text-[11px] font-semibold rounded">
+                            Digital
+                          </span>
+                        );
+                      if (s)
+                        return (
+                          <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-500 border border-gray-200 text-[11px] font-semibold rounded">
+                            {product.supplier}
+                          </span>
+                        );
+                      return <span className="text-xs text-gray-300">—</span>;
+                    })()}
+                  </td>
+                  <td className="py-4 px-4">
                     {Number(product.average_rating || product.rating || 0) > 0 ? (
                       <div className="flex items-center gap-1">
                         <StarRating
@@ -812,15 +881,43 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-4 px-4">
                     <span className="text-xs text-gray-500">
-                      {product.review_count ? `${product.review_count} reviews` : '—'}
+                      {product.review_count || 0}
                     </span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-xs text-gray-500">
-                      {isDigital(product)
-                        ? 'Instant'
-                        : product.shipping_estimate || product.shipping_days || '—'}
-                    </span>
+                    {isDigital(product) ? (
+                      <span className="text-xs text-gray-500">Instant</span>
+                    ) : editingShippingId === product.id ? (
+                      <input
+                        type="text"
+                        value={editShipping}
+                        onChange={(e) => setEditShipping(e.target.value)}
+                        onBlur={() => handleSaveShipping(product.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveShipping(product.id);
+                          if (e.key === 'Escape') setEditingShippingId(null);
+                        }}
+                        autoFocus
+                        className="w-20 px-2 py-1 bg-white border border-gold-500 rounded text-xs text-[#1a1a2e] focus:outline-none"
+                        placeholder="e.g. 3-7"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-1.5 group">
+                        <span className="text-xs text-gray-500">
+                          {product.shipping_estimate || product.shipping_days || '—'}
+                        </span>
+                        {savedShippingId === product.id ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        ) : (
+                          <button
+                            onClick={() => handleStartEditShipping(product)}
+                            className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all"
+                          >
+                            <Pencil className="w-3 h-3 text-gray-400" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="py-4 px-4">
                     <div className="relative">
