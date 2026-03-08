@@ -14,12 +14,12 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative aspect-square bg-warm-50 rounded-2xl overflow-hidden">
+      <div className="relative aspect-square bg-white rounded-2xl overflow-hidden">
         <Image
           src={images[selectedImage]}
           alt={`${productName} - Image ${selectedImage + 1}`}
           fill
-          className="object-cover"
+          className="object-contain"
           sizes="(max-width: 768px) 100vw, 55vw"
           priority
         />
@@ -32,7 +32,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
               key={index}
               onClick={() => setSelectedImage(index)}
               className={cn(
-                'relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-200',
+                'relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-200 bg-white',
                 selectedImage === index
                   ? 'border-gold-500 scale-105'
                   : 'border-warm-200 hover:border-warm-300'
@@ -42,7 +42,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 src={image}
                 alt={`${productName} - Thumbnail ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain"
                 sizes="80px"
               />
             </button>

@@ -114,7 +114,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
     <div>
       <button
         type="button"
-        className="relative w-full aspect-square rounded-2xl overflow-hidden bg-warm-50 border border-warm-100 cursor-pointer"
+        className="relative w-full aspect-square rounded-2xl overflow-hidden bg-white border border-warm-100 cursor-pointer"
         onClick={() => setLightboxOpen(true)}
         aria-label="Zoom product image"
       >
@@ -122,7 +122,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
           src={activeImage}
           alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
           fill
-          className="object-cover"
+          className="object-contain"
           sizes="(max-width: 1024px) 100vw, 50vw"
           unoptimized
         />
@@ -148,7 +148,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
             key={`${image}-${index}`}
             type="button"
             className={cn(
-              'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-colors',
+              'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-colors bg-white',
               index === activeIndex
                 ? 'border-gold-500'
                 : 'border-transparent hover:border-warm-300'
@@ -163,7 +163,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
               alt={`${productName} - Image ${index + 1} of ${galleryImages.length}`}
               width={64}
               height={64}
-              className="object-cover w-full h-full"
+              className="object-contain w-full h-full"
               unoptimized
             />
           </button>
