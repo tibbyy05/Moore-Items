@@ -153,9 +153,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
   // What's Included
   const [whatsIncludedEnabled, setWhatsIncludedEnabled] = useState(false);
-  const [whatsIncludedItems, setWhatsIncludedItems] = useState<Array<{ icon: string; title: string; description: string }>>([]);
-  const [whatsIncludedRaw, setWhatsIncludedRaw] = useState('');
-  const [polishingIncluded, setPolishingIncluded] = useState(false);
+  const [whatsIncludedText, setWhatsIncludedText] = useState('');
 
   // Save
   const [saving, setSaving] = useState(false);
@@ -270,8 +268,8 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       if (initialData.sections.whats_included_enabled) {
         setWhatsIncludedEnabled(true);
       }
-      if (Array.isArray(initialData.sections.whats_included)) {
-        setWhatsIncludedItems(initialData.sections.whats_included);
+      if (initialData.sections.whats_included_text) {
+        setWhatsIncludedText(initialData.sections.whats_included_text);
       }
     }
 
@@ -568,7 +566,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           feature2_image: imageSelections.feature2 || null,
           gallery_images: cleanGalleryImages,
           whats_included_enabled: whatsIncludedEnabled,
-          whats_included: whatsIncludedItems,
+          whats_included_text: whatsIncludedText,
         },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
@@ -583,6 +581,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         feature1_image: imageSelections.feature1,
         feature2_image: imageSelections.feature2,
       }));
+      console.log('[What\'s Included Save]', { enabled: whatsIncludedEnabled, textLen: whatsIncludedText.length });
 
       const isEdit = !!initialData?.id;
       const url = isEdit
@@ -1313,8 +1312,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
               {/* What's Included */}
               <fieldset className="border border-gray-200 rounded-xl p-4">
                 <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2">What&apos;s Included</legend>
-                <div className="space-y-4">
-                  {/* Toggle */}
+                <div className="space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -1324,116 +1322,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                     />
                     <span className="text-sm font-medium text-gray-700">Show &quot;What&apos;s Included&quot; section</span>
                   </label>
-
                   {whatsIncludedEnabled && (
-                    <>
-                      {/* Paste & Polish */}
-                      <div>
-                        <label className={LABEL}>Paste raw product features</label>
-                        <textarea
-                          rows={4}
-                          value={whatsIncludedRaw}
-                          onChange={(e) => setWhatsIncludedRaw(e.target.value)}
-                          placeholder="Paste raw product features from supplier listing..."
-                          className={`${INPUT} resize-y`}
-                        />
-                        <button
-                          type="button"
-                          disabled={polishingIncluded || !whatsIncludedRaw.trim()}
-                          onClick={async () => {
-                            setPolishingIncluded(true);
-                            try {
-                              const res = await fetch('/api/admin/landing-pages/polish-included', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ raw: whatsIncludedRaw, productName: selectedProduct?.name || '' }),
-                              });
-                              const data = await res.json();
-                              if (!res.ok) throw new Error(data?.error || 'Polish failed');
-                              setWhatsIncludedItems(data.items);
-                              toast.success('Features polished!');
-                            } catch (err: any) {
-                              toast.error(err.message || 'Failed to polish features');
-                            } finally {
-                              setPolishingIncluded(false);
-                            }
-                          }}
-                          className={`${GOLD_BTN} mt-2`}
-                        >
-                          {polishingIncluded ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          Polish with AI
-                        </button>
-                      </div>
-
-                      {/* Items Editor */}
-                      {whatsIncludedItems.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</p>
-                          {whatsIncludedItems.map((item, i) => (
-                            <div key={i} className="grid grid-cols-[60px_1fr_28px] gap-3 items-start">
-                              <div>
-                                <label className={LABEL}>Icon</label>
-                                <input
-                                  type="text"
-                                  maxLength={3}
-                                  value={item.icon}
-                                  onChange={(e) => {
-                                    const next = [...whatsIncludedItems];
-                                    next[i] = { ...next[i], icon: e.target.value };
-                                    setWhatsIncludedItems(next);
-                                  }}
-                                  className={`${INPUT} text-center`}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <div>
-                                  <label className={LABEL}>Title</label>
-                                  <input
-                                    type="text"
-                                    value={item.title}
-                                    onChange={(e) => {
-                                      const next = [...whatsIncludedItems];
-                                      next[i] = { ...next[i], title: e.target.value };
-                                      setWhatsIncludedItems(next);
-                                    }}
-                                    className={INPUT}
-                                  />
-                                </div>
-                                <div>
-                                  <label className={LABEL}>Description</label>
-                                  <textarea
-                                    rows={2}
-                                    value={item.description}
-                                    onChange={(e) => {
-                                      const next = [...whatsIncludedItems];
-                                      next[i] = { ...next[i], description: e.target.value };
-                                      setWhatsIncludedItems(next);
-                                    }}
-                                    className={`${INPUT} resize-y`}
-                                  />
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setWhatsIncludedItems((prev) => prev.filter((_, idx) => idx !== i))}
-                                className="mt-6 p-1 text-red-400 hover:text-red-600 transition-colors"
-                                title="Remove item"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => setWhatsIncludedItems((prev) => [...prev, { icon: '', title: '', description: '' }])}
-                        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-500 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" /> Add Item
-                      </button>
-                    </>
+                    <textarea
+                      rows={6}
+                      value={whatsIncludedText}
+                      onChange={(e) => setWhatsIncludedText(e.target.value)}
+                      placeholder={"Enter what's included, one item per line starting with -\n\n- 15 Vacuum Bags – 3 sizes: S, M, L\n- Rechargeable Pump – 1500mAh, USB-C\n- Charging Cable"}
+                      className={`${INPUT} resize-y`}
+                    />
                   )}
                 </div>
               </fieldset>

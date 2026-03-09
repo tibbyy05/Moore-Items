@@ -67,6 +67,10 @@ function scrollToSelector() {
 export function LandingPageClient({ page, product }: LandingPageProps) {
   const { addItem, itemCount, openCart } = useCart();
   const sections = page.sections || {};
+  console.log('[LP Sections]', JSON.stringify({
+    whats_included_enabled: sections?.whats_included_enabled,
+    whats_included_count: sections?.whats_included?.length,
+  }));
   const tiers: DiscountTier[] = page.quantity_discounts || [];
   const variants = product.mi_product_variants || [];
 
@@ -529,27 +533,38 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
       )}
 
       {/* ── WHAT'S INCLUDED ─────────────────────────────────────── */}
-      {sections.whats_included_enabled && Array.isArray(sections.whats_included) && sections.whats_included.length > 0 && (
-        <section className="bg-white py-16">
-          <div className="max-w-5xl mx-auto px-4">
-            <h2
-              className="font-playfair text-3xl font-bold text-center mb-10"
-              style={{ color: NAVY }}
-            >
-              What&apos;s Included
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-              {sections.whats_included.map((item: any, i: number) => (
-                <div key={i} className="bg-[#f7f6f3] rounded-xl p-5 border border-gray-100">
-                  <p className="text-2xl">{item.icon}</p>
-                  <p className="font-semibold text-sm mt-2" style={{ color: NAVY }}>{item.title}</p>
-                  <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                </div>
-              ))}
+      {sections.whats_included_enabled && sections.whats_included_text && (() => {
+        const lines = (sections.whats_included_text as string)
+          .split('\n')
+          .map((l: string) => l.replace(/^[-–—]\s*/, '').trim())
+          .filter(Boolean);
+        if (lines.length === 0) return null;
+        return (
+          <section className="bg-white py-16">
+            <div className="max-w-5xl mx-auto px-4">
+              <h2
+                className="font-playfair text-3xl font-bold text-center mb-10"
+                style={{ color: NAVY }}
+              >
+                What&apos;s Included
+              </h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {lines.map((line: string, i: number) => {
+                  const sep = line.match(/\s+[–—-]\s+/);
+                  const title = sep ? line.slice(0, sep.index) : line;
+                  const desc = sep ? line.slice(sep.index! + sep[0].length) : '';
+                  return (
+                    <div key={i} className="bg-[#f7f6f3] rounded-xl p-5 border border-gray-100">
+                      <p className="font-semibold text-sm" style={{ color: NAVY }}>{title}</p>
+                      {desc && <p className="text-sm text-gray-600 mt-1">{desc}</p>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* ── SECTION 6: FEATURE BLOCK 2 ──────────────────────────── */}
       {sections.feature_block_2 && (
