@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/StatCard';
 import { BarChart } from '@/components/admin/BarChart';
 import {
@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   ExternalLink,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -43,7 +44,34 @@ const PERIOD_OPTIONS = [
   { value: 'all_time', label: 'All Time' },
 ] as const;
 
+function useLiveVisitors() {
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchVisitors = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/realtime-visitors');
+      const data = await res.json();
+      setCount(data.activeUsers ?? 0);
+    } catch {
+      // keep last known count
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVisitors();
+    const interval = setInterval(fetchVisitors, 60_000);
+    return () => clearInterval(interval);
+  }, [fetchVisitors]);
+
+  return { count, loading };
+}
+
 export default function AdminDashboard() {
+  const liveVisitors = useLiveVisitors();
+
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -118,7 +146,24 @@ export default function AdminDashboard() {
         </select>
       </div>
 
-      <div className="grid grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-6 gap-6 mb-8">
+        <StatCard
+          label="Live Visitors"
+          value={
+            liveVisitors.loading ? (
+              '\u2014'
+            ) : (
+              <span className="flex items-center">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2" />
+                {liveVisitors.count}
+              </span>
+            )
+          }
+          subtitle="Active in last 30 min"
+          icon={Users}
+          iconBgClassName="bg-green-50"
+          iconClassName="text-green-500"
+        />
         <StatCard
           label={`Revenue ${periodLabel}`}
           value={`$${revenue.toFixed(2)}`}

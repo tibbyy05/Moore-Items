@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   label: string;
-  value: string;
+  value: React.ReactNode;
+  subtitle?: string;
   change?: {
     value: number;
     isPositive: boolean;
@@ -15,7 +16,7 @@ interface StatCardProps {
   className?: string;
 }
 
-export function StatCard({ label, value, change, icon: Icon, iconBgClassName, iconClassName, className }: StatCardProps) {
+export function StatCard({ label, value, subtitle, change, icon: Icon, iconBgClassName, iconClassName, className }: StatCardProps) {
   return (
     <div
       className={cn(
@@ -31,6 +32,10 @@ export function StatCard({ label, value, change, icon: Icon, iconBgClassName, ic
       <p className="text-[28px] font-bold text-[#1a1a2e] mb-2 font-variant-tabular">
         {value}
       </p>
+
+      {subtitle && (
+        <p className="text-xs text-gray-500">{subtitle}</p>
+      )}
 
       {change && (
         <div className="flex items-center gap-1.5">
