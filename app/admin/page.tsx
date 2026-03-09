@@ -6,8 +6,8 @@ import { BarChart } from '@/components/admin/BarChart';
 import {
   DollarSign,
   ShoppingCart,
+  ShoppingBag,
   Package,
-  TrendingUp,
   Sparkles,
   Plus,
   RefreshCw,
@@ -15,6 +15,7 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 interface RecentOrder {
@@ -70,6 +71,7 @@ function useLiveVisitors() {
 }
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const liveVisitors = useLiveVisitors();
 
   const today = new Date().toLocaleDateString('en-US', {
@@ -83,8 +85,9 @@ export default function AdminDashboard() {
   const [revenue, setRevenue] = useState(0);
   const [orders, setOrders] = useState(0);
   const [activeProducts, setActiveProducts] = useState(0);
-  const [conversionRate, setConversionRate] = useState(0);
   const [needsPolish, setNeedsPolish] = useState(0);
+  const [pendingFulfillment, setPendingFulfillment] = useState(0);
+  const [priceDriftCount, setPriceDriftCount] = useState(0);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [chartData, setChartData] = useState<Array<{ label: string; value: number; isToday: boolean }>>([]);
@@ -105,7 +108,8 @@ export default function AdminDashboard() {
         setOrders(data.orders);
         setActiveProducts(data.activeProducts);
         setNeedsPolish(data.needsPolish);
-        setConversionRate(data.conversionRate);
+        setPendingFulfillment(data.pendingFulfillment);
+        setPriceDriftCount(data.priceDriftCount);
         setRecentOrders(data.recentOrders);
         setTopProducts(data.topProducts);
         setChartData(data.chartData);
@@ -179,18 +183,28 @@ export default function AdminDashboard() {
           value={activeProducts.toString()}
           icon={Package}
         />
-        <StatCard
-          label="Conversion Rate"
-          value={`${conversionRate.toFixed(1)}%`}
-          icon={TrendingUp}
-        />
-        <StatCard
-          label="Needs Polish"
-          value={needsPolish.toString()}
-          icon={Sparkles}
-          iconBgClassName="bg-violet-50"
-          iconClassName="text-violet-500"
-        />
+        <div className="cursor-pointer" onClick={() => router.push('/admin/orders')}>
+          <StatCard
+            label="Needs Fulfillment"
+            value={pendingFulfillment.toString()}
+            subtitle="Paid, awaiting CJ submit"
+            icon={ShoppingBag}
+            {...(pendingFulfillment > 0 && {
+              iconBgClassName: 'bg-red-50',
+              iconClassName: 'text-red-500',
+            })}
+          />
+        </div>
+        <div className="cursor-pointer" onClick={() => router.push('/admin/catalog-health')}>
+          <StatCard
+            label="Needs Polish"
+            value={needsPolish.toString()}
+            subtitle={priceDriftCount > 0 ? `⚠ ${priceDriftCount} price drifted` : 'All prices stable'}
+            icon={Sparkles}
+            iconBgClassName="bg-violet-50"
+            iconClassName="text-violet-500"
+          />
+        </div>
       </div>
 
       <div className="flex gap-4 mb-8">

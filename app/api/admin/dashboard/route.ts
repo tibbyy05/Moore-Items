@@ -183,6 +183,8 @@ export async function GET(request: NextRequest) {
     { data: topSellers },
     { count: pageViews },
     { count: purchases },
+    { count: pendingFulfillmentCount },
+    { count: priceDriftCount },
   ] = await Promise.all([
     ordersQuery,
     supabase
@@ -210,6 +212,15 @@ export async function GET(request: NextRequest) {
       .from('mi_analytics_events')
       .select('*', { count: 'exact', head: true })
       .eq('event_type', 'purchase'),
+    supabase
+      .from('mi_orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('payment_status', 'paid')
+      .eq('fulfillment_status', 'unfulfilled'),
+    supabase
+      .from('mi_products')
+      .select('*', { count: 'exact', head: true })
+      .eq('price_drift_flagged', true),
   ]);
 
   const revenue =
@@ -246,5 +257,7 @@ export async function GET(request: NextRequest) {
     recentOrders: recentOrdersData || [],
     topProducts,
     chartData,
+    pendingFulfillment: pendingFulfillmentCount || 0,
+    priceDriftCount: priceDriftCount || 0,
   });
 }
