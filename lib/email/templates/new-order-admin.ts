@@ -5,6 +5,16 @@ export interface AdminOrderNotificationData {
   items: { name: string; quantity: number; price: number; variant_info?: string }[];
   total: number;
   timestamp: string; // ISO string or formatted date
+  orderId?: string;
+  shippingAddress?: {
+    name?: string | null;
+    line1?: string | null;
+    line2?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postal_code?: string | null;
+    country?: string | null;
+  } | null;
 }
 
 function formatCurrency(amount: number): string {
@@ -23,7 +33,7 @@ function renderItemRow(item: { name: string; quantity: number; price: number; va
 }
 
 export function newOrderAdminTemplate(data: AdminOrderNotificationData): string {
-  const { orderNumber, customerName, customerEmail, items, total, timestamp } = data;
+  const { orderNumber, customerName, customerEmail, items, total, timestamp, orderId, shippingAddress } = data;
 
   const formattedTime = new Date(timestamp).toLocaleString('en-US', {
     dateStyle: 'medium',
@@ -117,6 +127,20 @@ export function newOrderAdminTemplate(data: AdminOrderNotificationData): string 
               </td></tr>
             </table>
 
+            ${shippingAddress ? `
+            <div style="height: 16px;"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td bgcolor="#f7f6f3" style="background: #f7f6f3; border-radius: 12px; padding: 24px 32px;">
+                <p style="margin: 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Shipping Address</p>
+                <p style="margin: 12px 0 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 16px; color: #0a0e1a; line-height: 1.6;">
+                  ${shippingAddress.name ? `<strong>${shippingAddress.name}</strong><br />` : ''}${shippingAddress.line1 || ''}${shippingAddress.line2 ? `<br />${shippingAddress.line2}` : ''}<br />
+                  ${shippingAddress.city || ''}${shippingAddress.state ? `, ${shippingAddress.state}` : ''} ${shippingAddress.postal_code || ''}<br />
+                  ${shippingAddress.country || 'US'}
+                </p>
+              </td></tr>
+            </table>
+            ` : ''}
+
             <div style="height: 32px;"></div>
 
             <!-- Items Table -->
@@ -146,13 +170,9 @@ export function newOrderAdminTemplate(data: AdminOrderNotificationData): string 
                 <td align="center">
                   <table cellpadding="0" cellspacing="0" border="0" align="center">
                     <tr><td bgcolor="#c8a45e" style="background: #c8a45e; border-radius: 8px;">
-                      <a href="https://cjdropshipping.com/my.html#/order" style="display: inline-block; color: #ffffff; font-family: 'DM Sans', Arial, sans-serif; font-size: 18px; font-weight: bold; text-decoration: none; padding: 18px 48px;">Fund This Order in CJ</a>
+                      <a href="https://www.mooreitems.com/admin/orders${orderId ? `?highlight=${orderId}` : ''}" style="display: inline-block; color: #ffffff; font-family: 'DM Sans', Arial, sans-serif; font-size: 18px; font-weight: bold; text-decoration: none; padding: 18px 48px;">View Order in Admin</a>
                     </td></tr>
                   </table>
-                  <div style="height: 16px;"></div>
-                  <p style="margin: 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 15px;">
-                    <a href="https://www.mooreitems.com/admin/orders" style="color: #c8a45e; text-decoration: none; font-weight: 500;">View All Orders in Admin &rarr;</a>
-                  </p>
                 </td>
               </tr>
             </table>

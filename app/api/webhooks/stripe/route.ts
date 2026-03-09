@@ -187,6 +187,8 @@ export async function POST(request: NextRequest) {
                 })),
                 total: order.total || (session.amount_total || 0) / 100,
                 timestamp: new Date().toISOString(),
+                orderId: orderId,
+                shippingAddress: shippingAddress || undefined,
               }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
             } catch (adminEmailError) {
               console.error('[Webhook] Admin order notification failed:', adminEmailError);

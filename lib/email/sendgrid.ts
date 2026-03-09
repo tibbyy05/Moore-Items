@@ -228,7 +228,7 @@ export async function sendNewOrderAdminNotification(data: AdminOrderNotification
   const html = newOrderAdminTemplate(data);
   return sendEmail({
     to: 'mooreitemsshop@gmail.com',
-    subject: `New Order #${data.orderNumber} — ${data.customerName} ($${data.total.toFixed(2)})`,
+    subject: `New Order Received — #${data.orderNumber} · ${data.customerName}`,
     html,
   });
 }
