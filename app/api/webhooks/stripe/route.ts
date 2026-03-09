@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           // Get order items
           const { data: orderItems } = await supabase
             .from('mi_order_items')
-            .select('id, product_name, quantity, unit_price, product_image, variant_info, product_id')
+            .select('id, name, quantity, unit_price, image_url, variant_info, product_id')
             .eq('order_id', orderId);
 
           if (order) {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
                   if (digitalProductIds.includes(item.product_id)) {
                     const token = generateDownloadToken(orderId, item.id);
                     downloadLinks.push({
-                      itemName: item.product_name || 'Digital Product',
+                      itemName: item.name || 'Digital Product',
                       downloadUrl: `${siteUrl}/api/downloads/${orderId}/${item.id}?token=${token}`,
                     });
                   }
@@ -137,10 +137,10 @@ export async function POST(request: NextRequest) {
                 customerName,
                 orderNumber: order.order_number,
                 items: (orderItems || []).map(item => ({
-                  name: item.product_name,
+                  name: item.name,
                   quantity: item.quantity,
                   price: item.unit_price,
-                  image_url: item.product_image || undefined,
+                  image_url: item.image_url || undefined,
                   variant_info: item.variant_info || undefined,
                   is_digital: digitalProductIds.includes(item.product_id),
                 })),
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
                 customerName,
                 customerEmail: toEmail || '',
                 items: (orderItems || []).map(item => ({
-                  name: item.product_name,
+                  name: item.name,
                   quantity: item.quantity,
                   price: item.unit_price,
                   variant_info: item.variant_info || undefined,
@@ -273,7 +273,7 @@ export async function POST(request: NextRequest) {
         if (!alreadySent) {
           const { data: orderItems, error: itemsError } = await supabase
             .from('mi_order_items')
-            .select('name, image_url, quantity, unit_price, product_name, product_image')
+            .select('name, image_url, quantity, unit_price')
             .eq('order_id', order.id);
 
           if (itemsError) {
@@ -288,8 +288,8 @@ export async function POST(request: NextRequest) {
                 email,
                 cartUrl: 'https://www.mooreitems.com/cart',
                 orderItems: (orderItems || []).map((item) => ({
-                  name: item.product_name || item.name || 'Item',
-                  image_url: item.product_image || item.image_url || undefined,
+                  name: item.name || 'Item',
+                  image_url: item.image_url || undefined,
                   quantity: Number(item.quantity || 1),
                   unit_price: Number(item.unit_price || 0),
                 })),
