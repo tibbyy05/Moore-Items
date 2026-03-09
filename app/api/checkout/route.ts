@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: 0, currency: 'usd' },
-            display_name: 'Free Shipping (2-5 business days)',
+            display_name: 'Free Shipping',
             delivery_estimate: {
               minimum: { unit: 'business_day' as const, value: 2 },
               maximum: { unit: 'business_day' as const, value: 5 },
@@ -308,7 +308,7 @@ export async function POST(request: NextRequest) {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: Math.round(usRate * 100), currency: 'usd' },
-            display_name: 'Standard Shipping (2-5 business days)',
+            display_name: 'Standard Shipping',
             delivery_estimate: {
               minimum: { unit: 'business_day' as const, value: 2 },
               maximum: { unit: 'business_day' as const, value: 5 },
@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: 699, currency: 'usd' },
-            display_name: 'International Shipping (7-15 business days)',
+            display_name: 'International Shipping',
             delivery_estimate: {
               minimum: { unit: 'business_day' as const, value: 7 },
               maximum: { unit: 'business_day' as const, value: 15 },
