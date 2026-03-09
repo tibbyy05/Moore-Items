@@ -170,7 +170,7 @@ export function newOrderAdminTemplate(data: AdminOrderNotificationData): string 
                 <td align="center">
                   <table cellpadding="0" cellspacing="0" border="0" align="center">
                     <tr><td bgcolor="#c8a45e" style="background: #c8a45e; border-radius: 8px;">
-                      <a href="https://www.mooreitems.com/admin/orders${orderId ? `?highlight=${orderId}` : ''}" style="display: inline-block; color: #ffffff; font-family: 'DM Sans', Arial, sans-serif; font-size: 18px; font-weight: bold; text-decoration: none; padding: 18px 48px;">View Order in Admin</a>
+                      <a href="https://mooreitems.com/admin/orders${orderId ? `?highlight=${orderId}` : ''}" style="display: inline-block; color: #ffffff; font-family: 'DM Sans', Arial, sans-serif; font-size: 18px; font-weight: bold; text-decoration: none; padding: 18px 48px;">View Order in Admin</a>
                     </td></tr>
                   </table>
                 </td>

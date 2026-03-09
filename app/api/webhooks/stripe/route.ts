@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
               await sendAbandonedCart({
                 customerName,
                 email,
-                cartUrl: 'https://www.mooreitems.com/cart',
+                cartUrl: 'https://mooreitems.com/cart',
                 orderItems: (orderItems || []).map((item) => ({
                   name: item.name || 'Item',
                   image_url: item.image_url || undefined,

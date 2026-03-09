@@ -3,7 +3,7 @@ import { getGoogleCategory } from '@/lib/seo/google-categories';
 
 export const dynamic = 'force-dynamic';
 
-const SITE_URL = 'https://www.mooreitems.com';
+const SITE_URL = 'https://mooreitems.com';
 const BRAND = 'MooreItems';
 const FREE_SHIPPING_THRESHOLD = 50;
 const BATCH_SIZE = 1000;

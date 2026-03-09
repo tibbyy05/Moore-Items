@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const dynamic = 'force-dynamic';
 
-const BASE_URL = 'https://www.mooreitems.com';
+const BASE_URL = 'https://mooreitems.com';
 const PRODUCTS_PER_PAGE = 24;
 
 function escapeXml(str: string): string {

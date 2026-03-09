@@ -8,8 +8,8 @@ export default function robots(): MetadataRoute.Robots {
       disallow: ['/admin', '/api/admin/', '/api/webhooks/', '/api/checkout/', '/api/subscribe/', '/api/account/', '/api/downloads/', '/api/orders/', '/auth', '/account'],
     },
     sitemap: [
-      'https://www.mooreitems.com/sitemap.xml',
-      'https://www.mooreitems.com/api/feeds/google-merchant',
+      'https://mooreitems.com/sitemap.xml',
+      'https://mooreitems.com/api/feeds/google-merchant',
     ],
   };
 }
