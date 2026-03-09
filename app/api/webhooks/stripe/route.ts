@@ -63,7 +63,10 @@ export async function POST(request: NextRequest) {
             stripe_payment_intent_id: session.payment_intent,
             stripe_session_id: session.id,
             email: session.customer_details?.email || session.customer_email || null,
+            customer_email: session.customer_details?.email || session.customer_email || null,
             shipping_address: shippingAddress,
+            shipping_cost: (session.total_details?.amount_shipping || 0) / 100,
+            total: (session.amount_total || 0) / 100,
           })
           .eq('id', orderId);
 
@@ -88,28 +91,31 @@ export async function POST(request: NextRequest) {
 
         const hasDigitalItems = digitalProductIds.length > 0;
 
-        // ---- SEND ORDER CONFIRMATION EMAIL ----
+        // ---- SEND ORDER CONFIRMATION EMAIL + ADMIN ALERT ----
         try {
-          const customerEmail = session.customer_details?.email || session.customer_email;
-          if (customerEmail) {
-            // Get order details
-            const { data: order } = await supabase
-              .from('mi_orders')
-              .select('order_number, total, subtotal, shipping_cost, discount_amount')
-              .eq('id', orderId)
-              .single();
+          // Get order details
+          const { data: order } = await supabase
+            .from('mi_orders')
+            .select('order_number, total, subtotal, shipping_cost, discount_amount, email')
+            .eq('id', orderId)
+            .single();
 
-            // Get order items
-            const { data: orderItems } = await supabase
-              .from('mi_order_items')
-              .select('id, product_name, quantity, unit_price, product_image, variant_info, product_id')
-              .eq('order_id', orderId);
+          // Get order items
+          const { data: orderItems } = await supabase
+            .from('mi_order_items')
+            .select('id, product_name, quantity, unit_price, product_image, variant_info, product_id')
+            .eq('order_id', orderId);
 
-            if (order) {
-              const customerName = shippingAddress?.name
-                || session.customer_details?.name
-                || 'Customer';
+          if (order) {
+            const toEmail = session.customer_details?.email
+              || session.customer_email
+              || order.email;
+            const customerName = shippingAddress?.name
+              || session.customer_details?.name
+              || 'Customer';
 
+            // Send customer confirmation (only if we have a recipient)
+            if (toEmail) {
               // Generate download links for digital items
               const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mooreitems.com';
               const downloadLinks: Array<{ itemName: string; downloadUrl: string }> = [];
@@ -127,7 +133,7 @@ export async function POST(request: NextRequest) {
               }
 
               await sendOrderConfirmation({
-                customerEmail,
+                customerEmail: toEmail,
                 customerName,
                 orderNumber: order.order_number,
                 items: (orderItems || []).map(item => ({
@@ -165,25 +171,25 @@ export async function POST(request: NextRequest) {
                 .eq('id', orderId);
 
               console.log(`[Webhook] Order confirmation email sent for #${order.order_number}`);
+            }
 
-              // ---- ADMIN NOTIFICATION (fire-and-forget) ----
-              try {
-                sendNewOrderAdminNotification({
-                  orderNumber: order.order_number,
-                  customerName,
-                  customerEmail,
-                  items: (orderItems || []).map(item => ({
-                    name: item.product_name,
-                    quantity: item.quantity,
-                    price: item.unit_price,
-                    variant_info: item.variant_info || undefined,
-                  })),
-                  total: order.total || (session.amount_total || 0) / 100,
-                  timestamp: new Date().toISOString(),
-                }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
-              } catch (adminEmailError) {
-                console.error('[Webhook] Admin order notification failed:', adminEmailError);
-              }
+            // ---- ADMIN NOTIFICATION (always fires, fire-and-forget) ----
+            try {
+              sendNewOrderAdminNotification({
+                orderNumber: order.order_number,
+                customerName,
+                customerEmail: toEmail || '',
+                items: (orderItems || []).map(item => ({
+                  name: item.product_name,
+                  quantity: item.quantity,
+                  price: item.unit_price,
+                  variant_info: item.variant_info || undefined,
+                })),
+                total: order.total || (session.amount_total || 0) / 100,
+                timestamp: new Date().toISOString(),
+              }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
+            } catch (adminEmailError) {
+              console.error('[Webhook] Admin order notification failed:', adminEmailError);
             }
           }
         } catch (emailError) {

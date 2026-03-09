@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { calculateShippingCost, calculateFlatRateShipping, ShippingItem } from '@/lib/shipping';
-import { getShippingConfig } from '@/lib/config/shipping';
 import { cjClient } from '@/lib/cj/client';
 
 const checkoutRateLimiter = new Map<string, number[]>();
@@ -266,30 +264,80 @@ export async function POST(request: NextRequest) {
     const allDigital = validatedItems.every((item) => item.isDigital);
     const physicalItems = validatedItems.filter((item) => !item.isDigital);
 
-    // Calculate shipping with CJ real-time quotes (with fallback)
-    let shippingResult;
-    try {
-      const shippingConfig = await getShippingConfig();
-      const shippingItems: ShippingItem[] = validatedItems.map((item) => ({
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        isDigital: item.isDigital,
-        cjVid: item.cjVid,
-        productWeightGrams: item.productWeightGrams,
-      }));
-      shippingResult = await calculateShippingCost(shippingItems, subtotal, shippingConfig);
-    } catch (error) {
-      // If anything goes wrong with the new shipping system, fallback to flat rate
-      console.error('[checkout] Shipping calculation failed, using flat rate fallback:', error);
-      shippingResult = {
-        cost: allDigital ? 0 : calculateFlatRateShipping(subtotal),
-        method: allDigital ? 'free' as const : (subtotal >= 50 ? 'free' as const : 'flat_rate' as const),
-        label: allDigital ? 'Digital Delivery' : (subtotal >= 50 ? 'Free Shipping' : 'Standard Shipping'),
-      };
+    // Build Stripe shipping_options based on cart weight, subtotal, and warehouse
+    const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [];
+
+    if (!allDigital) {
+      const totalWeightGrams = physicalItems.reduce(
+        (sum, item) => sum + (item.productWeightGrams || 0) * item.quantity, 0
+      );
+      const hasCNItems = physicalItems.some(item => item.warehouse === 'CN');
+      const allCN = physicalItems.length > 0 && physicalItems.every(item => item.warehouse === 'CN');
+      const freeShipping = subtotal >= 50;
+
+      // Weight-based US rate
+      let usRate: number;
+      if (totalWeightGrams < 500) {
+        usRate = 1.99;
+      } else if (totalWeightGrams > 11340) {
+        usRate = 9.99;
+      } else {
+        usRate = 4.99;
+      }
+
+      console.log(`[checkout] Shipping calc: weight=${totalWeightGrams}g, subtotal=$${subtotal.toFixed(2)}, free=${freeShipping}, hasCN=${hasCNItems}, allCN=${allCN}, usRate=$${usRate}`);
+
+      // Free option first (subtotal >= $50)
+      if (freeShipping) {
+        shippingOptions.push({
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 0, currency: 'usd' },
+            display_name: 'Free Shipping (2-5 business days)',
+            delivery_estimate: {
+              minimum: { unit: 'business_day' as const, value: 2 },
+              maximum: { unit: 'business_day' as const, value: 5 },
+            },
+          },
+        });
+      }
+
+      // US weight-based rate (non-CN-only carts when not free)
+      if (!allCN && !freeShipping) {
+        shippingOptions.push({
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: Math.round(usRate * 100), currency: 'usd' },
+            display_name: 'Standard Shipping (2-5 business days)',
+            delivery_estimate: {
+              minimum: { unit: 'business_day' as const, value: 2 },
+              maximum: { unit: 'business_day' as const, value: 5 },
+            },
+          },
+        });
+      }
+
+      // International option for any CN items
+      if (hasCNItems) {
+        shippingOptions.push({
+          shipping_rate_data: {
+            type: 'fixed_amount',
+            fixed_amount: { amount: 699, currency: 'usd' },
+            display_name: 'International Shipping (7-15 business days)',
+            delivery_estimate: {
+              minimum: { unit: 'business_day' as const, value: 7 },
+              maximum: { unit: 'business_day' as const, value: 15 },
+            },
+          },
+        });
+      }
     }
 
-    const shippingCost = shippingResult.cost;
-    const total = Math.max(subtotal - discountAmount + shippingCost, 0);
+    // Use cheapest available option as estimated shipping for preliminary order
+    const minShippingCost = shippingOptions.length > 0
+      ? Math.min(...shippingOptions.map(o => o.shipping_rate_data?.fixed_amount?.amount ?? 0)) / 100
+      : 0;
+    const total = Math.max(subtotal - discountAmount + minShippingCost, 0);
 
     const { data: order, error: orderError } = await supabase
       .from('mi_orders')
@@ -300,7 +348,7 @@ export async function POST(request: NextRequest) {
         subtotal,
         discount_amount: discountAmount,
         discount_code: appliedDiscountCode,
-        shipping_cost: shippingCost,
+        shipping_cost: minShippingCost,
         total,
         email,
       })
@@ -338,25 +386,6 @@ export async function POST(request: NextRequest) {
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || 'http://localhost:3000';
 
-    // Build shipping options only for carts with physical items
-    let shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [];
-
-    if (!allDigital) {
-      shippingOptions = [
-        {
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: Math.round(shippingCost * 100), currency: 'usd' },
-            display_name: shippingResult.label,
-            delivery_estimate: {
-              minimum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 10 : 2 },
-              maximum: { unit: 'business_day' as const, value: physicalItems.some((i) => i.warehouse === 'CN') ? 18 : 5 },
-            },
-          },
-        },
-      ];
-    }
-
     let couponId: string | undefined;
     if (discountAmount > 0) {
       const coupon = await stripe.coupons.create({
@@ -391,7 +420,7 @@ export async function POST(request: NextRequest) {
         discount_amount: discountAmount.toFixed(2),
         supabase_order_id: order.id,
         is_all_digital: allDigital ? 'true' : 'false',
-        shipping_method: shippingResult.method,
+        shipping_method: allDigital ? 'digital' : (minShippingCost === 0 ? 'free' : 'standard'),
       },
       // Only collect shipping for carts with physical items
       ...(allDigital

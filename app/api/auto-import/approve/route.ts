@@ -9,6 +9,12 @@ import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import { categorizeWithAI, generateReviewsForProduct, stripHtml } from '@/lib/ai/product-enrichment';
 import Anthropic from '@anthropic-ai/sdk';
 
+function createTimeout(ms: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
   const {
@@ -35,7 +41,7 @@ async function requireAdmin() {
 async function importProduct(
   supabase: any,
   suggestion: any
-): Promise<{ success: boolean; product_id?: string; error?: string }> {
+): Promise<{ success: boolean; product_id?: string; error?: string; reviewParams?: { productName: string; description: string; retailPrice: number; categoryName: string } }> {
   const trimmedPid = suggestion.cj_pid.trim();
 
   // Check if product already exists (allow re-importing hidden products)
@@ -51,7 +57,16 @@ async function importProduct(
   }
 
   // 1. Fetch full product detail
-  const detail = await cjClient.getProduct(trimmedPid);
+  const { signal: detailSignal, clear: clearDetailTimeout } = createTimeout(10_000);
+  let detail;
+  try {
+    detail = await cjClient.getProduct(trimmedPid, detailSignal);
+  } catch (e: any) {
+    if (e.name === 'AbortError') throw new Error('CJ product detail timeout after 10s');
+    throw e;
+  } finally {
+    clearDetailTimeout();
+  }
   const payload = (detail as any)?.data ? (detail as any).data : detail;
 
   if (!payload) {
@@ -71,8 +86,9 @@ async function importProduct(
   // 2. Check stock
   let totalUsStock = 0;
   let stockData: any[] = [];
+  const { signal: stockSignal, clear: clearStockTimeout } = createTimeout(10_000);
   try {
-    const stockResponse = await cjClient.getProductStock(trimmedPid);
+    const stockResponse = await cjClient.getProductStock(trimmedPid, stockSignal);
     const raw = (stockResponse as any)?.data || stockResponse;
     stockData = Array.isArray(raw) ? raw : raw?.inventories || [];
     for (const inv of stockData) {
@@ -81,19 +97,22 @@ async function importProduct(
       }
     }
   } catch {
-    // Stock check failed
+    // Stock check failed or timed out
+  } finally {
+    clearStockTimeout();
   }
 
   const hasUSStock = totalUsStock > 0;
 
   // 3. Calculate shipping and pricing
   let shippingCost = 0;
+  const { signal: freightSignal, clear: clearFreightTimeout } = createTimeout(10_000);
   try {
     if (payload.variants?.length > 0) {
       const freight = await cjClient.calculateFreight({
         endCountryCode: 'US',
         products: [{ vid: payload.variants[0].vid, quantity: 1 }],
-      });
+      }, freightSignal);
       if (freight?.length > 0) {
         const freightValues = freight
           .map((f: any) => parsePriceValue(f.logisticPrice))
@@ -104,7 +123,9 @@ async function importProduct(
       }
     }
   } catch {
-    // fallback
+    // fallback or timed out
+  } finally {
+    clearFreightTimeout();
   }
   if (!shippingCost) {
     shippingCost = Math.max(cjPrice * 0.3, 3);
@@ -132,11 +153,18 @@ async function importProduct(
     .from('mi_categories')
     .select('id, name, slug');
 
-  let categoryId = await categorizeWithAI(
-    productName,
-    rawDescription,
-    categoryRows || []
-  );
+  const { signal: catSignal, clear: clearCatTimeout } = createTimeout(20_000);
+  let categoryId: string | null;
+  try {
+    categoryId = await categorizeWithAI(
+      productName,
+      rawDescription,
+      categoryRows || [],
+      catSignal
+    );
+  } finally {
+    clearCatTimeout();
+  }
 
   if (!categoryId) {
     categoryId = matchCategoryId(
@@ -153,6 +181,7 @@ async function importProduct(
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) {
+    const { signal: rewriteSignal, clear: clearRewriteTimeout } = createTimeout(20_000);
     try {
       const anthropic = new Anthropic({ apiKey: anthropicKey });
       const cleanResponse = await anthropic.messages.create({
@@ -186,7 +215,7 @@ Respond with exactly this JSON:
 {"cleanName":"...","cleanDescription":"..."}`,
           },
         ],
-      });
+      }, { signal: rewriteSignal });
 
       const rawText = cleanResponse.content
         .map((b) => (b.type === 'text' ? b.text : ''))
@@ -205,6 +234,8 @@ Respond with exactly this JSON:
     } catch (err) {
       console.error('[auto-import] AI description cleaning failed, using raw:', err);
       description = stripHtml(rawDescription).slice(0, 2000);
+    } finally {
+      clearRewriteTimeout();
     }
   } else {
     description = stripHtml(rawDescription).slice(0, 2000);
@@ -290,17 +321,9 @@ Respond with exactly this JSON:
     }
   }
 
-  // 10. Generate reviews
+  // 10. Prepare review params (reviews generated after save — non-blocking)
   const categoryName =
     categoryRows?.find((c: any) => c.id === categoryId)?.name || 'General';
-  await generateReviewsForProduct(
-    supabase,
-    inserted.id,
-    cleanName,
-    description,
-    pricing.retailPrice,
-    categoryName
-  );
 
   // 11. Update category product count
   if (categoryId) {
@@ -319,7 +342,16 @@ Respond with exactly this JSON:
   // Bust cache
   revalidatePath(`/product/${inserted.slug}`);
 
-  return { success: true, product_id: inserted.id };
+  return {
+    success: true,
+    product_id: inserted.id,
+    reviewParams: {
+      productName: cleanName,
+      description,
+      retailPrice: pricing.retailPrice,
+      categoryName,
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -363,6 +395,22 @@ export async function POST(request: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('id', suggestion_id);
+
+        // Generate reviews (non-blocking — import already succeeded)
+        if (result.reviewParams) {
+          try {
+            await generateReviewsForProduct(
+              supabase,
+              result.product_id!,
+              result.reviewParams.productName,
+              result.reviewParams.description,
+              result.reviewParams.retailPrice,
+              result.reviewParams.categoryName
+            );
+          } catch (reviewErr: any) {
+            console.warn('[auto-import] Review generation failed (non-blocking):', reviewErr?.message);
+          }
+        }
 
         return NextResponse.json({
           success: true,

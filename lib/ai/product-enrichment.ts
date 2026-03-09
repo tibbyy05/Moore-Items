@@ -15,7 +15,8 @@ export function stripHtml(html: string): string {
 export async function categorizeWithAI(
   productName: string,
   description: string,
-  categories: Array<{ id: string; name: string; slug: string }>
+  categories: Array<{ id: string; name: string; slug: string }>,
+  signal?: AbortSignal
 ): Promise<string | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
@@ -45,7 +46,7 @@ Categories: ${categoryList}
 Respond with the exact category name only.`,
         },
       ],
-    });
+    }, { signal });
 
     const chosenCategory = response.content
       .map((b) => (b.type === 'text' ? b.text : ''))

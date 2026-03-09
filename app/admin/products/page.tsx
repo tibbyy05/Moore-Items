@@ -945,24 +945,22 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-1">
-                      {product.cj_pid && (
-                        <button
-                          onClick={() => setPolishProduct({
-                            id: product.id,
-                            name: product.name,
-                            description: product.description || '',
-                            category_id: categories.find(c => c.slug === (product.mi_categories?.slug || ''))?.id || '',
-                            category_slug: product.mi_categories?.slug || '',
-                            retail_price: Number(product.retail_price || 0),
-                            images: product.images || [],
-                            review_count: product.review_count || 0,
-                          })}
-                          className="p-2 hover:bg-violet-50 rounded-lg transition-colors"
-                          title="Polish with AI"
-                        >
-                          <Sparkles className="w-4 h-4 text-violet-500" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setPolishProduct({
+                          id: product.id,
+                          name: product.name,
+                          description: product.description || '',
+                          category_id: categories.find(c => c.slug === (product.mi_categories?.slug || ''))?.id || '',
+                          category_slug: product.mi_categories?.slug || '',
+                          retail_price: Number(product.retail_price || 0),
+                          images: product.images || [],
+                          review_count: product.review_count || 0,
+                        })}
+                        className="p-2 hover:bg-violet-50 rounded-lg transition-colors"
+                        title="Polish with AI"
+                      >
+                        <Sparkles className="w-4 h-4 text-violet-500" />
+                      </button>
                       <Link
                         href={`/admin/products/edit/${product.id}`}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1199,27 +1197,25 @@ export default function ProductsPage() {
                     />
                     {generatingReviews === preview.id ? 'Generating...' : 'Generate Reviews'}
                   </button>
-                  {preview.cj_pid && (
-                    <button
-                      onClick={() => {
-                        setPreviewProduct(null);
-                        setPolishProduct({
-                          id: preview.id,
-                          name: preview.name,
-                          description: preview.description || '',
-                          category_id: categories.find(c => c.slug === (preview.mi_categories?.slug || ''))?.id || '',
-                          category_slug: preview.mi_categories?.slug || '',
-                          retail_price: Number(preview.retail_price || 0),
-                          images: preview.images || [],
-                          review_count: preview.review_count || 0,
-                        });
-                      }}
-                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      Polish This Product
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setPreviewProduct(null);
+                      setPolishProduct({
+                        id: preview.id,
+                        name: preview.name,
+                        description: preview.description || '',
+                        category_id: categories.find(c => c.slug === (preview.mi_categories?.slug || ''))?.id || '',
+                        category_slug: preview.mi_categories?.slug || '',
+                        retail_price: Number(preview.retail_price || 0),
+                        images: preview.images || [],
+                        review_count: preview.review_count || 0,
+                      });
+                    }}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Polish This Product
+                  </button>
                 </div>
               </div>
             </div>

@@ -24,6 +24,12 @@ function v2Name(item: any): string {
   return item?.nameEn || item?.productNameEn || item?.name || 'Unknown';
 }
 
+function randomPages(count: number, min: number, max: number): number[] {
+  const pages = new Set<number>();
+  while (pages.size < count) pages.add(Math.floor(Math.random() * (max - min + 1)) + min);
+  return Array.from(pages);
+}
+
 function v2Price(item: any): number | null {
   // V2 uses nowPrice (may be a range like "3.50-5.00") — take the lower bound
   const nowPrice = item?.nowPrice;
@@ -102,61 +108,63 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const batchId = `auto-${new Date().toISOString().slice(0, 10)}-${Date.now().toString(36)}`;
 
-    // 1. Fetch 30 US warehouse products from CJ
-    // Pages 1-30 are already in our catalog; sample from 31-80 for fresh products
-    const randomPage = Math.floor(Math.random() * 50) + 31;
-    console.log(`[auto-import] Fetching CJ products page ${randomPage}...`);
+    // 1. Fetch 30 US warehouse products from CJ (3 random pages × 10 each)
+    const pages = randomPages(3, 1, 100);
+    console.log(`[auto-import] Fetching CJ products from pages ${pages.join(', ')}...`);
 
-    const cjResponse = await cjClient.getProductsV2({
-      page: randomPage,
-      size: 30,
-      countryCode: 'US',
-      orderBy: 1,
-      sort: 'desc',
-    });
+    const pageResults = await Promise.all(
+      pages.map((pageNum) =>
+        cjClient.getProductsV2({
+          page: pageNum,
+          size: 10,
+          countryCode: 'US',
+          orderBy: 1,
+          sort: 'desc',
+        })
+      )
+    );
 
     // CJ V2 response shape: { data?: { content: [ { productList: [...] } ] }, content?: [...] }
-    const responseData = (cjResponse as any)?.data || cjResponse;
-    const contentBlocks = Array.isArray(responseData?.content) ? responseData.content : [];
-    const cjProducts = contentBlocks.flatMap((block: any) =>
-      Array.isArray(block?.productList) ? block.productList : []
-    );
+    const cjProducts = pageResults.flatMap((cjResponse) => {
+      const responseData = (cjResponse as any)?.data || cjResponse;
+      const contentBlocks = Array.isArray(responseData?.content) ? responseData.content : [];
+      return contentBlocks.flatMap((block: any) =>
+        Array.isArray(block?.productList) ? block.productList : []
+      );
+    });
+
+    console.log(`[auto-import] Fetched ${cjProducts.length} raw products`);
 
     if (cjProducts.length === 0) {
       return NextResponse.json({ error: 'No products returned from CJ' }, { status: 502 });
     }
 
-    // 2. Deduplicate against existing products and pending suggestions
-    const pids = cjProducts.map((p: any) => v2Pid(p)).filter(Boolean);
-    console.log(`[auto-import] CJ raw count: ${cjProducts.length}, extracted PIDs: ${pids.length}`);
+    // 2. Deduplicate against existing catalog products
+    let candidates = cjProducts.filter((p: any) => v2Pid(p));
 
-    const { data: existingProducts } = await supabase
+    const { data: allExistingProducts } = await supabase
       .from('mi_products')
       .select('cj_pid')
-      .in('cj_pid', pids);
+      .not('cj_pid', 'is', null);
+    const existingCjPids = new Set(allExistingProducts?.map(p => p.cj_pid) ?? []);
 
-    console.log(`[auto-import] After catalog dedup: ${pids.length - (existingProducts?.length || 0)} remain (${existingProducts?.length || 0} already in catalog)`);
+    candidates = candidates.filter(item => !existingCjPids.has(v2Pid(item)));
+    console.log(`[auto-import] ${candidates.length} after catalog dedup (${existingCjPids.size} in catalog)`);
 
-    const { data: existingSuggestions } = await supabase
+    // 2b. Deduplicate against ALL previously seen suggestions (any status)
+    const pids = candidates.map((p: any) => v2Pid(p)).filter(Boolean);
+
+    const { data: seenSuggestions } = await supabase
       .from('mi_auto_import_suggestions')
       .select('cj_pid')
-      .in('cj_pid', pids)
-      .eq('status', 'pending');
+      .in('cj_pid', pids);
+    const seenCjPids = new Set(seenSuggestions?.map(s => s.cj_pid) ?? []);
 
-    console.log(`[auto-import] Already pending suggestions: ${existingSuggestions?.length || 0}`);
+    candidates = candidates.filter(item => !seenCjPids.has(v2Pid(item)));
+    console.log(`[auto-import] ${candidates.length} after suggestions dedup (${seenCjPids.size} previously seen)`);
 
-    const existingPids = new Set([
-      ...(existingProducts || []).map((p: any) => p.cj_pid),
-      ...(existingSuggestions || []).map((s: any) => s.cj_pid),
-    ]);
-
-    const newProducts = cjProducts.filter((p: any) => {
-      const pid = v2Pid(p);
-      return pid && !existingPids.has(pid);
-    });
-    console.log(`[auto-import] ${cjProducts.length} fetched, ${newProducts.length} after dedup`);
-
-    if (newProducts.length === 0) {
+    if (candidates.length === 0) {
+      console.log(`[auto-import] 0 viable candidates after dedup — skipping email`);
       return NextResponse.json({ message: 'No new products after deduplication', suggested: 0 });
     }
 
@@ -176,7 +184,7 @@ export async function POST(request: NextRequest) {
     let marginSkipped = 0;
     let categorySkipped = 0;
     let overPriceSkipped = 0;
-    for (const product of newProducts) {
+    for (const product of candidates) {
       // Exclude heavy furniture categories
       const cat = (product.categoryName || product.categoryNameEn || '').toLowerCase();
       if (EXCLUDED_CATEGORIES.some((term) => cat.includes(term))) { categorySkipped++; continue; }
@@ -384,7 +392,7 @@ Score ALL products. Be selective — only give 70+ to genuinely good fits.`,
       batch_id: batchId,
       suggested: top10.length,
       fetched: cjProducts.length,
-      after_dedup: newProducts.length,
+      after_dedup: candidates.length,
       viable: viableCandidates.length,
       top_scores: top10.map((c) => ({ name: c.name, score: c.score })),
     });

@@ -44,6 +44,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     category_id: '',
     retail_price: '',
     cj_price: '',
+    shipping_cost: '',
     status: 'pending' as 'active' | 'pending' | 'hidden',
   });
 
@@ -67,6 +68,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             category_id: product.category_id || '',
             retail_price: String(product.retail_price || ''),
             cj_price: String(product.cj_price || ''),
+            shipping_cost: String(product.shipping_cost || '0'),
             status: product.status || 'pending',
           });
           setImageUrls(
@@ -239,8 +241,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
       const images = imageUrls.map((u) => u.trim()).filter(Boolean);
       const cjPrice = parseFloat(form.cj_price) || 0;
+      const shippingCost = parseFloat(form.shipping_cost) || 0;
       const stripeFee = Math.round((retailPrice * 0.029 + 0.3) * 100) / 100;
-      const baseCost = cjPrice + parseFloat(String(originalProduct?.shipping_cost || 0));
+      const baseCost = cjPrice + shippingCost;
       const totalCost = Math.round((baseCost + stripeFee) * 100) / 100;
       const marginDollars = Math.round((retailPrice - totalCost) * 100) / 100;
       const marginPercent =
@@ -253,6 +256,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         category_id: form.category_id || null,
         images: images.length > 0 ? images : null,
         cj_price: cjPrice,
+        shipping_cost: shippingCost,
         retail_price: retailPrice,
         stripe_fee: stripeFee,
         total_cost: totalCost,
@@ -407,12 +411,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         {/* Pricing */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Pricing</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Retail Price <span className="text-danger">*</span>
               </label>
-              <div className="relative w-48">
+              <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="number"
@@ -430,7 +434,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Your Cost
               </label>
-              <div className="relative w-48">
+              <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="number"
@@ -443,11 +447,27 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
                 />
               </div>
-              {originalProduct?.shipping_cost > 0 && (
-                <p className="text-xs text-gray-400 mt-1">
-                  + ${Number(originalProduct.shipping_cost || 0).toFixed(2)} shipping
-                </p>
-              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Shipping Cost ($)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="shipping_cost"
+                  value={form.shipping_cost}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Charged at checkout. Set to 0 for free shipping.
+              </p>
             </div>
           </div>
         </div>

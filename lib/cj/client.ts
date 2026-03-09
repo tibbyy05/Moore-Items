@@ -82,7 +82,7 @@ class CJClient {
   private baseUrl = process.env.CJ_API_BASE_URL!;
   private apiKey = process.env.CJ_API_KEY!;
 
-  async authenticate(): Promise<string> {
+  async authenticate(signal?: AbortSignal): Promise<string> {
     const now = Date.now();
 
     // L1: In-memory cache (warm instances — no I/O)
@@ -131,6 +131,7 @@ class CJClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey: this.apiKey }),
+      signal,
     });
 
     const authContentType = response.headers.get('content-type') ?? '';
@@ -165,13 +166,14 @@ class CJClient {
     return tokenCache.accessToken;
   }
 
-  private async apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  private async apiCall<T>(endpoint: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
     await enforceRateLimit();
-    const token = await this.authenticate();
+    const token = await this.authenticate(signal);
     console.log('[cj] apiCall', endpoint);
 
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
+      signal,
       headers: {
         'Content-Type': 'application/json',
         'CJ-Access-Token': token,
@@ -222,8 +224,8 @@ class CJClient {
     return this.apiCall(`/product/listV2?${searchParams.toString()}`);
   }
 
-  async getProduct(pid: string): Promise<CJProduct> {
-    return this.apiCall(`/product/query?pid=${pid}`);
+  async getProduct(pid: string, signal?: AbortSignal): Promise<CJProduct> {
+    return this.apiCall(`/product/query?pid=${pid}`, {}, signal);
   }
 
   async getProductReviews(pid: string, pageNum: number = 1, pageSize: number = 20): Promise<any> {
@@ -232,8 +234,8 @@ class CJClient {
     );
   }
 
-  async getProductStock(pid: string): Promise<any> {
-    return this.apiCall(`/product/stock/getInventoryByPid?pid=${pid}`);
+  async getProductStock(pid: string, signal?: AbortSignal): Promise<any> {
+    return this.apiCall(`/product/stock/getInventoryByPid?pid=${pid}`, {}, signal);
   }
 
   async getVariants(vid: string): Promise<CJVariant> {
@@ -248,11 +250,11 @@ class CJClient {
     startCountryCode?: string;
     endCountryCode: string;
     products: Array<{ quantity: number; vid: string }>;
-  }): Promise<CJFreightResult[]> {
+  }, signal?: AbortSignal): Promise<CJFreightResult[]> {
     return this.apiCall('/logistic/freightCalculate', {
       method: 'POST',
       body: JSON.stringify(params),
-    });
+    }, signal);
   }
 
   async createOrder(params: {
