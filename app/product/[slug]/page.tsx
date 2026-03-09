@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { fetchProductBySlug } from '@/lib/seo/fetchers';
 import { SITE_URL, SITE_NAME } from '@/lib/seo/constants';
 import { ProductJsonLd, BreadcrumbJsonLd } from '@/lib/seo/json-ld';
@@ -24,9 +25,7 @@ export async function generateMetadata({
   params: { slug: string };
 }): Promise<Metadata> {
   const product = await fetchProductBySlug(params.slug);
-  if (!product) {
-    return { title: `Product Not Found | ${SITE_NAME}` };
-  }
+  if (!product) notFound();
 
   const stripped = stripHtml(product.description);
   const plainDescription = stripped
@@ -67,6 +66,7 @@ export default async function ProductPage({
   params: { slug: string };
 }) {
   const product = await fetchProductBySlug(params.slug);
+  if (!product || product.status !== 'active') notFound();
 
   const categoryName = product?.mi_categories?.name || 'Uncategorized';
   const categorySlug = product?.mi_categories?.slug || '';
