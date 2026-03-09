@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 async function requireAdmin() {
@@ -25,11 +26,18 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const supabaseAdmin = createAdminClient();
     const propertyId = process.env.GA4_PROPERTY_ID;
-    const serviceAccountKey = JSON.parse(process.env.GA4_SERVICE_ACCOUNT_KEY || '{}');
+
+    const { data: setting } = await supabaseAdmin
+      .from('mi_settings')
+      .select('value')
+      .eq('key', 'ga4_service_account_key')
+      .single();
+    const credentials = JSON.parse(setting!.value);
 
     const auth = new GoogleAuth({
-      credentials: serviceAccountKey,
+      credentials,
       scopes: ['https://www.googleapis.com/auth/analytics.readonly'],
     });
 
