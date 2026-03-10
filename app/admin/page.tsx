@@ -205,13 +205,7 @@ export default function AdminDashboard() {
           <StatCard
             label="Needs Polish"
             value={needsPolish.toString()}
-            subtitle={
-              priceDriftCount > 0 ? (
-                <span className="text-amber-600">{`⚠ ${priceDriftCount} price drifts`}</span>
-              ) : (
-                <span className="text-gray-400">All prices stable</span>
-              )
-            }
+            subtitle={priceDriftCount > 0 ? `⚠ ${priceDriftCount} price drifts` : 'All prices stable'}
             icon={Sparkles}
             iconBgClassName="bg-violet-50"
             iconClassName="text-violet-500"
