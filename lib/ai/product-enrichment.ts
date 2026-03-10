@@ -173,3 +173,64 @@ Output format — a JSON array:
     return 0;
   }
 }
+
+export async function polishProductWithAI(input: {
+  rawTitle: string;
+  rawDescription: string;
+  categoryHint?: string;
+}): Promise<{
+  title: string;
+  description: string;
+  whatsIncluded: string[];
+}> {
+  const fallback = { title: input.rawTitle, description: input.rawDescription, whatsIncluded: [] };
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return fallback;
+
+  try {
+    const anthropic = new Anthropic({ apiKey });
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system:
+        'You are a premium e-commerce copywriter. Output ONLY valid JSON — no markdown fences, no explanation, no extra text.',
+      messages: [
+        {
+          role: 'user',
+          content: `Rewrite this product listing for a premium retail store.
+
+Raw title: ${input.rawTitle}
+Raw description: ${stripHtml(input.rawDescription).slice(0, 500)}${input.categoryHint ? `\nCategory: ${input.categoryHint}` : ''}
+
+Return JSON with exactly these keys:
+
+1. "title" — Clean retail title case, max 80 chars. Strip supplier junk: Hot Sale, 2024, Free Shipping, dimensions, Chinese text, ALL CAPS words, platform references like AliExpress/Temu/Amazon.
+
+2. "description" — 2-3 sentences of benefit-focused lifestyle copy. Write like Nordstrom, not a marketplace. No bullet lists, no specs, no dimensions. Max 300 chars.
+
+3. "whatsIncluded" — string array of what physically comes in the box, inferred from the product name and description. Examples: ["1x Yoga Mat", "1x Carrying Strap"] or ["1x Necklace", "Gift Box"]. Empty array if genuinely uncertain. Max 5 items.
+
+{"title":"...","description":"...","whatsIncluded":["..."]}`,
+        },
+      ],
+    });
+
+    const rawText = response.content
+      .map((b) => (b.type === 'text' ? b.text : ''))
+      .join('')
+      .trim();
+
+    const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const parsed = JSON.parse(jsonText);
+
+    return {
+      title: typeof parsed.title === 'string' ? parsed.title.slice(0, 80) : fallback.title,
+      description: typeof parsed.description === 'string' ? parsed.description.slice(0, 300) : fallback.description,
+      whatsIncluded: Array.isArray(parsed.whatsIncluded)
+        ? parsed.whatsIncluded.filter((s: any) => typeof s === 'string').slice(0, 5)
+        : [],
+    };
+  } catch {
+    return fallback;
+  }
+}

@@ -12,16 +12,12 @@ import {
   BarChart3,
   Layers,
   Zap,
-  MapPin,
-  Plus,
   DollarSign,
   RefreshCw,
   Tag,
   Truck,
   Activity,
-  Radar,
   Sparkles,
-  Link2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -50,10 +46,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, count: null },
       { href: '/admin/products', label: 'Products', icon: Package, count: null },
-      { href: '/admin/products/add', label: 'Add Product', icon: Plus, count: null },
-      { href: '/admin/import-url', label: 'Import from URL', icon: Link2, count: null },
-      { href: '/admin/pricing', label: 'Pricing', icon: DollarSign, count: null },
-      { href: '/admin/shipping', label: 'Shipping', icon: Truck, count: null },
+      { href: '/admin/catalog/import', label: 'Import Products', icon: Sparkles, count: null },
     ],
   },
   {
@@ -68,10 +61,14 @@ const NAV_SECTIONS: NavSection[] = [
   {
     heading: 'TOOLS',
     items: [
-      { href: '/admin/product-scout', label: 'Product Scout', icon: Radar, count: null },
-      { href: '/admin/us-stock', label: 'US Stock', icon: MapPin, count: null },
       { href: '/admin/catalog-health', label: 'Catalog Health', icon: Activity, count: null },
-      { href: '/admin/auto-import', label: 'Auto Import', icon: Sparkles, count: null },
+    ],
+  },
+  {
+    heading: 'SETTINGS',
+    items: [
+      { href: '/admin/pricing', label: 'Pricing', icon: DollarSign, count: null },
+      { href: '/admin/shipping', label: 'Shipping', icon: Truck, count: null },
     ],
   },
   {

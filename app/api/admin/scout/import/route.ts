@@ -6,6 +6,7 @@ import { calculatePricing, computeCompareAtPrice } from '@/lib/pricing';
 import { parsePriceValue, extractImagesFromDetail } from '@/lib/cj/sync';
 import { parseVariantColorSize } from '@/lib/utils/variant-parser';
 import { PRICING_CONFIG } from '@/lib/config/pricing';
+import { polishProductWithAI } from '@/lib/ai/product-enrichment';
 import Anthropic from '@anthropic-ai/sdk';
 
 async function requireAdmin() {
@@ -305,14 +306,21 @@ export async function POST(request: NextRequest) {
     // 4. Extract images
     const images = extractImagesFromDetail(detail, payload.productImage);
 
-    // 5. Clean description
-    let description = payload.description || '';
-    description = description.replace(/<img[^>]*>/gi, '');
-    description = description.replace(/<p>\s*<\/p>/gi, '');
-    description = description.trim();
+    // 5. AI polish: rewrite title + description
+    const polished = await polishProductWithAI({
+      rawTitle: payload.productNameEn || payload.productName || '',
+      rawDescription: payload.description || '',
+      categoryHint: payload.categoryName || '',
+    });
+
+    const finalName = polished.title;
+    let description = polished.description;
+    if (polished.whatsIncluded.length > 0) {
+      description += `\nWhat's Included: ${polished.whatsIncluded.join(', ')}`;
+    }
 
     // 6. Generate slug
-    const slug = productName
+    const slug = finalName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
@@ -342,7 +350,7 @@ export async function POST(request: NextRequest) {
     // 8. Insert product
     const productData = {
       cj_pid: trimmedPid,
-      name: productName,
+      name: finalName,
       slug: `${slug}-${trimmedPid.substring(0, 8)}`,
       description,
       category_id: categoryId,

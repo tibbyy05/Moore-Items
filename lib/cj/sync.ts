@@ -366,36 +366,40 @@ export function detectUSWarehouse(cjProduct: any): boolean {
 
 export function extractImagesFromDetail(detail: any, fallback?: string | null): string[] {
   const payload = detail?.data ? detail.data : detail;
-  let images: string[] = [];
+  const images: string[] = [];
 
-  if (Array.isArray(payload?.productImageSet)) {
-    images = [...payload.productImageSet];
-  } else if (typeof payload?.productImage === 'string') {
-    try {
-      const parsed = JSON.parse(payload.productImage);
-      if (Array.isArray(parsed)) {
-        images = parsed;
-      } else {
-        images = [payload.productImage];
-      }
-    } catch {
-      images = [payload.productImage];
-    }
+  // 1. Main product image first
+  if (typeof payload?.productImage === 'string' && payload.productImage) {
+    images.push(payload.productImage);
+  } else if (fallback) {
+    images.push(fallback);
   }
 
+  // 2. Variant images
   if (Array.isArray(payload?.variants)) {
     for (const variant of payload.variants) {
-      if (variant?.variantImage && !images.includes(variant.variantImage)) {
+      if (variant?.variantImage && typeof variant.variantImage === 'string') {
         images.push(variant.variantImage);
       }
     }
   }
 
-  if (fallback && !images.includes(fallback)) {
+  // 3. productImageSet
+  if (Array.isArray(payload?.productImageSet)) {
+    for (const url of payload.productImageSet) {
+      if (typeof url === 'string') {
+        images.push(url);
+      }
+    }
+  }
+
+  // 4. Ensure fallback is included if not already covered by productImage
+  if (fallback && typeof payload?.productImage === 'string' && payload.productImage) {
     images.push(fallback);
   }
 
-  return images.filter((url) => typeof url === 'string' && url.startsWith('http'));
+  // Deduplicate, filter valid URLs
+  return Array.from(new Set(images)).filter((url) => url.startsWith('http'));
 }
 
 export function matchCategoryId(
