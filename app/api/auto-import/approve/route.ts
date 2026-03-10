@@ -57,6 +57,7 @@ async function importProduct(
   }
 
   // 1. Fetch full product detail
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
   const { signal: detailSignal, clear: clearDetailTimeout } = createTimeout(10_000);
   let detail;
   try {
@@ -84,6 +85,7 @@ async function importProduct(
   }
 
   // 2. Check stock
+  await sleep(1100);
   let totalUsStock = 0;
   let stockData: any[] = [];
   const { signal: stockSignal, clear: clearStockTimeout } = createTimeout(10_000);
@@ -105,6 +107,7 @@ async function importProduct(
   const hasUSStock = totalUsStock > 0;
 
   // 3. Calculate shipping and pricing
+  await sleep(1100);
   let shippingCost = 0;
   const { signal: freightSignal, clear: clearFreightTimeout } = createTimeout(10_000);
   try {

@@ -112,17 +112,20 @@ export async function POST(request: NextRequest) {
     const pages = randomPages(3, 1, 100);
     console.log(`[auto-import] Fetching CJ products from pages ${pages.join(', ')}...`);
 
-    const pageResults = await Promise.all(
-      pages.map((pageNum) =>
-        cjClient.getProductsV2({
+    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const pageResults = [];
+    for (const pageNum of pages) {
+      if (pageResults.length > 0) await sleep(1100);
+      pageResults.push(
+        await cjClient.getProductsV2({
           page: pageNum,
           size: 10,
           countryCode: 'US',
           orderBy: 1,
           sort: 'desc',
         })
-      )
-    );
+      );
+    }
 
     // CJ V2 response shape: { data?: { content: [ { productList: [...] } ] }, content?: [...] }
     const cjProducts = pageResults.flatMap((cjResponse) => {
