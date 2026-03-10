@@ -185,6 +185,8 @@ export async function GET(request: NextRequest) {
     { count: purchases },
     { count: pendingFulfillmentCount },
     { count: priceDriftCount },
+    { count: pendingImportsCount },
+    { data: healthCheckRow },
   ] = await Promise.all([
     ordersQuery,
     supabase
@@ -221,6 +223,15 @@ export async function GET(request: NextRequest) {
       .from('mi_products')
       .select('*', { count: 'exact', head: true })
       .eq('price_drift_flagged', true),
+    supabase
+      .from('mi_auto_import_suggestions')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    supabase
+      .from('mi_settings')
+      .select('value')
+      .eq('key', 'last_health_check_result')
+      .single(),
   ]);
 
   const revenue =
@@ -248,6 +259,17 @@ export async function GET(request: NextRequest) {
   const conversionRate =
     pageViews && pageViews > 0 ? ((purchases || 0) / pageViews) * 100 : 0;
 
+  let healthScore: number | null = null;
+  let healthCheckedAt: string | null = null;
+  try {
+    const raw = healthCheckRow?.value;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (parsed && typeof parsed.score === 'number') healthScore = parsed.score;
+    if (parsed && parsed.checked_at) healthCheckedAt = String(parsed.checked_at);
+  } catch {
+    // parsing failed — keep nulls
+  }
+
   return NextResponse.json({
     revenue,
     orders,
@@ -259,5 +281,8 @@ export async function GET(request: NextRequest) {
     chartData,
     pendingFulfillment: pendingFulfillmentCount || 0,
     priceDriftCount: priceDriftCount || 0,
+    pendingImports: pendingImportsCount || 0,
+    healthScore,
+    healthCheckedAt,
   });
 }

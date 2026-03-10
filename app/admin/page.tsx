@@ -9,7 +9,7 @@ import {
   ShoppingBag,
   Package,
   Sparkles,
-  Plus,
+  Upload,
   RefreshCw,
   ExternalLink,
   Users,
@@ -88,6 +88,9 @@ export default function AdminDashboard() {
   const [needsPolish, setNeedsPolish] = useState(0);
   const [pendingFulfillment, setPendingFulfillment] = useState(0);
   const [priceDriftCount, setPriceDriftCount] = useState(0);
+  const [pendingImports, setPendingImports] = useState(0);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
+  const [healthCheckedAt, setHealthCheckedAt] = useState<string | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [chartData, setChartData] = useState<Array<{ label: string; value: number; isToday: boolean }>>([]);
@@ -110,6 +113,9 @@ export default function AdminDashboard() {
         setNeedsPolish(data.needsPolish);
         setPendingFulfillment(data.pendingFulfillment);
         setPriceDriftCount(data.priceDriftCount);
+        setPendingImports(data.pendingImports);
+        setHealthScore(data.healthScore);
+        setHealthCheckedAt(data.healthCheckedAt);
         setRecentOrders(data.recentOrders);
         setTopProducts(data.topProducts);
         setChartData(data.chartData);
@@ -150,7 +156,7 @@ export default function AdminDashboard() {
         </select>
       </div>
 
-      <div className="grid grid-cols-6 gap-6 mb-8">
+      <div className="grid grid-cols-7 gap-6 mb-8">
         <StatCard
           label="Live Visitors"
           value={
@@ -199,24 +205,85 @@ export default function AdminDashboard() {
           <StatCard
             label="Needs Polish"
             value={needsPolish.toString()}
-            subtitle={priceDriftCount > 0 ? `⚠ ${priceDriftCount} price drifted` : 'All prices stable'}
+            subtitle={
+              priceDriftCount > 0 ? (
+                <span className="text-amber-600">{`⚠ ${priceDriftCount} price drifts`}</span>
+              ) : (
+                <span className="text-gray-400">All prices stable</span>
+              )
+            }
             icon={Sparkles}
             iconBgClassName="bg-violet-50"
             iconClassName="text-violet-500"
           />
         </div>
+        <div className="cursor-pointer" onClick={() => router.push('/admin/catalog/import')}>
+          <StatCard
+            label="Pending Imports"
+            value={pendingImports.toString()}
+            subtitle="Awaiting your review"
+            icon={Sparkles}
+            {...(pendingImports > 0
+              ? { iconBgClassName: 'bg-amber-50', iconClassName: 'text-amber-500' }
+              : {})}
+          />
+        </div>
       </div>
+
+      <Link
+        href="/admin/catalog-health"
+        className={`flex items-center justify-between rounded-xl px-5 py-3.5 mb-8 transition-shadow hover:shadow-md ${
+          healthScore === null
+            ? 'bg-gray-50 border border-gray-200'
+            : healthScore >= 90
+              ? 'bg-green-50 border border-green-200'
+              : healthScore >= 70
+                ? 'bg-amber-50 border border-amber-200'
+                : 'bg-red-50 border border-red-200'
+        }`}
+      >
+        <span className={`text-sm font-semibold ${
+          healthScore === null
+            ? 'text-gray-500'
+            : healthScore >= 90
+              ? 'text-green-700'
+              : healthScore >= 70
+                ? 'text-amber-700'
+                : 'text-red-700'
+        }`}>
+          {healthScore === null
+            ? 'Health check not yet run \u00b7 Run it from Catalog Health'
+            : healthScore >= 90
+              ? `\u2713 Catalog Health: ${healthScore}/100 \u2014 All good`
+              : healthScore >= 70
+                ? `\u26a0 Catalog Health: ${healthScore}/100 \u2014 Some issues need attention`
+                : `\u2717 Catalog Health: ${healthScore}/100 \u2014 Action required`}
+        </span>
+        {healthCheckedAt && (
+          <span className="text-xs text-gray-400">
+            Last checked{' '}
+            {(() => {
+              const ms = Date.now() - new Date(healthCheckedAt).getTime();
+              const mins = Math.floor(ms / 60000);
+              if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+              const hrs = Math.floor(mins / 60);
+              if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`;
+              return new Date(healthCheckedAt).toLocaleDateString();
+            })()}
+          </span>
+        )}
+      </Link>
 
       <div className="flex gap-4 mb-8">
         <Link
-          href="/admin/products/add"
+          href="/admin/catalog/import"
           className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-5 py-3.5 hover:shadow-md transition-shadow group"
         >
           <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-            <Plus className="w-4 h-4 text-indigo-600" />
+            <Upload className="w-4 h-4 text-indigo-600" />
           </div>
           <span className="text-sm font-semibold text-[#1a1a2e] group-hover:text-indigo-600 transition-colors">
-            Add Product
+            Import Products
           </span>
         </Link>
         <button

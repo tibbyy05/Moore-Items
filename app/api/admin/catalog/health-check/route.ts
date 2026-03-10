@@ -402,6 +402,15 @@ export async function POST(request: NextRequest) {
 
   const timestamp = new Date().toISOString();
 
+  // Persist latest health score to mi_settings for dashboard
+  await supabase.from('mi_settings').upsert(
+    {
+      key: 'last_health_check_result',
+      value: JSON.stringify({ score: healthScore, checked_at: timestamp }),
+    },
+    { onConflict: 'key' }
+  );
+
   // Send alert email if there are unresolved issues (fire-and-forget)
   if (needsAttention > 0) {
     sendHealthCheckAlert({
