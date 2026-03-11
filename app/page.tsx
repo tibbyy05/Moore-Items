@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Truck, Package, Star, Sparkles } from 'lucide-react';
+import { Truck, Package, Star, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -121,33 +121,78 @@ export default async function Home() {
       <CartDrawer />
 
       <main className="bg-white">
-        <section className="bg-[#f7f6f3] min-h-[calc(100vh-120px)] flex items-center overflow-hidden">
-          <div className="max-w-[1600px] mx-auto px-4 w-full">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center w-full">
-              <div>
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-playfair font-semibold text-warm-900 mb-6">
-                  <span className="block">Moore Items.</span>
-                  <span className="block">More Savings.</span>
+        {/* Hero */}
+        <section className="relative bg-navy-900 overflow-hidden">
+          <div className="absolute inset-0 bg-hero-gradient" />
+          <div className="absolute top-1/2 right-0 w-[600px] h-[600px] -translate-y-1/2 translate-x-1/4 bg-gold-500/[0.04] rounded-full blur-[120px] pointer-events-none" />
+
+          <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 py-14 sm:py-20 lg:py-0 lg:min-h-[calc(100vh-120px)] flex items-center">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center w-full">
+              {/* Copy */}
+              <div className="order-2 lg:order-1">
+                <p className="text-xs sm:text-sm font-semibold tracking-[0.2em] uppercase text-gold-500 mb-4 sm:mb-5">
+                  Curated for you
+                </p>
+                <h1 className="font-playfair font-bold text-white leading-[1.1] mb-6">
+                  <span className="block text-4xl sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
+                    Moore Items.
+                  </span>
+                  <span className="block text-4xl sm:text-5xl lg:text-[3.5rem] xl:text-6xl mt-1">
+                    More <span className="text-gold-400">Savings.</span>
+                  </span>
                 </h1>
-                <p className="text-lg text-warm-700 mb-2 max-w-xl">
-                  3,000+ curated products. Free US shipping on orders over $50. Delivered in 2-5
-                  days.
+                <p className="text-base sm:text-lg text-navy-200 leading-relaxed mb-3 max-w-lg">
+                  3,000+ handpicked products with free US shipping over $50 — delivered to your door in 2–5 days.
                 </p>
-                <p className="text-sm text-[#c9a96e] mb-8">
-                  ★★★★★ Trusted by 10,000+ happy shoppers
-                </p>
+                <div className="flex items-center gap-1.5 text-gold-400 text-sm mb-8">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-gold-400" />
+                  ))}
+                  <span className="ml-1.5 text-navy-200">Trusted by 10,000+ happy shoppers</span>
+                </div>
                 <div className="flex flex-wrap gap-3">
-                  <CustomButton variant="primary" asChild>
-                    <Link href="/shop?sort=best-selling">Shop Best Sellers</Link>
+                  <CustomButton variant="primary" size="lg" asChild>
+                    <Link href="/shop?sort=best-selling">
+                      Shop Best Sellers
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Link>
                   </CustomButton>
-                  <CustomButton variant="secondary" asChild>
-                    <Link href="/shop">Browse Categories</Link>
+                  <CustomButton variant="ghost" size="lg" asChild>
+                    <Link href="/shop">Browse All</Link>
                   </CustomButton>
                 </div>
+                <div className="flex items-center gap-2 mt-6 text-xs text-navy-400">
+                  <ShieldCheck className="w-4 h-4 text-gold-500/70" />
+                  <span>Secure checkout &middot; 30-day returns &middot; Quality guaranteed</span>
+                </div>
               </div>
-              <div className="w-full h-[560px]">
+
+              {/* Image grid */}
+              <div className="order-1 lg:order-2 w-full h-[340px] sm:h-[420px] lg:h-[560px]">
                 <HeroGrid pool={heroGridPool} />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats bar */}
+        <section className="relative bg-navy-950 border-t border-gold-500/10">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-gold-500/10">
+              {[
+                { icon: Package, value: '3,000+', label: 'Curated Products' },
+                { icon: Star, value: '39,000+', label: '5-Star Reviews' },
+                { icon: Truck, value: '2–5 Days', label: 'Fast US Delivery' },
+                { icon: Sparkles, value: 'AI', label: 'Shopping Assistant' },
+              ].map(({ icon: Icon, value, label }) => (
+                <div key={label} className="flex items-center justify-center gap-3 py-5 sm:py-6">
+                  <Icon className="w-5 h-5 text-gold-500 shrink-0" />
+                  <div>
+                    <p className="text-lg sm:text-xl font-playfair font-bold text-white leading-tight">{value}</p>
+                    <p className="text-[11px] sm:text-xs text-navy-400 uppercase tracking-wider">{label}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -178,33 +223,6 @@ export default async function Home() {
                   <ProductCard product={product} />
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-[#f7f6f3] py-14 sm:py-16">
-          <div className="max-w-[1600px] mx-auto px-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
-              <div className="text-center">
-                <Package className="w-6 h-6 text-gold-600 mx-auto mb-3" />
-                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">3,000+</p>
-                <p className="text-sm text-warm-500 mt-1">Curated Products</p>
-              </div>
-              <div className="text-center">
-                <Star className="w-6 h-6 text-gold-600 mx-auto mb-3" />
-                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">39,000+</p>
-                <p className="text-sm text-warm-500 mt-1">5-Star Reviews</p>
-              </div>
-              <div className="text-center">
-                <Truck className="w-6 h-6 text-gold-600 mx-auto mb-3" />
-                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">2-5 Days</p>
-                <p className="text-sm text-warm-500 mt-1">Fast US Delivery</p>
-              </div>
-              <div className="text-center">
-                <Sparkles className="w-6 h-6 text-gold-600 mx-auto mb-3" />
-                <p className="text-3xl sm:text-4xl font-playfair font-bold text-[#0f1629]">AI</p>
-                <p className="text-sm text-warm-500 mt-1">Shopping Assistant</p>
-              </div>
             </div>
           </div>
         </section>
