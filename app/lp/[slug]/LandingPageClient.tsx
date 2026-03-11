@@ -37,6 +37,7 @@ interface LandingPageProps {
     description: string;
     slug: string;
     warehouse: string;
+    warehouse_status?: string | null;
     mi_categories: { name: string; slug: string } | null;
     mi_product_variants: Array<{
       id: string;
@@ -155,6 +156,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
       quantity: selectedTier.qty,
       image: product.images?.[0] || '',
       warehouse: (product.warehouse || 'US') as 'US' | 'CN' | 'CA',
+      warehouse_status: (product.warehouse_status as 'US' | 'CN' | 'DIGITAL') || null,
     });
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 3000);
@@ -461,13 +463,21 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
             {/* Trust badges */}
             <div className="flex items-center justify-center gap-6 mt-6 text-xs text-gray-500">
               <span>🔒 Secure Checkout</span>
-              <span>🚚 Free Shipping</span>
+              {product.warehouse_status === 'DIGITAL' ? (
+                <span>⚡ Instant Download</span>
+              ) : (
+                <span>🚚 Free Shipping</span>
+              )}
               <span>↩️ 30-Day Returns</span>
             </div>
 
-            {/* Stock notice */}
-            <p className="text-center text-xs font-medium text-green-600 mt-4">
-              ✓ In stock — delivered in 2–5 business days
+            {/* Stock / delivery notice */}
+            <p className={`text-center text-xs font-medium mt-4 ${product.warehouse_status === 'DIGITAL' ? 'text-violet-600' : product.warehouse_status === 'US' ? 'text-green-600' : 'text-amber-600'}`}>
+              {product.warehouse_status === 'DIGITAL'
+                ? '✓ Instant download — delivered to your email'
+                : product.warehouse_status === 'US'
+                  ? '✓ In stock — delivered in 2–5 business days'
+                  : '✓ In stock — delivered in 7–20 business days'}
             </p>
           </div>
         </div>

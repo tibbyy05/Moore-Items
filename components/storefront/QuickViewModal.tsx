@@ -82,6 +82,7 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
       quantity,
       image: product.images[0],
       warehouse: product.warehouse,
+      warehouse_status: product.warehouse_status,
       isDigital: product.isDigital,
     });
     setAddedState(true);

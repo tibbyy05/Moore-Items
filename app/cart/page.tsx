@@ -65,6 +65,7 @@ export default function CartPage() {
           quantity: qty,
           image: p.images?.[0] || '/placeholder.webp',
           warehouse: p.warehouse || 'CN',
+          warehouse_status: p.warehouse_status || null,
         });
 
         if (promo) {
@@ -124,6 +125,7 @@ export default function CartPage() {
         description: product.description || '',
         shippingDays: product.shipping_days || '7-12 days',
         warehouse: product.warehouse || 'CN',
+        warehouse_status: product.warehouse_status || null,
         inStock: product.stock_count > 0,
         stockCount: product.stock_count || 0,
       }));
@@ -337,23 +339,23 @@ export default function CartPage() {
                 </div>
 
                 {(() => {
-                  const hasDigital = items.some((i) => i.isDigital);
-                  const hasUSItems = items.some((i) => i.warehouse === 'US' && !i.isDigital);
-                  const hasCNItems = items.some((i) => i.warehouse === 'CN' && !i.isDigital);
+                  const hasDigital = items.some((i) => i.warehouse_status === 'DIGITAL' || i.isDigital);
+                  const hasUSItems = items.some((i) => i.warehouse_status === 'US' && !i.isDigital);
+                  const hasCNItems = items.some((i) => i.warehouse_status !== 'US' && i.warehouse_status !== 'DIGITAL' && !i.isDigital);
 
                   if (!hasUSItems && !hasCNItems && hasDigital) {
                     return (
                       <div className="flex items-center gap-2 text-sm text-violet-700 bg-violet-50 rounded-lg px-4 py-3 mt-4">
                         <Download className="w-4 h-4 flex-shrink-0" />
-                        <span>Instant Digital Download — available immediately after purchase</span>
+                        <span>Instant download — delivered to your email</span>
                       </div>
                     );
                   }
 
                   const shippingMessage = hasUSItems && hasCNItems
-                    ? 'US items: 2-5 business days \u2022 International items: 7-15 business days'
+                    ? 'US items: 2-5 business days \u2022 International items: 7-20 business days'
                     : hasCNItems
-                      ? 'Items ship internationally — estimated delivery in 7-15 business days'
+                      ? 'Items ship internationally — estimated delivery in 7-20 business days'
                       : 'All items ship from US warehouses — estimated delivery in 2-5 business days';
 
                   const isCNOnly = hasCNItems && !hasUSItems;

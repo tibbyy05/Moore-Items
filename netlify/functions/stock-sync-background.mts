@@ -44,6 +44,22 @@ function getProductTotalStock(stockData: any): number {
   return inventories.reduce((sum: number, inv: any) => sum + (inv.totalInventoryNum || 0), 0);
 }
 
+function getProductUSStock(stockData: any): number {
+  const payload = stockData?.data || stockData;
+  const inventories = payload?.inventories || (Array.isArray(payload) ? payload : []);
+  return inventories
+    .filter((inv: any) => inv.countryCode === 'US')
+    .reduce((sum: number, inv: any) => sum + (inv.totalInventoryNum || 0), 0);
+}
+
+function getProductCNStock(stockData: any): number {
+  const payload = stockData?.data || stockData;
+  const inventories = payload?.inventories || (Array.isArray(payload) ? payload : []);
+  return inventories
+    .filter((inv: any) => inv.countryCode === 'CN')
+    .reduce((sum: number, inv: any) => sum + (inv.totalInventoryNum || 0), 0);
+}
+
 function buildVariantStockMap(stockData: any): Map<string, { us: number; cn: number }> {
   const payload = stockData?.data || stockData;
   const variantInventories: any[] = payload?.variantInventories || [];
@@ -135,8 +151,8 @@ export default async (req: Request) => {
     const allProducts = await fetchAll<any>(
       supabase,
       'mi_products',
-      'id, name, cj_pid, status, category_id',
-      (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock'])
+      'id, name, cj_pid, status, category_id, warehouse_status',
+      (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock']).neq('warehouse', 'DIGITAL')
     );
 
     // In risk mode, filter to high-risk products only
@@ -156,11 +172,15 @@ export default async (req: Request) => {
 
       try {
         const stockData = await cjClient.getProductStock(product.cj_pid);
-        const totalStock = getProductTotalStock(stockData);
         const variantStockMap = buildVariantStockMap(stockData);
+        const usProductStock = getProductUSStock(stockData);
+        const cnProductStock = getProductCNStock(stockData);
+        const hasAnyStock = usProductStock > 0 || cnProductStock > 0;
+        const shippingProfile = usProductStock > 0 ? 'US' : 'CN';
+        const preferUS = usProductStock > 0;
 
-        // ─── Case 1: Zero stock on active product → hide it ───
-        if (totalStock === 0 && product.status === 'active') {
+        // ─── Case 1: Zero stock everywhere on active product → hide it ───
+        if (!hasAnyStock && product.status === 'active') {
           const { error: updateError } = await supabase
             .from('mi_products')
             .update({ status: 'out_of_stock' })
@@ -173,37 +193,42 @@ export default async (req: Request) => {
           }
         }
 
-        // ─── Case 2: Stock returned on out_of_stock product → reactivate ───
-        else if (totalStock > 0 && product.status === 'out_of_stock') {
+        // ─── Case 2: Has stock + needs reactivation or shipping profile change ───
+        else if (hasAnyStock && (product.status === 'out_of_stock' || product.warehouse_status !== shippingProfile)) {
           const { error: updateError } = await supabase
             .from('mi_products')
-            .update({ status: 'active' })
+            .update({ status: 'active', warehouse_status: shippingProfile })
             .eq('id', product.id);
 
           if (!updateError) {
+            // Fetch ALL variants (active + inactive) so we can reactivate stocked ones
             const { data: variants } = await supabase
               .from('mi_product_variants')
               .select('id, cj_vid')
-              .eq('product_id', product.id)
-              .eq('is_active', true);
+              .eq('product_id', product.id);
 
             for (const v of variants || []) {
               const cjStock = variantStockMap.get(v.cj_vid);
-              const usStock = cjStock?.us ?? 0;
+              const variantStock = preferUS ? (cjStock?.us ?? 0) : (cjStock?.cn ?? 0);
               await supabase
                 .from('mi_product_variants')
-                .update({ stock_count: usStock })
+                .update({ stock_count: variantStock, is_active: variantStock > 0 })
                 .eq('id', v.id);
             }
 
-            reactivated++;
+            if (product.status === 'out_of_stock') {
+              reactivated++;
+              changes.push({ name: product.name, action: 'reactivated', newStock: usProductStock || cnProductStock });
+            } else {
+              stockUpdated++;
+              changes.push({ name: product.name, action: 'stock_updated', newStock: usProductStock || cnProductStock });
+            }
             if (product.category_id) changedCategoryIds.add(product.category_id);
-            changes.push({ name: product.name, action: 'reactivated', newStock: totalStock });
           }
         }
 
-        // ─── Case 3: Active product — update per-variant stock where changed ───
-        else if (totalStock > 0 && product.status === 'active') {
+        // ─── Case 3: Active product, same profile — update per-variant stock where changed ───
+        else if (hasAnyStock && product.status === 'active') {
           const { data: variants } = await supabase
             .from('mi_product_variants')
             .select('id, cj_vid, stock_count')
@@ -216,19 +241,19 @@ export default async (req: Request) => {
 
           for (const v of variants || []) {
             const cjStock = variantStockMap.get(v.cj_vid);
-            const usStock = cjStock?.us ?? 0;
+            const variantStock = preferUS ? (cjStock?.us ?? 0) : (cjStock?.cn ?? 0);
             const currentStock = v.stock_count ?? 0;
-            const diff = Math.abs(usStock - currentStock);
+            const diff = Math.abs(variantStock - currentStock);
 
-            if (usStock === 0 || diff >= STOCK_CHANGE_THRESHOLD) {
+            if (variantStock === 0 || diff >= STOCK_CHANGE_THRESHOLD) {
               await supabase
                 .from('mi_product_variants')
-                .update({ stock_count: usStock })
+                .update({ stock_count: variantStock })
                 .eq('id', v.id);
 
               if (variantsUpdated === 0) {
                 sampleOld = currentStock;
-                sampleNew = usStock;
+                sampleNew = variantStock;
               }
               variantsUpdated++;
             }

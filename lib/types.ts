@@ -36,6 +36,7 @@ export interface Product {
   whatsIncluded?: string[] | null;
   shippingDays: string;
   warehouse: 'US' | 'CN' | 'CA';
+  warehouse_status?: 'US' | 'CN' | 'DIGITAL' | null;
   isDigital?: boolean;
   inStock: boolean;
   stockCount: number;
@@ -69,5 +70,6 @@ export interface CartItem {
   quantity: number;
   image: string;
   warehouse: 'US' | 'CN' | 'CA';
+  warehouse_status?: 'US' | 'CN' | 'DIGITAL' | null;
   isDigital?: boolean;
 }

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, Eye, Truck, Globe, AlertTriangle } from 'lucide-react';
+import { Heart, Eye, Truck, Globe, AlertTriangle, Download } from 'lucide-react';
 import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { QuickViewModal } from './QuickViewModal';
@@ -160,15 +160,20 @@ export function ProductCard({ product, priority = false, className }: ProductCar
               Only {displayStock} left
             </p>
           ) : null}
-          {product.warehouse === 'US' ? (
+          {product.warehouse_status === 'DIGITAL' || product.isDigital ? (
+            <div className="flex items-center gap-1 text-violet-600 text-xs mt-1">
+              <Download className="w-3 h-3" />
+              <span>Instant download</span>
+            </div>
+          ) : product.warehouse_status === 'US' ? (
             <div className="flex items-center gap-1 text-green-600 text-xs mt-1">
               <Truck className="w-3 h-3" />
-              <span>Delivered in 2-5 days</span>
+              <span>Delivered in 2-5 business days</span>
             </div>
           ) : (
             <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
               <Globe className="w-3 h-3" />
-              <span>Delivered in 7-15 days</span>
+              <span>Delivered in 7-20 business days</span>
             </div>
           )}
         </div>

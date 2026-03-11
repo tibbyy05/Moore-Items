@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame, Star, ShieldCheck } from 'lucide-react';
+import { Truck, Heart, ShoppingCart, Check, Download, Eye, AlertTriangle, Flame, Star, ShieldCheck, Globe } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -362,6 +362,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
         whatsIncluded: rawProduct.whats_included || null,
         shippingDays: rawProduct.shipping_estimate || rawProduct.shipping_days || '7-12 days',
         warehouse: rawProduct.warehouse || 'CN',
+        warehouse_status: rawProduct.warehouse_status || null,
         isDigital: !!(rawProduct.digital_file_path || rawProduct.mi_categories?.slug === 'digital-downloads'),
         inStock: rawProduct.cj_pid
           ? rawProduct.status === 'active'
@@ -413,6 +414,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
         whatsIncluded: item.whats_included || null,
         shippingDays: item.shipping_estimate || item.shipping_days || '7-12 days',
         warehouse: item.warehouse || 'CN',
+        warehouse_status: item.warehouse_status || null,
         isDigital: !!(item.digital_file_path || item.mi_categories?.slug === 'digital-downloads' || item.stock_count >= 9999),
         inStock: item.stock_count > 0,
         stockCount: item.stock_count || 0,
@@ -539,6 +541,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       quantity,
       image: product.images[0],
       warehouse: product.warehouse,
+      warehouse_status: product.warehouse_status,
       isDigital: product.isDigital,
     });
     setAddedState(true);
@@ -634,7 +637,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 </div>
               ) : null}
 
-              {product.isDigital ? (
+              {product.warehouse_status === 'DIGITAL' || product.isDigital ? (
                 <div className="mb-6 bg-violet-50 border border-violet-200 rounded-xl p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 w-10 h-10 bg-violet-100 rounded-full flex items-center justify-center">
@@ -645,12 +648,12 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                         Instant Digital Download
                       </p>
                       <p className="text-xs text-violet-600">
-                        Available immediately after purchase · No shipping required
+                        Instant download — delivered to your email
                       </p>
                     </div>
                   </div>
                 </div>
-              ) : product.warehouse === 'US' ? (
+              ) : product.warehouse_status === 'US' ? (
                 <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -658,7 +661,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-green-800">
-                        Fast US Shipping — 2-5 Business Days
+                        Delivered in 2-5 business days
                       </p>
                       <p className="text-xs text-green-600">
                         Ships from United States · Free shipping on orders $50+
@@ -667,15 +670,20 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                   </div>
                 </div>
               ) : (
-                <div className="mb-6 text-sm text-warm-700 flex flex-wrap items-center gap-2">
-                  <Truck className="w-4 h-4 text-gold-500" />
-                  <span>
-                    Standard Shipping — Estimated {product.shippingDays}
-                  </span>
-                  <span className="text-warm-500">· Ships from </span>
-                  <span className="font-semibold text-warm-900">
-                    {product.warehouse === 'CA' ? 'Canada' : 'China'}
-                  </span>
+                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                      <Globe className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">
+                        Delivered in 7-20 business days
+                      </p>
+                      <p className="text-xs text-amber-600">
+                        Ships internationally · Free shipping on orders $50+
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -771,26 +779,30 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
               <Accordion type="single" collapsible className="mt-6">
                 <AccordionItem value="shipping">
                   <AccordionTrigger>
-                    {product.isDigital ? 'Delivery Information' : 'Shipping Information'}
+                    {product.warehouse_status === 'DIGITAL' || product.isDigital ? 'Delivery Information' : 'Shipping Information'}
                   </AccordionTrigger>
                   <AccordionContent>
-                    {product.isDigital ? (
+                    {product.warehouse_status === 'DIGITAL' || product.isDigital ? (
                       <div className="space-y-2 text-warm-700">
                         <p>
-                          <strong>Delivery:</strong> Instant download after purchase
+                          <strong>Delivery:</strong> Instant download — delivered to your email
                         </p>
                         <p>
                           Download links are available on the order confirmation page and in your order history.
                           A link is also included in your confirmation email.
                         </p>
                       </div>
+                    ) : product.warehouse_status === 'US' ? (
+                      <div className="space-y-2 text-warm-700">
+                        <p>
+                          <strong>Estimated delivery:</strong> 2-5 business days
+                        </p>
+                        <p>Free shipping on orders over $50.</p>
+                      </div>
                     ) : (
                       <div className="space-y-2 text-warm-700">
                         <p>
-                          <strong>US Warehouse:</strong> 2-5 business days
-                        </p>
-                        <p>
-                          <strong>International:</strong> {product.shippingDays}
+                          <strong>Estimated delivery:</strong> 7-20 business days
                         </p>
                         <p>Free shipping on orders over $50.</p>
                       </div>

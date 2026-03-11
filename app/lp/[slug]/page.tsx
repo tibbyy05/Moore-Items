@@ -47,7 +47,7 @@ export default async function LandingPage({ params }: PageProps) {
   const { data: product } = await supabase
     .from('mi_products')
     .select(
-      'id, name, retail_price, images, description, slug, warehouse, mi_categories(name, slug), mi_product_variants(id, name, color, size, retail_price, stock_count, image_url)'
+      'id, name, retail_price, images, description, slug, warehouse, warehouse_status, mi_categories(name, slug), mi_product_variants(id, name, color, size, retail_price, stock_count, image_url)'
     )
     .eq('id', productIds[0])
     .single();
