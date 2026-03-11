@@ -1,7 +1,9 @@
-// ─── Cron Schedule ─────────────────────────────────────────────────
-// 4AM full sync:  POST /.netlify/functions/stock-sync-background?key=STOCK_SYNC_SECRET
-// 2PM risk sync:  POST /.netlify/functions/stock-sync-background?key=STOCK_SYNC_SECRET&mode=risk
-// Both use the STOCK_SYNC_SECRET env var for query-param auth.
+// ─── Cron Schedule (cron-job.org) ──────────────────────────────────
+// Every 2 hours:  POST /.netlify/functions/stock-sync-background?key=STOCK_SYNC_SECRET
+// Each run processes up to BATCH_SIZE products starting from the
+// saved offset, cycling through the full catalog throughout the day.
+// Risk mode (on-demand): &mode=risk  — skips pagination, checks
+// only low-stock + recently-ordered products.
 // The Next.js route at /api/admin/catalog/stock-sync proxies here.
 // ───────────────────────────────────────────────────────────────────
 
@@ -11,6 +13,8 @@ import { sendStockSyncAlert, type StockSyncChange } from '../../lib/email/sendgr
 
 const CJ_DELAY_MS = 1200;
 const STOCK_CHANGE_THRESHOLD = 5;
+const BATCH_SIZE = 200;
+const LOCK_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>;
 
@@ -142,7 +146,7 @@ export default async (req: Request) => {
 
     if (lockRow && lockRow.updated_at) {
       const lockAge = Date.now() - new Date(lockRow.updated_at).getTime();
-      if (lockAge < 60 * 60 * 1000) {
+      if (lockAge < LOCK_TIMEOUT_MS) {
         console.log(`[stock-sync-bg] Sync already in progress (lock age ${Math.round(lockAge / 1000)}s), skipping`);
         return new Response('already running', { status: 202 });
       }
@@ -171,22 +175,38 @@ export default async (req: Request) => {
     const driftProducts: { name: string; maxDriftPct: number }[] = [];
     const productDriftUpdates: { id: string; flagged: boolean; details: any }[] = [];
 
-    // Fetch all CJ products that are active or out_of_stock
+    // Fetch all CJ products that are active or out_of_stock (deterministic order for pagination)
     const allProducts = await fetchAll<any>(
       supabase,
       'mi_products',
       'id, name, cj_pid, status, category_id, warehouse_status',
-      (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock']).neq('warehouse', 'DIGITAL')
+      (q: any) => q.not('cj_pid', 'is', null).in('status', ['active', 'out_of_stock']).neq('warehouse', 'DIGITAL').order('id')
     );
 
-    // In risk mode, filter to high-risk products only
+    // Determine which products to process this run
     let products: any[];
+    let batchOffset = 0;
+    let isBatchedRun = false;
+
     if (mode === 'risk') {
+      // Risk mode: no pagination, check all high-risk products
       const riskIds = await buildRiskProductIds(supabase);
       products = allProducts.filter((p: any) => riskIds.has(p.id));
       console.log(`[stock-sync-bg] Risk mode: ${products.length} of ${allProducts.length} products qualified`);
     } else {
-      products = allProducts;
+      // ─── Paginated full sync: process BATCH_SIZE products per run ───
+      const { data: offsetRow } = await supabase
+        .from('mi_settings')
+        .select('value')
+        .eq('key', 'stock_sync_offset')
+        .maybeSingle();
+
+      batchOffset = parseInt(offsetRow?.value || '0', 10) || 0;
+      if (batchOffset >= allProducts.length) batchOffset = 0; // reset if catalog shrunk
+
+      products = allProducts.slice(batchOffset, batchOffset + BATCH_SIZE);
+      isBatchedRun = true;
+      console.log(`[stock-sync-bg] Full mode: batch ${batchOffset}–${batchOffset + products.length - 1} of ${allProducts.length} products`);
     }
 
     // Process one product at a time to respect CJ rate limit (1 QPS)
@@ -367,6 +387,19 @@ export default async (req: Request) => {
       }
     }
 
+    // ─── Save or clear pagination offset ───
+    if (isBatchedRun) {
+      const nextOffset = batchOffset + BATCH_SIZE;
+      if (nextOffset >= allProducts.length) {
+        await supabase.from('mi_settings').delete().eq('key', 'stock_sync_offset');
+        console.log(`[stock-sync-bg] Full catalog cycle complete (${allProducts.length} products)`);
+      } else {
+        await supabase
+          .from('mi_settings')
+          .upsert({ key: 'stock_sync_offset', value: String(nextOffset) }, { onConflict: 'key' });
+      }
+    }
+
     // ─── Recalculate category counts if any products changed status ───
     if (changedCategoryIds.size > 0) {
       const allActiveProducts = await fetchAll<any>(
@@ -429,8 +462,11 @@ export default async (req: Request) => {
       });
     }
 
+    const batchInfo = isBatchedRun
+      ? `batch ${batchOffset}–${batchOffset + products.length - 1} of ${allProducts.length}`
+      : `${mode} mode`;
     console.log(
-      `[stock-sync-bg] ${mode} sync complete: ${totalChecked} checked, ${totalChanges} changes, ${driftFlagged} drift, ${errors} errors, ${duration}s`
+      `[stock-sync-bg] ${batchInfo}: ${totalChecked} checked, ${totalChanges} changes, ${driftFlagged} drift, ${errors} errors, ${duration}s`
     );
     } finally {
       await supabase.from('mi_settings').delete().eq('key', 'stock_sync_running');
