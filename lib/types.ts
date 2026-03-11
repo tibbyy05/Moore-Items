@@ -33,6 +33,7 @@ export interface Product {
   badge: 'NEW' | 'TRENDING' | 'SALE' | 'BESTSELLER' | null;
   variants: ProductVariant[];
   description: string;
+  whatsIncluded: string[] | null;
   shippingDays: string;
   warehouse: 'US' | 'CN' | 'CA';
   isDigital?: boolean;

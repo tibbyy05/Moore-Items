@@ -314,10 +314,7 @@ export async function POST(request: NextRequest) {
     });
 
     const finalName = polished.title;
-    let description = polished.description;
-    if (polished.whatsIncluded.length > 0) {
-      description += `\nWhat's Included: ${polished.whatsIncluded.join(', ')}`;
-    }
+    const description = polished.description;
 
     // 6. Generate slug
     const slug = finalName
@@ -353,6 +350,7 @@ export async function POST(request: NextRequest) {
       name: finalName,
       slug: `${slug}-${trimmedPid.substring(0, 8)}`,
       description,
+      whats_included: polished.whatsIncluded,
       category_id: categoryId,
       images,
       cj_price: cjPrice,

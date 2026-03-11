@@ -6,8 +6,7 @@ import { calculatePricingWithConfig, computeCompareAtPrice } from '@/lib/pricing
 import { getPricingConfigFromDB } from '@/lib/config/pricing';
 import { parsePriceValue, extractImagesFromDetail, matchCategoryId } from '@/lib/cj/sync';
 import { parseVariantColorSize } from '@/lib/utils/variant-parser';
-import { categorizeWithAI, generateReviewsForProduct, stripHtml } from '@/lib/ai/product-enrichment';
-import Anthropic from '@anthropic-ai/sdk';
+import { categorizeWithAI, generateReviewsForProduct, stripHtml, polishProductWithAI } from '@/lib/ai/product-enrichment';
 
 function createTimeout(ms: number): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
@@ -177,72 +176,14 @@ async function importProduct(
     );
   }
 
-  const categorySlug = categoryRows?.find((c: any) => c.id === categoryId)?.slug || 'general';
-
-  let cleanName = productName;
-  let description = rawDescription;
-
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (anthropicKey) {
-    const { signal: rewriteSignal, clear: clearRewriteTimeout } = createTimeout(20_000);
-    try {
-      const anthropic = new Anthropic({ apiKey: anthropicKey });
-      const cleanResponse = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 600,
-        system: `You are a product copywriter for MooreItems.com — a curated marketplace positioned as "Nordstrom meets Target".
-Write clean, compelling product copy that sells the lifestyle and benefit, not the specs.
-Respond ONLY with valid JSON. No markdown, no backticks, no explanation.`,
-        messages: [
-          {
-            role: 'user',
-            content: `Clean and rewrite this CJ dropshipping product for our store.
-
-Raw name: ${productName}
-Raw description/specs: ${stripHtml(rawDescription).slice(0, 800)}
-Category: ${categorySlug}
-
-Rules for the name:
-- Remove ALL of: dimensions, weights, model numbers, platform references (Temu, Amazon, Walmart), promotional words (New, Hot, Top Sale, Best), shipping references, material specs
-- Keep it under 70 characters
-- Make it sound like a real retail product name
-
-Rules for the description:
-- Write 2 paragraphs of engaging marketing copy (4-6 sentences each)
-- Focus on lifestyle benefits and who this is for — not raw specs
-- Do NOT include: melting points, cross-border references, platform names, "product display", "housekeeping", Chinese manufacturing references, material chemistry specs, or any text that sounds like a warehouse listing
-- End with one sentence about why it fits everyday life
-- Tone: warm, confident, accessible — like Target.com product copy
-
-Respond with exactly this JSON:
-{"cleanName":"...","cleanDescription":"..."}`,
-          },
-        ],
-      }, { signal: rewriteSignal });
-
-      const rawText = cleanResponse.content
-        .map((b) => (b.type === 'text' ? b.text : ''))
-        .join('')
-        .trim();
-
-      const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-      const cleaned = JSON.parse(jsonText);
-
-      if (cleaned.cleanName && typeof cleaned.cleanName === 'string') {
-        cleanName = cleaned.cleanName.slice(0, 200);
-      }
-      if (cleaned.cleanDescription && typeof cleaned.cleanDescription === 'string') {
-        description = cleaned.cleanDescription;
-      }
-    } catch (err) {
-      console.error('[auto-import] AI description cleaning failed, using raw:', err);
-      description = stripHtml(rawDescription).slice(0, 2000);
-    } finally {
-      clearRewriteTimeout();
-    }
-  } else {
-    description = stripHtml(rawDescription).slice(0, 2000);
-  }
+  const polished = await polishProductWithAI({
+    rawTitle: productName,
+    rawDescription: rawDescription,
+    categoryHint: payload.categoryName || '',
+  });
+  const cleanName = polished.title;
+  const description = polished.description;
+  const whatsIncluded = polished.whatsIncluded;
 
   // 6. Generate slug from cleaned name
   const slug = cleanName
@@ -257,6 +198,7 @@ Respond with exactly this JSON:
     name: cleanName,
     slug: `${slug}-${trimmedPid.substring(0, 8)}`,
     description,
+    whats_included: whatsIncluded,
     category_id: categoryId,
     images,
     cj_price: cjPrice,

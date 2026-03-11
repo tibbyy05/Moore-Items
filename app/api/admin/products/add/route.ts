@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     warehouse: rest.warehouse ?? null,
     status: status || 'pending',
     digital_file_path: rest.digital_file_path || null,
+    whats_included: rest.whats_included || [],
     supplier: 'manual',
   };
 

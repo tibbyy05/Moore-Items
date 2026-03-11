@@ -8,6 +8,7 @@ export interface ProductPageData {
   retail_price: number;
   compare_at_price: number | null;
   description: string;
+  whats_included: string[] | null;
   images: string[];
   stock_count: number;
   status: string;

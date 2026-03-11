@@ -359,6 +359,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
             stock_count: variant.stock_count,
           })) || [],
         description: rawProduct.description || '',
+        whatsIncluded: rawProduct.whats_included || null,
         shippingDays: rawProduct.shipping_estimate || rawProduct.shipping_days || '7-12 days',
         warehouse: rawProduct.warehouse || 'CN',
         isDigital: !!(rawProduct.digital_file_path || rawProduct.mi_categories?.slug === 'digital-downloads'),
@@ -409,6 +410,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
             imageUrl: variant.image_url || undefined,
           })) || [],
         description: item.description || '',
+        whatsIncluded: item.whats_included || null,
         shippingDays: item.shipping_estimate || item.shipping_days || '7-12 days',
         warehouse: item.warehouse || 'CN',
         isDigital: !!(item.digital_file_path || item.mi_categories?.slug === 'digital-downloads' || item.stock_count >= 9999),
@@ -743,6 +745,22 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 <h2 className="text-2xl font-playfair font-semibold text-warm-900 mb-4">
                   Product Details
                 </h2>
+                {product.whatsIncluded && product.whatsIncluded.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">
+                      What&apos;s Included
+                    </p>
+                    <ul className="space-y-1">
+                      {product.whatsIncluded.map((item, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                          <span style={{ color: '#c8a45e' }}>&#10003;</span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="border-t border-gray-100 mt-4" />
+                  </div>
+                )}
                 <DescriptionFormatter
                   html={cleanDescription}
                   productName={product.name}

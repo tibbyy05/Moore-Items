@@ -29,6 +29,7 @@ export default function AddProductPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [polishing, setPolishing] = useState(false);
   const [polishStatus, setPolishStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [whatsIncluded, setWhatsIncluded] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -69,11 +70,8 @@ export default function AddProductPage() {
         rawDescription: form.description,
         categoryHint,
       });
-      let desc = polished.description;
-      if (polished.whatsIncluded.length > 0) {
-        desc += `\n\nWhat's Included: ${polished.whatsIncluded.join(', ')}`;
-      }
-      setForm((prev) => ({ ...prev, name: polished.title, description: desc }));
+      setForm((prev) => ({ ...prev, name: polished.title, description: polished.description }));
+      setWhatsIncluded(polished.whatsIncluded);
       setPolishStatus('success');
       setTimeout(() => setPolishStatus('idle'), 3000);
     } catch {
@@ -167,6 +165,7 @@ export default function AddProductPage() {
         warehouse: null,
         status: form.status,
         digital_file_path: digitalFilePath,
+        whats_included: whatsIncluded,
       };
 
       const response = await fetch('/api/admin/products/add', {
