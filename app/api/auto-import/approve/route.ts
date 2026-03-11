@@ -41,6 +41,7 @@ async function importProduct(
   supabase: any,
   suggestion: any
 ): Promise<{ success: boolean; product_id?: string; error?: string; reviewParams?: { productName: string; description: string; retailPrice: number; categoryName: string } }> {
+  const startTime = Date.now();
   const trimmedPid = suggestion.cj_pid.trim();
 
   // Check if product already exists (allow re-importing hidden products)
@@ -57,12 +58,12 @@ async function importProduct(
 
   // 1. Fetch full product detail
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  const { signal: detailSignal, clear: clearDetailTimeout } = createTimeout(10_000);
+  const { signal: detailSignal, clear: clearDetailTimeout } = createTimeout(8_000);
   let detail;
   try {
     detail = await cjClient.getProduct(trimmedPid, detailSignal);
   } catch (e: any) {
-    if (e.name === 'AbortError') throw new Error('CJ product detail timeout after 10s');
+    if (e.name === 'AbortError') throw new Error('CJ product detail timeout after 8s');
     throw e;
   } finally {
     clearDetailTimeout();
@@ -84,10 +85,13 @@ async function importProduct(
   }
 
   // 2. Check stock
-  await sleep(1100);
+  if (Date.now() - startTime > 22000) {
+    return { success: false, error: 'Processing timeout — please retry' };
+  }
+  await sleep(500);
   let totalUsStock = 0;
   let stockData: any[] = [];
-  const { signal: stockSignal, clear: clearStockTimeout } = createTimeout(10_000);
+  const { signal: stockSignal, clear: clearStockTimeout } = createTimeout(8_000);
   try {
     const stockResponse = await cjClient.getProductStock(trimmedPid, stockSignal);
     const raw = (stockResponse as any)?.data || stockResponse;
@@ -105,10 +109,13 @@ async function importProduct(
 
   const hasUSStock = totalUsStock > 0;
 
-  // 3. Calculate shipping and pricing
-  await sleep(1100);
+  // 3. Calculate shipping and pricing (fully optional — failure never blocks import)
+  if (Date.now() - startTime > 22000) {
+    return { success: false, error: 'Processing timeout — please retry' };
+  }
+  await sleep(500);
   let shippingCost = 0;
-  const { signal: freightSignal, clear: clearFreightTimeout } = createTimeout(10_000);
+  const { signal: freightSignal, clear: clearFreightTimeout } = createTimeout(8_000);
   try {
     if (payload.variants?.length > 0) {
       const freight = await cjClient.calculateFreight({
@@ -125,7 +132,7 @@ async function importProduct(
       }
     }
   } catch {
-    // fallback or timed out
+    // freight failed or timed out — continue with fallback
   } finally {
     clearFreightTimeout();
   }
@@ -174,6 +181,10 @@ async function importProduct(
       productName,
       categoryRows || []
     );
+  }
+
+  if (Date.now() - startTime > 22000) {
+    return { success: false, error: 'Processing timeout — please retry' };
   }
 
   const polished = await polishProductWithAI({

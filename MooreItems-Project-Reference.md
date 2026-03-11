@@ -3512,3 +3512,64 @@ Replaced hardcoded flat shipping with weight-based Stripe `shipping_options`:
 - `fix: admin order email — shipping address, line items, view order button, subject line`
 - `fix: order email items blank — webhook was reading non-existent product_name/product_image columns, correct columns are name/image_url`
 - `chore: update SendGrid from address to orders@mooreitems.com`
+
+
+### Session 35 (Mar 10, 2026): Import System Overhaul & Dashboard Command Center
+
+**Image extraction fix** (`lib/cj/sync.ts`):
+- `extractImagesFromDetail()` now builds complete image array: productImage first → variant images (variants[].variantImage) → productImageSet gallery → Array.from(new Set()) dedup
+- All 5 CJ import call sites benefit: scout import, scout search, manual CJ import, auto-import approve, main sync
+
+**Canonical AI polish** (`lib/ai/product-enrichment.ts`):
+- Added `polishProductWithAI({ rawTitle, rawDescription, categoryHint })` — single shared function
+- Outputs: title (max 80 chars), description (max 300 chars lifestyle copy), whatsIncluded[] (what's in the box, max 5 items)
+- Graceful fallback: returns raw inputs unchanged on any failure
+- Wired into scout/import and auto-import/approve — both routes now use this instead of divergent inline prompts
+
+**Database migrations** (Supabase):
+- `mi_products.supplier` text column added (default 'cj', backfilled from cj_pid presence)
+- `mi_auto_import_suggestions.supplier` and `.source_url` columns added
+- `mi_products.whats_included` text[] column added (default '{}')
+- `mi_settings` key `last_health_check_result` — health check route now upserts `{score, checked_at}` after every run
+
+**Unified import hub** (`app/admin/catalog/import/page.tsx`):
+- 4-tab page: AI Suggestions, Browse CJ, Paste URL/PID, Manual Entry
+- `components/admin/AutoImportPanel.tsx` — extracted from auto-import page
+- `components/admin/ProductScoutPanel.tsx` — extracted from product scout page
+- Paste URL tab: two-step preview (GET /api/admin/verify-product) → import (POST /api/admin/scout/import), handles 409 already-exists
+- Manual Entry tab: full inline product creation form with AI Polish button, same logic as /admin/products/add
+- `/admin/auto-import` and `/admin/product-scout` now redirect to `/admin/catalog/import`
+
+**Sidebar consolidated** (`components/admin/Sidebar.tsx`):
+- Removed: Add Product, Import from URL, Product Scout, Auto Import, US Stock (5 items)
+- Added: Import Products → /admin/catalog/import
+- New structure: STORE (Dashboard, Products, Import Products) / OPERATIONS (Orders, Customers, Promo Codes, Landing Pages) / TOOLS (Catalog Health) / SETTINGS (Pricing, Shipping)
+
+**Add Product page cleaned up** (`app/admin/products/add/page.tsx`):
+- Removed CJ Import tab (now redundant with import hub)
+- Added AI Polish button — inline with Product Name field, calls polishProductWithAI(), updates name + description + stores whatsIncluded
+
+**QPS fix** — auto-import suggest and approve routes now have await sleep(1100) between sequential CJ API calls. Prevents 1600200 QPS errors when clicking Run Now manually.
+
+**Dashboard command center** (`app/admin/page.tsx` + `app/api/admin/dashboard/route.ts`):
+- 7th stat card: Pending Imports (amber when > 0, links to /admin/catalog/import)
+- Catalog Health bar: green/amber/red tinted full-width bar with score + relative timestamp, links to /admin/catalog-health
+- Needs Polish subtitle: shows price drift count in amber or "All prices stable" in grey
+- Quick Actions: "Import Products" replaces "Add Product"
+- Dashboard API: added pendingImports, healthScore, healthCheckedAt to response
+
+**whatsIncluded end to end**:
+- All import paths save to `mi_products.whats_included` text[] column
+- Product detail page (`ProductPageClient.tsx`) renders gold ✓ checklist above description when array has items
+- Manual form Polish button captures whatsIncluded and submits with product
+- Existing catalog has empty arrays — backfill script needed to populate historical products
+
+**Key architectural decisions**:
+- `lib/cj/sync.ts extractImagesFromDetail()` = canonical image extractor for all CJ paths
+- `lib/ai/product-enrichment.ts polishProductWithAI()` = canonical AI polish for all import paths
+- `supplier` column on mi_products = foundation for future multi-supplier (AliExpress, Topdawg, etc.)
+- whatsIncluded stored as structured array, not appended to description text
+
+**On the horizon**:
+- Backfill whatsIncluded on existing ~3,000 products
+- AliExpress URL adapter for Paste URL tab
