@@ -130,10 +130,34 @@ export default async (req: Request) => {
     }
 
     const mode: 'full' | 'risk' = url.searchParams.get('mode') === 'risk' ? 'risk' : 'full';
+
+    const supabase = createAdminClient();
+
+    // ─── Concurrency lock ───
+    const { data: lockRow } = await supabase
+      .from('mi_settings')
+      .select('value, updated_at')
+      .eq('key', 'stock_sync_running')
+      .maybeSingle();
+
+    if (lockRow && lockRow.updated_at) {
+      const lockAge = Date.now() - new Date(lockRow.updated_at).getTime();
+      if (lockAge < 60 * 60 * 1000) {
+        console.log(`[stock-sync-bg] Sync already in progress (lock age ${Math.round(lockAge / 1000)}s), skipping`);
+        return new Response('already running', { status: 202 });
+      }
+      console.log(`[stock-sync-bg] Stale lock found (${Math.round(lockAge / 60000)}m old), reclaiming`);
+    }
+
+    await supabase
+      .from('mi_settings')
+      .upsert({ key: 'stock_sync_running', value: 'true' }, { onConflict: 'key' });
+
     console.log(`[stock-sync-bg] Starting ${mode} sync...`);
 
     const startTime = Date.now();
-    const supabase = createAdminClient();
+
+    try {
     const changes: StockSyncChange[] = [];
     let totalChecked = 0;
     let hidden = 0;
@@ -408,6 +432,9 @@ export default async (req: Request) => {
     console.log(
       `[stock-sync-bg] ${mode} sync complete: ${totalChecked} checked, ${totalChanges} changes, ${driftFlagged} drift, ${errors} errors, ${duration}s`
     );
+    } finally {
+      await supabase.from('mi_settings').delete().eq('key', 'stock_sync_running');
+    }
   } catch (err) {
     console.error('[stock-sync-bg] Fatal error:', err);
   }
