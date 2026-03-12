@@ -1,5 +1,5 @@
 // ─── Cron Schedule (cron-job.org) ──────────────────────────────────
-// Every 2 hours:  POST /.netlify/functions/stock-sync-background?key=STOCK_SYNC_SECRET
+// Every hour:  POST /.netlify/functions/stock-sync-background?key=STOCK_SYNC_SECRET
 // Each run processes up to BATCH_SIZE products starting from the
 // saved offset, cycling through the full catalog throughout the day.
 // Risk mode (on-demand): &mode=risk  — skips pagination, checks
@@ -13,7 +13,7 @@ import { sendStockSyncAlert, type StockSyncChange } from '../../lib/email/sendgr
 
 const CJ_DELAY_MS = 1200;
 const STOCK_CHANGE_THRESHOLD = 5;
-const BATCH_SIZE = 200;
+const BATCH_SIZE = 50;
 const LOCK_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes
 
 type SupabaseAdmin = ReturnType<typeof createAdminClient>;
