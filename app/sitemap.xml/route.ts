@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin';
+import { SITE_URL } from '@/lib/seo/constants';
 
 export const dynamic = 'force-dynamic';
-
-const BASE_URL = 'https://mooreitems.com';
 const PRODUCTS_PER_PAGE = 24;
 
 function escapeXml(str: string): string {
@@ -44,18 +43,18 @@ export async function GET() {
 
   // Static pages
   const staticEntries = [
-    urlEntry(BASE_URL, { changefreq: 'daily', priority: 1.0 }),
-    urlEntry(`${BASE_URL}/shop`, { changefreq: 'daily', priority: 0.8 }),
-    urlEntry(`${BASE_URL}/trending`, { changefreq: 'daily', priority: 0.8 }),
-    urlEntry(`${BASE_URL}/deals`, { changefreq: 'daily', priority: 0.8 }),
-    urlEntry(`${BASE_URL}/new-arrivals`, { changefreq: 'daily', priority: 0.8 }),
-    urlEntry(`${BASE_URL}/about`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/contact`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/faq`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/shipping-policy`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/returns`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/privacy-policy`, { changefreq: 'monthly', priority: 0.3 }),
-    urlEntry(`${BASE_URL}/terms`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(SITE_URL, { changefreq: 'daily', priority: 1.0 }),
+    urlEntry(`${SITE_URL}/shop`, { changefreq: 'daily', priority: 0.8 }),
+    urlEntry(`${SITE_URL}/trending`, { changefreq: 'daily', priority: 0.8 }),
+    urlEntry(`${SITE_URL}/deals`, { changefreq: 'daily', priority: 0.8 }),
+    urlEntry(`${SITE_URL}/new-arrivals`, { changefreq: 'daily', priority: 0.8 }),
+    urlEntry(`${SITE_URL}/about`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/contact`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/faq`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/shipping-policy`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/returns`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/privacy-policy`, { changefreq: 'monthly', priority: 0.3 }),
+    urlEntry(`${SITE_URL}/terms`, { changefreq: 'monthly', priority: 0.3 }),
   ];
 
   // Category pages
@@ -66,7 +65,7 @@ export async function GET() {
   const categoryEntries: string[] = [];
   for (const cat of categories || []) {
     categoryEntries.push(
-      urlEntry(`${BASE_URL}/category/${cat.slug}`, {
+      urlEntry(`${SITE_URL}/category/${cat.slug}`, {
         lastmod: cat.updated_at,
         changefreq: 'daily',
         priority: 0.8,
@@ -77,7 +76,7 @@ export async function GET() {
     const totalPages = Math.ceil((cat.product_count || 0) / PRODUCTS_PER_PAGE);
     for (let p = 2; p <= totalPages; p++) {
       categoryEntries.push(
-        urlEntry(`${BASE_URL}/category/${cat.slug}?page=${p}`, {
+        urlEntry(`${SITE_URL}/category/${cat.slug}?page=${p}`, {
           lastmod: cat.updated_at,
           changefreq: 'daily',
           priority: 0.5,
@@ -109,7 +108,7 @@ export async function GET() {
   }
 
   const productEntries = allProducts.map((product) =>
-    urlEntry(`${BASE_URL}/product/${product.slug}`, {
+    urlEntry(`${SITE_URL}/product/${product.slug}`, {
       lastmod: product.updated_at,
       changefreq: 'weekly',
       priority: 0.6,
