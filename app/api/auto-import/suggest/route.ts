@@ -390,6 +390,11 @@ Score ALL products. Be selective — only give 70+ to genuinely good fits.`,
 
     console.log(`[auto-import] Batch ${batchId}: ${top10.length} suggestions saved`);
 
+    // Record last successful run time
+    await supabase
+      .from('mi_settings')
+      .upsert({ key: 'auto_import_last_run', value: new Date().toISOString() }, { onConflict: 'key' });
+
     return NextResponse.json({
       success: true,
       batch_id: batchId,

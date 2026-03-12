@@ -104,8 +104,22 @@ export default async (req: Request) => {
     const { data: autoImportSetting } = await supabase
       .from('mi_settings')
       .select('value')
-      .eq('key', 'last_auto_import_run')
-      .single();
+      .eq('key', 'auto_import_last_run')
+      .maybeSingle();
+
+    let autoImportStatus: string;
+    if (!autoImportSetting?.value) {
+      autoImportStatus = 'No run recorded yet';
+    } else {
+      const lastRunAge = Date.now() - new Date(autoImportSetting.value).getTime();
+      const twentyFiveHoursMs = 25 * 60 * 60 * 1000;
+      if (lastRunAge > twentyFiveHoursMs) {
+        const hoursAgo = Math.round(lastRunAge / (60 * 60 * 1000));
+        autoImportStatus = `ACTION REQUIRED: Last run was ${hoursAgo}h ago (missed scheduled run)`;
+      } else {
+        autoImportStatus = `ALL CLEAR: Last run ${autoImportSetting.value}`;
+      }
+    }
 
     // ─── d) FULFILLMENT ALERTS ───
     const { data: stuckOrders } = await supabase
@@ -131,7 +145,7 @@ export default async (req: Request) => {
       },
       autoImport: {
         newlyImportedYesterday: newlyImported ?? 0,
-        lastAutoImportRun: autoImportSetting?.value ?? null,
+        status: autoImportStatus,
       },
       fulfillment: {
         stuckOrders: stuckCount,
