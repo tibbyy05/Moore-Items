@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
           if (cnEntry && vi.vid) {
             await supabase
               .from('mi_product_variants')
-              .update({ stock_count: cnEntry.totalInventoryNum || 0 })
+              .update({ stock_count: cnEntry.totalInventory ?? 0 })
               .eq('product_id', inserted.id)
               .eq('cj_vid', vi.vid);
           }
