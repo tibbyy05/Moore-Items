@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
@@ -20,7 +21,7 @@ export default function ReturnsPage() {
           <div className="space-y-5 text-warm-700 leading-relaxed">
             <p>We offer a 30-day return policy on all orders.</p>
             <p>Items must be unused and in original packaging.</p>
-            <p>Contact support to initiate a return.</p>
+            <p>Contact us via our <Link href="/contact" className="text-gold-600 underline hover:text-gold-700">Contact page</Link> to initiate a return.</p>
             <p>Refunds are processed within 5-7 business days.</p>
             <p>Damaged or defective items are replaced at no charge.</p>
           </div>
