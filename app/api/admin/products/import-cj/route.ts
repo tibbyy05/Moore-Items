@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
     try {
       if (payload.variants?.length > 0) {
         const freight = await cjClient.calculateFreight({
+          startCountryCode: (hasUSStock || detectUSWarehouse(payload)) ? 'US' : 'CN',
           endCountryCode: 'US',
           products: [{ vid: payload.variants[0].vid, quantity: 1 }],
         });
@@ -241,11 +242,11 @@ export async function POST(request: NextRequest) {
             (loc: any) => loc.countryCode === 'CN'
           );
           if (cnEntry && vi.vid) {
-            await supabase
+            const { count } = await supabase
               .from('mi_product_variants')
-              .update({ stock_count: cnEntry.totalInventory ?? 0 })
-              .eq('product_id', inserted.id)
+              .update({ stock_count: cnEntry.totalInventory ?? 0 }, { count: 'exact' })
               .eq('cj_vid', vi.vid);
+            console.log(`[import-cj] stock updated for vid ${vi.vid}: ${count} rows`);
           }
         }
       } catch (stockErr: any) {
