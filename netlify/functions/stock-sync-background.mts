@@ -445,8 +445,11 @@ export default async (req: Request) => {
     const timestamp = new Date().toISOString();
     const totalChanges = hidden + reactivated + stockUpdated;
 
-    // Send alert email when changes or drift detected
-    if (totalChanges > 0 || driftFlagged > 0) {
+    // Send alert email only for significant runs:
+    // - 10+ total changes, OR
+    // - any products went out of stock this run
+    const shouldEmail = totalChanges >= 10 || hidden > 0;
+    if (shouldEmail) {
       await sendStockSyncAlert({
         totalChecked,
         hidden,
@@ -460,6 +463,8 @@ export default async (req: Request) => {
         driftProducts,
         mode,
       });
+    } else if (totalChanges > 0 || driftFlagged > 0) {
+      console.log(`[stock-sync-bg] Skipping email: ${totalChanges} changes, ${hidden} hidden, ${driftFlagged} drift (below threshold)`);
     }
 
     const batchInfo = isBatchedRun

@@ -1,0 +1,180 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { sendDailyBriefing } from '@/lib/email/sendgrid';
+
+export const dynamic = 'force-dynamic';
+
+export async function POST(request: NextRequest) {
+  // 1. AUTH — verify secret header
+  const secret = request.headers.get('x-briefing-secret');
+  if (!secret || secret !== process.env.BRIEFING_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = createAdminClient();
+
+  // Compute yesterday's date range in EST
+  const now = new Date();
+  const estOffset = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const yesterdayStart = new Date(estOffset);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  yesterdayStart.setHours(0, 0, 0, 0);
+  const yesterdayEnd = new Date(yesterdayStart);
+  yesterdayEnd.setHours(23, 59, 59, 999);
+  const sevenDaysAgo = new Date(estOffset);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+  const yesterdayStartISO = yesterdayStart.toISOString();
+  const yesterdayEndISO = yesterdayEnd.toISOString();
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+  // 2. GATHER DATA
+
+  // a) SALES — yesterday
+  const { data: yesterdayOrders } = await supabase
+    .from('mi_orders')
+    .select('total')
+    .eq('payment_status', 'paid')
+    .is('refund_status', null)
+    .gte('created_at', yesterdayStartISO)
+    .lte('created_at', yesterdayEndISO);
+
+  const yesterdayCount = yesterdayOrders?.length ?? 0;
+  const yesterdayRevenue = yesterdayOrders?.reduce((sum, o) => sum + (o.total || 0), 0) ?? 0;
+  const yesterdayAvg = yesterdayCount > 0 ? yesterdayRevenue / yesterdayCount : 0;
+
+  // 7-day sales
+  const { data: weekOrders } = await supabase
+    .from('mi_orders')
+    .select('total')
+    .eq('payment_status', 'paid')
+    .is('refund_status', null)
+    .gte('created_at', sevenDaysAgoISO);
+
+  const weekCount = weekOrders?.length ?? 0;
+  const weekRevenue = weekOrders?.reduce((sum, o) => sum + (o.total || 0), 0) ?? 0;
+
+  // b) CATALOG HEALTH
+  const { count: activeProducts } = await supabase
+    .from('mi_products')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active');
+
+  const { count: outOfStockProducts } = await supabase
+    .from('mi_products')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'out_of_stock');
+
+  // Margin drift: (price - cost_price) / price < 0.15 AND active
+  const { data: marginProducts } = await supabase
+    .from('mi_products')
+    .select('id, price, cost_price')
+    .eq('status', 'active')
+    .gt('price', 0)
+    .gt('cost_price', 0);
+
+  const marginDriftCount = (marginProducts ?? []).filter((p) => {
+    const margin = (p.price - p.cost_price) / p.price;
+    return margin < 0.15;
+  }).length;
+
+  // Stock changes in last 24h
+  const { count: recentStockChanges } = await supabase
+    .from('mi_products')
+    .select('id', { count: 'exact', head: true })
+    .gte('updated_at', twentyFourHoursAgo);
+
+  // c) PENDING AUTO-IMPORTS
+  const { count: newlyImported } = await supabase
+    .from('mi_products')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .gte('created_at', yesterdayStartISO);
+
+  const { data: autoImportSetting } = await supabase
+    .from('mi_settings')
+    .select('value')
+    .eq('key', 'last_auto_import_run')
+    .single();
+
+  // d) FULFILLMENT ALERTS — stuck unfulfilled paid orders older than 24h
+  const { data: stuckOrders } = await supabase
+    .from('mi_orders')
+    .select('id, order_number, created_at, total')
+    .eq('fulfillment_status', 'unfulfilled')
+    .eq('payment_status', 'paid')
+    .lt('created_at', twentyFourHoursAgo);
+
+  const stuckCount = stuckOrders?.length ?? 0;
+
+  // 3. CALL CLAUDE API
+  const briefingData = {
+    sales: {
+      yesterday: { orders: yesterdayCount, revenue: yesterdayRevenue, avgOrderValue: Math.round(yesterdayAvg * 100) / 100 },
+      last7Days: { orders: weekCount, revenue: weekRevenue },
+    },
+    catalog: {
+      activeProducts: activeProducts ?? 0,
+      outOfStockProducts: outOfStockProducts ?? 0,
+      marginDriftCount,
+      stockChangesLast24h: recentStockChanges ?? 0,
+    },
+    autoImport: {
+      newlyImportedYesterday: newlyImported ?? 0,
+      lastAutoImportRun: autoImportSetting?.value ?? null,
+    },
+    fulfillment: {
+      stuckOrders: stuckCount,
+      stuckOrderDetails: (stuckOrders ?? []).slice(0, 10).map((o) => ({
+        orderNumber: o.order_number,
+        createdAt: o.created_at,
+        total: o.total,
+      })),
+    },
+  };
+
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+  }
+
+  const anthropic = new Anthropic({ apiKey });
+
+  const message = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    system: `You are the operations manager for MooreItems, a dropshipping e-commerce store targeting $10k/month revenue. Analyze the daily data and write a concise morning briefing for the owner Danny. Format with three sections: ACTION REQUIRED (specific tasks with urgency), WATCHING (trends worth monitoring), ALL CLEAR (things running normally). Be direct, specific, and prioritize what moves the needle toward revenue. If sales are $0, acknowledge it matter-of-factly — the store is pre-ads-launch. Flag anything that could hurt the upcoming Meta ads launch.`,
+    messages: [
+      {
+        role: 'user',
+        content: `Here is today's operational data for MooreItems:\n\n${JSON.stringify(briefingData, null, 2)}`,
+      },
+    ],
+  });
+
+  const briefingText =
+    message.content[0].type === 'text' ? message.content[0].text : '';
+
+  // 4. SEND EMAIL
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  await sendDailyBriefing({
+    briefingText,
+    date: today,
+    orderCount: yesterdayCount,
+    activeProducts: activeProducts ?? 0,
+    marginAlerts: marginDriftCount,
+    stuckOrders: stuckCount,
+  });
+
+  // 5. RETURN
+  return NextResponse.json({ success: true, briefing: briefingText });
+}

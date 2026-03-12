@@ -6,6 +6,7 @@ import { stockSyncTemplate } from './templates/stock-sync';
 import { newOrderAdminTemplate, type AdminOrderNotificationData } from './templates/new-order-admin';
 import { autoImportDigestTemplate } from './templates/auto-import-digest';
 import { contactFormAdminTemplate, contactFormAutoReplyTemplate, type ContactFormData } from './templates/contact-form';
+import { dailyBriefingTemplate, type DailyBriefingData } from './templates/daily-briefing';
 
 // ============================================================
 // SendGrid Email Client for MooreItems.com
@@ -283,6 +284,21 @@ export async function sendContactFormAutoReply(data: ContactFormData) {
   return sendEmail({
     to: data.email,
     subject: 'We received your message — MooreItems',
+    html,
+  });
+}
+
+// ============================================================
+// Daily Briefing Email
+// ============================================================
+
+export type { DailyBriefingData };
+
+export async function sendDailyBriefing(data: DailyBriefingData) {
+  const html = dailyBriefingTemplate(data);
+  return sendEmail({
+    to: 'mooreitemsshop@gmail.com',
+    subject: `MooreItems Daily Briefing — ${data.date}`,
     html,
   });
 }
