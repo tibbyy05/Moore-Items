@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       retail_price: pricing.retailPrice,
       margin_dollars: pricing.marginDollars,
       margin_percent: pricing.marginPercent,
-      stock_count: 100,
+      stock_count: warehouse === 'CN' ? 0 : 100,
       warehouse,
       shipping_days: shippingDays,
       delivery_cycle_days: deliveryCycle,
@@ -248,8 +248,8 @@ export async function POST(request: NextRequest) {
               .eq('cj_vid', vi.vid);
           }
         }
-      } catch {
-        // Non-fatal — stock will be corrected by scheduled sync
+      } catch (stockErr: any) {
+        console.error('[import-cj] CN stock update failed:', stockErr?.message);
       }
     }
 

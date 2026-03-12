@@ -48,6 +48,9 @@ interface CJVariant {
   variantImage: string;
   variantSellPrice: number;
   variantProperty: string;
+  variantSku: string;
+  variantKey: string;
+  variantWeight?: number;
 }
 
 interface CJFreightResult {
