@@ -215,6 +215,7 @@ export async function POST(request: NextRequest) {
             cj_price: variantPrice,
             retail_price: variantPricing.retailPrice,
             image_url: parsed.image_url || variant.variantImage,
+            sku: variant.variantSku || null,
             color: parsed.color || null,
             size: parsed.size || null,
             stock_count: 100,
@@ -222,6 +223,33 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: 'cj_vid' }
         );
+      }
+    }
+
+    // For CN warehouse imports, update variant stock counts immediately
+    if (warehouse === 'CN' && payload.variants?.length > 0) {
+      try {
+        // Reuse stockData from the earlier warehouse check, or re-fetch if it failed
+        let inventory = stockData;
+        if (!inventory) {
+          const stockResponse = await cjClient.getProductStock(trimmedPid);
+          inventory = stockResponse?.data || stockResponse;
+        }
+        const variantInventories: any[] = inventory?.variantInventories || [];
+        for (const vi of variantInventories) {
+          const cnEntry = (vi.inventory || []).find(
+            (loc: any) => loc.countryCode === 'CN'
+          );
+          if (cnEntry && vi.vid) {
+            await supabase
+              .from('mi_product_variants')
+              .update({ stock_count: cnEntry.totalInventoryNum || 0 })
+              .eq('product_id', inserted.id)
+              .eq('cj_vid', vi.vid);
+          }
+        }
+      } catch {
+        // Non-fatal — stock will be corrected by scheduled sync
       }
     }
 

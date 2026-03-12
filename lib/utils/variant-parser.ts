@@ -177,6 +177,23 @@ function parseVariantKeyString(variantKey: string): {
       }
     }
   }
+  // Space-separated: "Blue 380ml", "2pcs Pink", "Pink Simple Packaging", "White Pink"
+  else if (raw.includes(' ')) {
+    const words = raw.split(' ');
+    const firstWord = words[0];
+    const restWords = words.slice(1).join(' ');
+    if (isColor(firstWord)) {
+      color = titleCase(firstWord);
+      if (isColor(restWords)) {
+        color = titleCase(raw); // bicolor: "White Pink"
+      } else {
+        size = restWords; // "Blue 380ml", "Pink Simple Packaging"
+      }
+    } else if (/^\d+\s*pcs?$/i.test(firstWord)) {
+      size = firstWord; // "2pcs Pink" → size=2pcs, color=Pink
+      if (isColor(restWords)) color = titleCase(restWords);
+    }
+  }
   // Pure color
   else if (isColor(raw)) {
     color = titleCase(raw);
@@ -190,7 +207,7 @@ function parseVariantKeyString(variantKey: string): {
     for (const c of Array.from(KNOWN_COLORS)) {
       if (lower.startsWith(c) && raw.length > c.length) {
         const remainder = raw.substring(c.length);
-        if (/^[\d]/.test(remainder)) {
+        if (/^[\d]/.test(remainder.trimStart())) {
           color = titleCase(c);
           if (isSizeStr(remainder)) size = remainder;
           break;
