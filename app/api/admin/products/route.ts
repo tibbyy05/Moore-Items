@@ -148,10 +148,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { supabase, error } = await requireAdmin(request);
-  if (error) return error;
+  try {
+    const { supabase, error } = await requireAdmin(request);
+    if (error) return error;
   const body = await request.json();
+  // DEBUG: log incoming request
+  console.log('[PATCH /api/admin/products] full body:', JSON.stringify(body, null, 2));
   const { id, ...updates } = body;
+  console.log('[PATCH /api/admin/products] id:', id);
+  console.log('[PATCH /api/admin/products] update fields:', Object.keys(updates));
 
   if (updates.markup_multiplier || updates.retail_price) {
     const { data: product } = await supabase
@@ -200,14 +205,18 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  console.log('[PATCH /api/admin/products] final updates to Supabase:', JSON.stringify(updates, null, 2));
   const { error: updateError } = await supabase
     .from('mi_products')
     .update(updates)
     .eq('id', id);
 
+  console.log('[PATCH /api/admin/products] Supabase result — error:', updateError);
   if (updateError) {
+    console.error('[PATCH /api/admin/products] UPDATE FAILED:', updateError.message, updateError);
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
+  console.log('[PATCH /api/admin/products] UPDATE SUCCEEDED for id:', id);
 
   // Re-fetch with category join so the response includes mi_categories
   const { data, error: fetchError } = await supabase
@@ -287,6 +296,10 @@ export async function PATCH(request: NextRequest) {
   }
 
   return NextResponse.json({ product: data });
+  } catch (err: any) {
+    console.error('[products PATCH] UNHANDLED ERROR:', err?.message, err?.stack);
+    return NextResponse.json({ error: err?.message || 'unknown' }, { status: 500 });
+  }
 }
 
 export async function DELETE(request: NextRequest) {
