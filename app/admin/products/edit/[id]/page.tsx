@@ -26,6 +26,12 @@ import {
   Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createBrowserClient } from '@supabase/ssr';
+
+const supabaseStorage = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -197,23 +203,23 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setUploadImageError(null);
     setUploadingImage(true);
     try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('/api/admin/landing-pages/upload-image', {
-        method: 'POST',
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      const path = `products/${params.id}/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabaseStorage.storage
+        .from('landing-page-images')
+        .upload(path, file, { upsert: false });
+      if (error) throw new Error(error.message);
+      const { data: urlData } = supabaseStorage.storage
+        .from('landing-page-images')
+        .getPublicUrl(path);
+      const url = urlData.publicUrl;
       setImageUrls((prev) => {
-        // Replace the first empty slot, or append
         const emptyIdx = prev.findIndex((u) => !u.trim());
         if (emptyIdx >= 0) {
           const next = [...prev];
-          next[emptyIdx] = data.url;
+          next[emptyIdx] = url;
           return next;
         }
-        return [...prev, data.url];
+        return [...prev, url];
       });
     } catch (err: any) {
       setUploadImageError(err.message || 'Upload failed');
@@ -263,13 +269,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
     setUploadingVariantImage(variantId);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('variantId', variantId);
-      const res = await fetch('/api/admin/products/upload-image', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      await handleVariantImageSave(variantId, data.url);
+      const path = `variants/${variantId}/${crypto.randomUUID()}-${file.name}`;
+      const { error } = await supabaseStorage.storage
+        .from('gallery-photos')
+        .upload(path, file, { upsert: false });
+      if (error) throw new Error(error.message);
+      const { data: urlData } = supabaseStorage.storage
+        .from('gallery-photos')
+        .getPublicUrl(path);
+      await handleVariantImageSave(variantId, urlData.publicUrl);
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload image');
     } finally {
