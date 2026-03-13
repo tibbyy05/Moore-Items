@@ -253,8 +253,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       toast.error('Only JPEG, PNG, WebP, and GIF images are allowed');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5 MB');
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Image must be under 20 MB');
       return;
     }
     setUploadingVariantImage(variantId);
