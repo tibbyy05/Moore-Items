@@ -110,6 +110,9 @@ function PasteUrlTab() {
 
       if (res.status === 409) {
         setResult({ existing: true, ...data });
+      } else if (res.status === 202) {
+        setResult({ queued: true, ...data });
+        setPreview(null);
       } else if (!res.ok) {
         throw new Error(data.error || 'Import failed');
       } else {
@@ -290,8 +293,32 @@ function PasteUrlTab() {
         </div>
       )}
 
-      {/* Success */}
-      {result && !result.existing && (
+      {/* Queued (background import) */}
+      {result?.queued && (
+        <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div className="flex items-center gap-2 text-emerald-700 mb-2">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-sm font-semibold">Import in progress</span>
+          </div>
+          <p className="text-sm text-emerald-700 mb-3">
+            {result.message || 'Product will appear in your catalog shortly.'}
+          </p>
+          <div className="flex gap-3 text-xs">
+            <a href="/admin/products" className="text-emerald-600 hover:underline">
+              Check Products &rarr;
+            </a>
+            <button
+              onClick={clearAll}
+              className="text-emerald-600 hover:underline"
+            >
+              Import another &rarr;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success (synchronous — legacy) */}
+      {result && !result.existing && !result.queued && (
         <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
           <div className="flex items-center gap-2 text-emerald-700 mb-2">
             <CheckCircle className="w-4 h-4" />

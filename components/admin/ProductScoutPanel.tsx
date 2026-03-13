@@ -284,23 +284,38 @@ function SearchCJTab() {
         body: JSON.stringify({ cj_pid: product.cj_pid, source: 'scout' }),
       });
       const data = await safeJson(res);
-      if (!res.ok) throw new Error(data.error || 'Import failed');
+      if (!res.ok && res.status !== 202) throw new Error(data.error || 'Import failed');
 
-      setImportResults((prev) => ({ ...prev, [product.cj_pid]: data }));
+      if (res.status === 202) {
+        // Background import queued
+        setImportResults((prev) => ({
+          ...prev,
+          [product.cj_pid]: { queued: true, message: data.message },
+        }));
+        setResults((prev) =>
+          prev.map((p) =>
+            p.cj_pid === product.cj_pid
+              ? { ...p, catalog_status: 'in_catalog' as const }
+              : p
+          )
+        );
+      } else {
+        setImportResults((prev) => ({ ...prev, [product.cj_pid]: data }));
 
-      // Update the product's catalog status in results
-      setResults((prev) =>
-        prev.map((p) =>
-          p.cj_pid === product.cj_pid
-            ? {
-                ...p,
-                catalog_status: 'in_catalog' as const,
-                existing_product_id: data.product_id,
-                existing_product_slug: data.product_slug,
-              }
-            : p
-        )
-      );
+        // Update the product's catalog status in results
+        setResults((prev) =>
+          prev.map((p) =>
+            p.cj_pid === product.cj_pid
+              ? {
+                  ...p,
+                  catalog_status: 'in_catalog' as const,
+                  existing_product_id: data.product_id,
+                  existing_product_slug: data.product_slug,
+                }
+              : p
+          )
+        );
+      }
     } catch (err: any) {
       setImportResults((prev) => ({
         ...prev,
@@ -713,7 +728,7 @@ function ProductCard({
         </div>
 
         {/* Import success message */}
-        {importResult && !importResult.error && (
+        {importResult && !importResult.error && !importResult.queued && (
           <div className="mb-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-700">
             <p className="font-semibold mb-1">Imported successfully!</p>
             <p>
@@ -732,6 +747,17 @@ function ProductCard({
                 Edit in admin &rarr;
               </a>
             </div>
+          </div>
+        )}
+
+        {/* Import queued (background) */}
+        {importResult?.queued && (
+          <div className="mb-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-700">
+            <p className="font-semibold mb-1">Import in progress</p>
+            <p>Product will appear in your catalog shortly.</p>
+            <a href="/admin/products" className="text-emerald-600 hover:underline mt-1 inline-block">
+              Check Products &rarr;
+            </a>
           </div>
         )}
 
@@ -1013,7 +1039,13 @@ function QuickViewModal({
                 </button>
               )}
 
-              {importResult && !importResult.error && (
+              {importResult?.queued && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-700">
+                  <p className="font-semibold">Import in progress — check Products shortly.</p>
+                </div>
+              )}
+
+              {importResult && !importResult.error && !importResult.queued && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-xs text-emerald-700">
                   <p className="font-semibold">Imported! {importResult.variants_created} variants, {importResult.reviews_generated} reviews</p>
                 </div>
