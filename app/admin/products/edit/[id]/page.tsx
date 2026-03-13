@@ -17,6 +17,11 @@ import {
   ChevronRight,
   Pencil,
   Trash2,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,6 +61,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [variantEdit, setVariantEdit] = useState({ name: '', stock_count: '', retail_price: '' });
   const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
   const [variantSaving, setVariantSaving] = useState(false);
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [variantSort, setVariantSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: '', dir: 'asc' });
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -271,6 +280,76 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       setVariantSaving(false);
     }
   };
+
+  const handleToggleActive = async (v: any) => {
+    setVariantSaving(true);
+    try {
+      const res = await fetch(`/api/admin/variants/${v.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !v.is_active }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update variant');
+      }
+      toast.success(v.is_active ? 'Variant hidden' : 'Variant activated');
+      await fetchVariants();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to toggle variant');
+    } finally {
+      setVariantSaving(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    const ids = Array.from(selectedVariantIds);
+    let deleted = 0;
+    for (const id of ids) {
+      try {
+        const res = await fetch(`/api/admin/variants/${id}`, { method: 'DELETE' });
+        if (res.ok) deleted++;
+      } catch {}
+    }
+    toast.success(`Deleted ${deleted} variant${deleted !== 1 ? 's' : ''}`);
+    setSelectedVariantIds(new Set());
+    setConfirmBulkDelete(false);
+    setBulkDeleting(false);
+    await fetchVariants();
+  };
+
+  const toggleVariantSort = (key: string) => {
+    setVariantSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: 'asc' }
+    );
+  };
+
+  const getVariantMargin = (v: any) => {
+    const retail = Number(v.retail_price || 0);
+    return retail > 0
+      ? (retail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / retail * 100
+      : 0;
+  };
+
+  const getVariantTotalCost = (v: any) => Number(v.cj_price || 0) + Number(v.shipping_cost || 0);
+
+  const sortedVariants = [...variants].sort((a, b) => {
+    if (!variantSort.key) return 0;
+    const dir = variantSort.dir === 'asc' ? 1 : -1;
+    switch (variantSort.key) {
+      case 'name': return dir * (a.name || '').localeCompare(b.name || '');
+      case 'stock': return dir * ((a.stock_count ?? 0) - (b.stock_count ?? 0));
+      case 'totalCost': return dir * (getVariantTotalCost(a) - getVariantTotalCost(b));
+      case 'salePrice': return dir * ((Number(a.retail_price) || 0) - (Number(b.retail_price) || 0));
+      case 'margin': return dir * (getVariantMargin(a) - getVariantMargin(b));
+      default: return 0;
+    }
+  });
+
+  const lowMarginVariants = variants.filter((v) => getVariantMargin(v) < 25 && Number(v.retail_price || 0) > 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -774,24 +853,130 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               Variants
               <span className="ml-2 text-sm font-normal text-gray-400">{variants.length}</span>
             </h2>
+
+            {/* Margin warning banner */}
+            {lowMarginVariants.length > 0 && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-800">
+                  <p className="font-semibold mb-1">Low margin warning (&lt;25%)</p>
+                  {lowMarginVariants.map((v: any) => (
+                    <p key={v.id}>{v.name || v.sku || 'Unnamed'} — {getVariantMargin(v).toFixed(1)}%</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bulk actions */}
+            {selectedVariantIds.size > 0 && (
+              <div className="mb-3 flex items-center gap-3">
+                {!confirmBulkDelete ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmBulkDelete(true)}
+                    className="px-3 py-1.5 bg-danger hover:bg-danger/90 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete {selectedVariantIds.size} selected
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-800">Delete {selectedVariantIds.size} variants? This cannot be undone.</p>
+                    <button
+                      type="button"
+                      disabled={bulkDeleting}
+                      onClick={handleBulkDelete}
+                      className="px-2.5 py-1 bg-danger hover:bg-danger/90 text-white text-xs font-medium rounded transition-colors disabled:opacity-60"
+                    >
+                      {bulkDeleting ? 'Deleting...' : 'Confirm'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmBulkDelete(false)}
+                      className="px-2.5 py-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setSelectedVariantIds(new Set()); setConfirmBulkDelete(false); }}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Clear selection
+                </button>
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-left">
-                    <th className="pb-2 font-medium text-gray-500">Name</th>
-                    <th className="pb-2 font-medium text-gray-500">SKU</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Stock</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Cost</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Shipping</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Total Cost</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Sale Price</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Margin</th>
+                    <th className="pb-2 pr-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedVariantIds.size === variants.length && variants.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedVariantIds(new Set(variants.map((v: any) => v.id)));
+                          } else {
+                            setSelectedVariantIds(new Set());
+                            setConfirmBulkDelete(false);
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-gold-500 focus:ring-gold-500/40"
+                      />
+                    </th>
+                    {[
+                      { key: 'name', label: 'Name', align: 'text-left' },
+                      { key: '', label: 'SKU', align: 'text-left' },
+                      { key: 'stock', label: 'Stock', align: 'text-right' },
+                      { key: '', label: 'Cost', align: 'text-right' },
+                      { key: '', label: 'Shipping', align: 'text-right' },
+                      { key: 'totalCost', label: 'Total Cost', align: 'text-right' },
+                      { key: 'salePrice', label: 'Sale Price', align: 'text-right' },
+                      { key: 'margin', label: 'Margin', align: 'text-right' },
+                    ].map(({ key, label, align }) => (
+                      <th
+                        key={label}
+                        className={`pb-2 font-medium text-gray-500 ${align} ${key ? 'cursor-pointer select-none hover:text-gray-700' : ''}`}
+                        onClick={key ? () => toggleVariantSort(key) : undefined}
+                      >
+                        <span className="inline-flex items-center gap-0.5">
+                          {label}
+                          {key && variantSort.key === key && (
+                            variantSort.dir === 'asc'
+                              ? <ChevronUp className="w-3 h-3" />
+                              : <ChevronDown className="w-3 h-3" />
+                          )}
+                        </span>
+                      </th>
+                    ))}
                     <th className="pb-2 font-medium text-gray-500 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {variants.map((v: any) => (
-                    <tr key={v.id}>
+                  {sortedVariants.map((v: any) => {
+                    const isInactive = v.is_active === false;
+                    const rowClass = isInactive ? 'opacity-50' : '';
+                    return (
+                    <tr key={v.id} className={rowClass}>
+                      <td className="py-2 pr-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedVariantIds.has(v.id)}
+                          onChange={(e) => {
+                            setSelectedVariantIds((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(v.id);
+                              else next.delete(v.id);
+                              return next;
+                            });
+                          }}
+                          className="w-3.5 h-3.5 rounded border-gray-300 text-gold-500 focus:ring-gold-500/40"
+                        />
+                      </td>
                       {editingVariantId === v.id ? (
                         <>
                           <td className="py-2 pr-2">
@@ -819,7 +1004,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                             ${Number(v.shipping_cost || 0).toFixed(2)}
                           </td>
                           <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
-                            ${(Number(v.cj_price || 0) + Number(v.shipping_cost || 0)).toFixed(2)}
+                            ${getVariantTotalCost(v).toFixed(2)}
                           </td>
                           <td className="py-2 pr-2">
                             <input
@@ -865,10 +1050,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         </>
                       ) : (
                         <>
-                          <td className="py-2 pr-2 text-[#1a1a2e]">{v.name || '—'}</td>
+                          <td className={`py-2 pr-2 ${isInactive ? 'line-through text-gray-400' : 'text-[#1a1a2e]'}`}>{v.name || '—'}</td>
                           <td className="py-2 pr-2 text-gray-400 text-xs font-mono">{v.sku || '—'}</td>
                           <td className="py-2 pr-2 text-right">
-                            <span className={v.stock_count === 0 ? 'text-danger font-medium' : 'text-[#1a1a2e]'}>
+                            <span className={v.stock_count === 0 ? 'text-danger font-medium' : isInactive ? 'text-gray-400' : 'text-[#1a1a2e]'}>
                               {v.stock_count ?? '—'}
                             </span>
                           </td>
@@ -879,17 +1064,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                             ${Number(v.shipping_cost || 0).toFixed(2)}
                           </td>
                           <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
-                            ${(Number(v.cj_price || 0) + Number(v.shipping_cost || 0)).toFixed(2)}
+                            ${getVariantTotalCost(v).toFixed(2)}
                           </td>
-                          <td className="py-2 pr-2 text-right text-[#1a1a2e]">
+                          <td className={`py-2 pr-2 text-right ${isInactive ? 'text-gray-400' : 'text-[#1a1a2e]'}`}>
                             ${Number(v.retail_price || 0).toFixed(2)}
                           </td>
                           {(() => {
-                            const retail = Number(v.retail_price || 0);
-                            const margin = retail > 0
-                              ? ((retail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / retail * 100)
-                              : 0;
-                            const marginColor = margin >= 30 ? 'text-emerald-600' : margin >= 15 ? 'text-amber-600' : 'text-danger';
+                            const margin = getVariantMargin(v);
+                            const marginColor = isInactive ? 'text-gray-400' : margin >= 30 ? 'text-emerald-600' : margin >= 15 ? 'text-amber-600' : 'text-danger';
                             return (
                               <td className={`py-2 pr-2 text-right text-xs font-medium ${marginColor}`}>
                                 {margin.toFixed(1)}%
@@ -908,6 +1090,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                               </button>
                               <button
                                 type="button"
+                                disabled={variantSaving}
+                                onClick={() => handleToggleActive(v)}
+                                className={`p-1.5 rounded transition-colors ${v.is_active !== false ? 'text-gray-400 hover:text-amber-500 hover:bg-amber-50' : 'text-amber-500 hover:text-emerald-500 hover:bg-emerald-50'}`}
+                                title={v.is_active !== false ? 'Hide variant' : 'Activate variant'}
+                              >
+                                {v.is_active !== false ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setDeletingVariantId(v.id)}
                                 className="p-1.5 text-gray-400 hover:text-danger rounded hover:bg-danger/10 transition-colors"
                                 title="Delete variant"
@@ -919,7 +1110,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         </>
                       )}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
