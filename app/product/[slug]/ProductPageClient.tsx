@@ -528,7 +528,14 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
     );
   }
 
-  const effectivePrice = selectedVariant?.price || product.price;
+  // Variant-driven pricing: use selected variant's retail_price, fall back to product-level price
+  const effectivePrice = selectedVariant?.price ?? product.price;
+  // Discount badge recalculates automatically: (compareAt - effectivePrice) / compareAt
+  const effectiveCompareAtPrice = product.compareAtPrice;
+  // True when variants exist and have mixed prices (show "from" label)
+  const hasVariantPriceRange =
+    product.variants.length > 1 &&
+    new Set(product.variants.map((v) => v.price)).size > 1;
 
   const handleAddToCart = () => {
     addItem({
@@ -624,12 +631,16 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 </div>
               ) : null}
 
-              <PriceDisplay
-                price={effectivePrice}
-                compareAtPrice={product.compareAtPrice}
-                size="lg"
-                className="mb-6"
-              />
+              <div className="mb-6 flex items-baseline gap-2">
+                {hasVariantPriceRange && !selectedVariant && (
+                  <span className="text-sm text-warm-500">From</span>
+                )}
+                <PriceDisplay
+                  price={effectivePrice}
+                  compareAtPrice={effectiveCompareAtPrice}
+                  size="lg"
+                />
+              </div>
               {!product.isDigital && viewingCount ? (
                 <div className="flex items-center gap-2 text-xs text-warm-500 mb-6">
                   <Eye className="w-4 h-4" />
@@ -1106,7 +1117,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-warm-900 break-words">{product.name}</p>
-              <p className="text-sm text-warm-600">${effectivePrice.toFixed(2)}</p>
+              <PriceDisplay price={effectivePrice} compareAtPrice={effectiveCompareAtPrice} size="sm" />
             </div>
             <CustomButton
               variant="primary"
