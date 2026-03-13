@@ -52,6 +52,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     retail_price: '',
     cj_price: '',
     shipping_cost: '',
+    shipping_days: '',
+    processing_time: '',
     status: 'pending' as 'active' | 'pending' | 'hidden',
   });
 
@@ -90,6 +92,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             retail_price: String(product.retail_price || ''),
             cj_price: String(product.cj_price || ''),
             shipping_cost: String(product.shipping_cost || '0'),
+            shipping_days: product.shipping_days || '',
+            processing_time: product.processing_time || '',
             status: product.status || 'pending',
           });
           setImageUrls(
@@ -416,6 +420,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         total_cost: totalCost,
         margin_dollars: marginDollars,
         margin_percent: marginPercent,
+        shipping_days: form.shipping_days.trim() || null,
+        processing_time: form.processing_time.trim() || null,
         status: form.status,
       };
 
@@ -625,6 +631,47 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
           </div>
         </div>
+
+        {/* Shipping Info */}
+        {!isDigital && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Shipping Info</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Delivery Estimate
+                </label>
+                <input
+                  type="text"
+                  name="shipping_days"
+                  value={form.shipping_days}
+                  onChange={handleChange}
+                  placeholder="e.g. 8-15 business days"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Shown to customers on the product page.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Processing Time
+                </label>
+                <input
+                  type="text"
+                  name="processing_time"
+                  value={form.processing_time}
+                  onChange={handleChange}
+                  placeholder="e.g. 1-3 days"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Time before the order ships.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Images */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">

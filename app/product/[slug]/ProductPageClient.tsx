@@ -664,7 +664,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                         Delivered in {product.shippingDays}
                       </p>
                       <p className="text-xs text-green-600">
-                        Ships from United States · Free shipping on orders $50+
+                        {product.warehouse === 'CN' ? 'Ships internationally' : 'Ships from United States'} · Free shipping on orders $50+
                       </p>
                     </div>
                   </div>
@@ -680,7 +680,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                         Delivered in {product.shippingDays}
                       </p>
                       <p className="text-xs text-amber-600">
-                        Ships internationally · Free shipping on orders $50+
+                        {product.warehouse === 'CN' ? 'Ships internationally' : 'Ships from United States'} · Free shipping on orders $50+
                       </p>
                     </div>
                   </div>
