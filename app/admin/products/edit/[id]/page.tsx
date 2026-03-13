@@ -73,6 +73,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           const product = data.product;
           setOriginalProduct(product);
           setVariants(data.variants || []);
+          console.log('VARIANTS DEBUG:', data.variants);
           setForm({
             name: product.name || '',
             description: product.description || '',

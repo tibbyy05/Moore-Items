@@ -33,15 +33,17 @@ export async function GET(request: NextRequest) {
   // Single product fetch by ID (for edit page)
   const id = searchParams.get('id');
   if (id) {
-    const { data, error: fetchError } = await supabase
-      .from('mi_products')
-      .select('*, mi_categories(name, slug)')
-      .eq('id', id)
-      .single();
-    if (fetchError || !data) {
+    const [productRes, variantsRes] = await Promise.all([
+      supabase.from('mi_products').select('*, mi_categories(name, slug)').eq('id', id).single(),
+      supabase.from('mi_product_variants').select('*').eq('product_id', id).order('created_at'),
+    ]);
+    if (productRes.error || !productRes.data) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
-    return NextResponse.json({ product: data });
+    return NextResponse.json({
+      product: productRes.data,
+      variants: variantsRes.data || [],
+    });
   }
 
   const page = parseInt(searchParams.get('page') || '1');
