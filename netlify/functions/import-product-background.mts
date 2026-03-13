@@ -363,11 +363,14 @@ export default async function handler(req: Request) {
     // 9. Create variants
     let variantsCreated = 0;
     if (payload.variants?.length > 0) {
-      // Fetch variant stock one at a time, 1s between calls
+      // Fetch variant stock + freight one at a time, 1s between calls
       const targetCountry = warehouse === 'US' ? 'US' : 'CN';
       const variantStockMap = new Map<string, number>();
+      const variantFreightMap = new Map<string, number>();
       for (let i = 0; i < payload.variants.length; i++) {
         const v = payload.variants[i];
+
+        // Stock lookup
         const vidStock = await cjClient.getVariantStock(v.vid).catch(() => null);
         if (vidStock) {
           const entries = Array.isArray(vidStock) ? vidStock : [];
@@ -376,6 +379,26 @@ export default async function handler(req: Request) {
             variantStockMap.set(v.vid, match.totalInventoryNum ?? 999);
           }
         }
+
+        // Per-variant freight lookup
+        try {
+          const freight = await cjClient.calculateFreight({
+            startCountryCode: warehouse,
+            endCountryCode: 'US',
+            products: [{ vid: v.vid, quantity: 1 }],
+          });
+          if (freight?.length > 0) {
+            const freightValues = freight
+              .map((f: any) => parsePriceValue(f.logisticPrice))
+              .filter((val: number | null): val is number => val !== null && val > 0);
+            if (freightValues.length > 0) {
+              variantFreightMap.set(v.vid, Math.min(...freightValues));
+            }
+          }
+        } catch (freightErr: any) {
+          console.warn(`[import-bg] Freight failed for vid ${v.vid}:`, freightErr?.message);
+        }
+
         if (i < payload.variants.length - 1) await new Promise((r) => setTimeout(r, 1000));
       }
 
@@ -383,7 +406,8 @@ export default async function handler(req: Request) {
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
 
-        const variantPricing = calculatePricing(variantPrice, shippingCost);
+        const variantShippingCost = variantFreightMap.get(variant.vid) ?? shippingCost;
+        const variantPricing = calculatePricing(variantPrice, variantShippingCost);
         const parsed = parseVariantColorSize(variant, productName);
         const variantStock = variantStockMap.get(variant.vid) ?? 999;
 
@@ -399,7 +423,7 @@ export default async function handler(req: Request) {
             color: parsed.color || null,
             size: parsed.size || null,
             stock_count: variantStock,
-            shipping_cost: shippingCost,
+            shipping_cost: variantShippingCost,
             is_active: variantStock > 0,
           },
           { onConflict: 'cj_vid' }
