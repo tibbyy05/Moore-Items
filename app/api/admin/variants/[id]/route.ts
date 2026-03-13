@@ -45,7 +45,6 @@ export async function PATCH(
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
-  console.log('[variant PATCH] id:', params.id, 'updates sent:', updates);
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('mi_product_variants')
@@ -54,7 +53,6 @@ export async function PATCH(
     .select()
     .single();
 
-  console.log('[variant PATCH] supabase result:', JSON.stringify(data), 'error:', error);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
