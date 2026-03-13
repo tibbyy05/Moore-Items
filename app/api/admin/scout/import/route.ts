@@ -384,18 +384,42 @@ export async function POST(request: NextRequest) {
     // 9. Create variants
     let variantsCreated = 0;
     if (payload.variants?.length > 0) {
+      let variantIdx = 0;
       for (const variant of payload.variants) {
+        if (variantIdx === 0) {
+          console.log('VARIANT DEBUG:', JSON.stringify(variant, null, 2));
+          console.log('STOCK DATA DEBUG:', JSON.stringify(stockData, null, 2));
+        }
+        variantIdx++;
+
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
 
         const variantPricing = calculatePricing(variantPrice, shippingCost);
         const parsed = parseVariantColorSize(variant, productName);
 
-        // Find variant stock
-        let variantStock = 100;
+        // Find variant stock — check US first, then CN, then inline inventories
+        let variantStock = 999;
         for (const inv of stockData) {
-          if ((inv.vid === variant.vid) && inv.countryCode === 'US') {
+          if (inv.vid === variant.vid && inv.countryCode === 'US') {
             variantStock = inv.quantity || inv.totalInventoryNum || 0;
+          }
+        }
+        if (variantStock === 999 && warehouse === 'CN') {
+          // Check stockData for CN entries
+          for (const inv of stockData) {
+            if (inv.vid === variant.vid && inv.countryCode === 'CN') {
+              variantStock = inv.totalInventory ?? inv.quantity ?? inv.totalInventoryNum ?? 999;
+            }
+          }
+          // Fallback: check variant's inline inventories array
+          if (variantStock === 999) {
+            const cnInv = (variant.inventories || []).find(
+              (inv: any) => inv.countryCode === 'CN'
+            );
+            if (cnInv) {
+              variantStock = cnInv.totalInventory ?? 999;
+            }
           }
         }
 
@@ -407,6 +431,7 @@ export async function POST(request: NextRequest) {
             cj_price: variantPrice,
             retail_price: variantPricing.retailPrice,
             image_url: parsed.image_url || variant.variantImage,
+            sku: variant.variantSku || null,
             color: parsed.color || null,
             size: parsed.size || null,
             stock_count: variantStock,
