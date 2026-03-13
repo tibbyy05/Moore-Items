@@ -15,6 +15,8 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,6 +50,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     status: 'pending' as 'active' | 'pending' | 'hidden',
   });
 
+  // Variant management
+  const [variants, setVariants] = useState<any[]>([]);
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null);
+  const [variantEdit, setVariantEdit] = useState({ name: '', stock_count: '', retail_price: '' });
+  const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
+  const [variantSaving, setVariantSaving] = useState(false);
+
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
@@ -60,8 +69,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         ]);
 
         if (productRes.ok) {
-          const { product } = await productRes.json();
+          const data = await productRes.json();
+          const product = data.product;
           setOriginalProduct(product);
+          setVariants(data.variants || []);
           setForm({
             name: product.name || '',
             description: product.description || '',
@@ -195,6 +206,69 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       return [...prev, url];
     });
     setPasteUrl('');
+  };
+
+  const fetchVariants = async () => {
+    try {
+      const res = await fetch(`/api/admin/products?id=${params.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVariants(data.variants || []);
+      }
+    } catch {}
+  };
+
+  const handleVariantEdit = (v: any) => {
+    setEditingVariantId(v.id);
+    setVariantEdit({
+      name: v.name || '',
+      stock_count: String(v.stock_count ?? ''),
+      retail_price: String(v.retail_price ?? ''),
+    });
+  };
+
+  const handleVariantSave = async (id: string) => {
+    setVariantSaving(true);
+    try {
+      const res = await fetch(`/api/admin/variants/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: variantEdit.name,
+          stock_count: Number(variantEdit.stock_count),
+          retail_price: Number(variantEdit.retail_price),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update variant');
+      }
+      toast.success('Variant updated');
+      setEditingVariantId(null);
+      await fetchVariants();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update variant');
+    } finally {
+      setVariantSaving(false);
+    }
+  };
+
+  const handleVariantDelete = async (id: string) => {
+    setVariantSaving(true);
+    try {
+      const res = await fetch(`/api/admin/variants/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete variant');
+      }
+      toast.success('Variant deleted');
+      setDeletingVariantId(null);
+      await fetchVariants();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete variant');
+    } finally {
+      setVariantSaving(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -687,6 +761,159 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 >
                   Cancel replacement
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Variants */}
+        {variants.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">
+              Variants
+              <span className="ml-2 text-sm font-normal text-gray-400">{variants.length}</span>
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-left">
+                    <th className="pb-2 font-medium text-gray-500">Name</th>
+                    <th className="pb-2 font-medium text-gray-500">SKU</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Stock</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Price</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Cost</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Shipping</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {variants.map((v: any) => (
+                    <tr key={v.id}>
+                      {editingVariantId === v.id ? (
+                        <>
+                          <td className="py-2 pr-2">
+                            <input
+                              type="text"
+                              value={variantEdit.name}
+                              onChange={(e) => setVariantEdit((prev) => ({ ...prev, name: e.target.value }))}
+                              className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                            />
+                          </td>
+                          <td className="py-2 pr-2 text-gray-400 text-xs">{v.sku || '—'}</td>
+                          <td className="py-2 pr-2">
+                            <input
+                              type="number"
+                              value={variantEdit.stock_count}
+                              onChange={(e) => setVariantEdit((prev) => ({ ...prev, stock_count: e.target.value }))}
+                              min="0"
+                              className="w-20 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                            />
+                          </td>
+                          <td className="py-2 pr-2">
+                            <input
+                              type="number"
+                              value={variantEdit.retail_price}
+                              onChange={(e) => setVariantEdit((prev) => ({ ...prev, retail_price: e.target.value }))}
+                              step="0.01"
+                              min="0"
+                              className="w-24 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                            />
+                          </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.cj_price || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.shipping_cost || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                disabled={variantSaving}
+                                onClick={() => handleVariantSave(v.id)}
+                                className="px-2.5 py-1 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-xs font-semibold rounded transition-colors disabled:opacity-60"
+                              >
+                                {variantSaving ? 'Saving...' : 'Save'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingVariantId(null)}
+                                className="px-2.5 py-1 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-2 pr-2 text-[#1a1a2e]">{v.name || '—'}</td>
+                          <td className="py-2 pr-2 text-gray-400 text-xs font-mono">{v.sku || '—'}</td>
+                          <td className="py-2 pr-2 text-right">
+                            <span className={v.stock_count === 0 ? 'text-danger font-medium' : 'text-[#1a1a2e]'}>
+                              {v.stock_count ?? '—'}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-2 text-right text-[#1a1a2e]">
+                            ${Number(v.retail_price || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.cj_price || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.shipping_cost || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleVariantEdit(v)}
+                                className="p-1.5 text-gray-400 hover:text-gold-500 rounded hover:bg-gold-50 transition-colors"
+                                title="Edit variant"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeletingVariantId(v.id)}
+                                className="p-1.5 text-gray-400 hover:text-danger rounded hover:bg-danger/10 transition-colors"
+                                title="Delete variant"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Delete confirmation dialog */}
+            {deletingVariantId && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">
+                  Delete <strong>{variants.find((v: any) => v.id === deletingVariantId)?.name}</strong>? This cannot be undone.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    disabled={variantSaving}
+                    onClick={() => handleVariantDelete(deletingVariantId)}
+                    className="px-3 py-1.5 bg-danger hover:bg-danger/90 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    {variantSaving ? 'Deleting...' : 'Delete'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingVariantId(null)}
+                    className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>

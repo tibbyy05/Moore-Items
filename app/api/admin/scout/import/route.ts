@@ -420,6 +420,7 @@ export async function POST(request: NextRequest) {
             color: parsed.color || null,
             size: parsed.size || null,
             stock_count: variantStock,
+            shipping_cost: shippingCost,
             is_active: variantStock > 0,
           },
           { onConflict: 'cj_vid' }
