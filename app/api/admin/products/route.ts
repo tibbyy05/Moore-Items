@@ -229,14 +229,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Updated but failed to re-fetch' }, { status: 500 });
   }
 
-  // Sync retail_price to all variants for this product
-  if (updates.retail_price || updates.markup_multiplier) {
-    await supabase
-      .from('mi_product_variants')
-      .update({ retail_price: data.retail_price })
-      .eq('product_id', id);
-  }
-
   // Bust Next.js cache for the updated product page
   if (data?.slug) {
     revalidatePath(`/product/${data.slug}`);
