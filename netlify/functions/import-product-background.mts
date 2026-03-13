@@ -486,7 +486,3 @@ export default async function handler(req: Request) {
     return new Response(JSON.stringify({ error: err?.message || 'Import failed' }), { status: 500 });
   }
 }
-
-export const config = {
-  path: '/.netlify/functions/import-product-background',
-};
