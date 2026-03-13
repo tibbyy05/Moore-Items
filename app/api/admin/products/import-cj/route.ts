@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
     const shipCost = parseFloat(String(shippingCost));
     const isUSWarehouse = hasUSStock || detectUSWarehouse(payload);
     const warehouse: 'US' | 'CN' = isUSWarehouse ? 'US' : 'CN';
+    console.log('[import-cj] BUILD v2 - warehouse:', warehouse, 'stock default:', warehouse === 'CN' ? 0 : 100);
     const warehouseConfig = getPricingConfig(warehouse);
     const pricing = calculatePricing(cjPrice, shipCost, warehouseConfig.markupMultiplier);
     const shippingDays = warehouse === 'US' ? '2-5 days' : '7-16 days';
