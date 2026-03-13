@@ -22,6 +22,8 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
+  Image,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -68,6 +70,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [variantSort, setVariantSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: '', dir: 'asc' });
 
+  // Variant image management
+  const [variantImageUrls, setVariantImageUrls] = useState<Record<string, string>>({});
+  const [savingVariantImage, setSavingVariantImage] = useState<string | null>(null);
+  const [uploadingVariantImage, setUploadingVariantImage] = useState<string | null>(null);
+  const [dragOverVariant, setDragOverVariant] = useState<string | null>(null);
+  const variantFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
@@ -84,6 +93,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           const product = data.product;
           setOriginalProduct(product);
           setVariants(data.variants || []);
+          const imgMap: Record<string, string> = {};
+          (data.variants || []).forEach((v: any) => { imgMap[v.id] = v.image_url || ''; });
+          setVariantImageUrls(imgMap);
           console.log('VARIANTS DEBUG:', data.variants);
           setForm({
             name: product.name || '',
@@ -228,8 +240,60 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (res.ok) {
         const data = await res.json();
         setVariants(data.variants || []);
+        const imgMap: Record<string, string> = {};
+        (data.variants || []).forEach((v: any) => { imgMap[v.id] = v.image_url || ''; });
+        setVariantImageUrls(imgMap);
       }
     } catch {}
+  };
+
+  const handleVariantImageUpload = async (variantId: string, file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, WebP, and GIF images are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB');
+      return;
+    }
+    setUploadingVariantImage(variantId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('variantId', variantId);
+      const res = await fetch('/api/admin/products/upload-image', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      await handleVariantImageSave(variantId, data.url);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload image');
+    } finally {
+      setUploadingVariantImage(null);
+    }
+  };
+
+  const handleVariantImageSave = async (variantId: string, url?: string) => {
+    const imageUrl = url ?? variantImageUrls[variantId] ?? '';
+    setSavingVariantImage(variantId);
+    try {
+      const res = await fetch(`/api/admin/products/${params.id}/variant-image`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ variantId, imageUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update variant image');
+      toast.success('Variant image updated');
+      setVariantImageUrls((prev) => ({ ...prev, [variantId]: imageUrl }));
+      setVariants((prev) =>
+        prev.map((v) => v.id === variantId ? { ...v, image_url: imageUrl } : v)
+      );
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update variant image');
+    } finally {
+      setSavingVariantImage(null);
+    }
   };
 
   const handleVariantEdit = (v: any) => {
@@ -1186,6 +1250,124 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Variant Images */}
+        {variants.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4 flex items-center gap-2">
+              <Image className="w-4 h-4 text-[#c8a45e]" />
+              Variant Images
+            </h2>
+            <div className="space-y-4">
+              {variants.map((v: any) => {
+                const isUploading = uploadingVariantImage === v.id;
+                const isSaving = savingVariantImage === v.id;
+                const isBusy = isUploading || isSaving;
+                const isDragOver = dragOverVariant === v.id;
+                const currentUrl = variantImageUrls[v.id] ?? v.image_url ?? '';
+                return (
+                <div
+                  key={v.id}
+                  className="p-4 bg-gray-50 border border-gray-100 rounded-lg"
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Thumbnail */}
+                    <div className="w-16 h-16 flex-shrink-0 rounded-lg border border-gray-200 bg-white overflow-hidden flex items-center justify-center">
+                      {currentUrl ? (
+                        <img
+                          src={currentUrl}
+                          alt={v.name || 'Variant'}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      ) : (
+                        <Image className="w-6 h-6 text-gray-300" />
+                      )}
+                    </div>
+
+                    {/* Name + upload zone */}
+                    <div className="flex-1 min-w-0">
+                      <div className="mb-2">
+                        <p className="text-sm font-medium text-[#1a1a2e] truncate">{v.name || 'Unnamed'}</p>
+                        {v.sku && <p className="text-xs text-gray-400 font-mono truncate">{v.sku}</p>}
+                      </div>
+
+                      {/* Drop zone */}
+                      <div
+                        className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                          isDragOver
+                            ? 'border-[#c8a45e] bg-[#c8a45e]/5'
+                            : 'border-gray-300 hover:border-[#c8a45e]/60 hover:bg-gray-50'
+                        } ${isBusy ? 'pointer-events-none opacity-60' : ''}`}
+                        onClick={() => !isBusy && variantFileRefs.current[v.id]?.click()}
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverVariant(v.id); }}
+                        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragOverVariant(null); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverVariant(null);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file) handleVariantImageUpload(v.id, file);
+                        }}
+                      >
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          ref={(el) => { variantFileRefs.current[v.id] = el; }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleVariantImageUpload(v.id, file);
+                            e.target.value = '';
+                          }}
+                        />
+                        {isUploading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <RefreshCw className="w-4 h-4 animate-spin text-[#c8a45e]" />
+                            <span className="text-xs text-gray-500">Uploading…</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2">
+                            <Upload className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs text-gray-500">Drop image or click to browse</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Paste URL fallback */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-gray-400 flex-shrink-0">Or paste URL</span>
+                        <input
+                          type="text"
+                          value={currentUrl}
+                          onChange={(e) =>
+                            setVariantImageUrls((prev) => ({ ...prev, [v.id]: e.target.value }))
+                          }
+                          placeholder="https://..."
+                          className="flex-1 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-[#c8a45e]/40 focus:border-[#c8a45e]"
+                        />
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => handleVariantImageSave(v.id)}
+                          className="px-2.5 py-1.5 bg-[#c8a45e] hover:bg-[#b8944e] text-[#0f1629] text-xs font-semibold rounded-lg transition-colors disabled:opacity-60 flex items-center gap-1 flex-shrink-0"
+                        >
+                          {isSaving ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Check className="w-3 h-3" />
+                          )}
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
