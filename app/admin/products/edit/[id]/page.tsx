@@ -190,6 +190,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   };
 
   const handleImageUpload = async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Image must be under 20 MB');
+      return;
+    }
     setUploadImageError(null);
     setUploadingImage(true);
     try {
