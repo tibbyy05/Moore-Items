@@ -273,17 +273,19 @@ export async function POST(request: NextRequest) {
     const hasUSStock = totalUsStock > 0;
 
     // 3. Calculate shipping and pricing
+    const warehouse: 'US' | 'CN' = hasUSStock ? 'US' : 'CN';
     let shippingCost = 0;
     try {
       if (payload.variants?.length > 0) {
         const freight = await cjClient.calculateFreight({
+          startCountryCode: warehouse,
           endCountryCode: 'US',
           products: [{ vid: payload.variants[0].vid, quantity: 1 }],
         });
         if (freight?.length > 0) {
           const freightValues = freight
             .map((f: any) => parsePriceValue(f.logisticPrice))
-            .filter((v: number | null): v is number => v !== null);
+            .filter((v: number | null): v is number => v !== null && v > 0);
           if (freightValues.length > 0) {
             shippingCost = Math.min(...freightValues);
           }
@@ -298,8 +300,6 @@ export async function POST(request: NextRequest) {
 
     const pricing = calculatePricing(cjPrice, shippingCost);
     const compareAtPrice = computeCompareAtPrice(pricing.retailPrice);
-
-    const warehouse: 'US' | 'CN' = hasUSStock ? 'US' : 'CN';
     const shippingDays = warehouse === 'US' ? '2-5 days' : '7-16 days';
     const shippingEstimate = warehouse === 'US' ? '2-5 business days' : '10-20 business days';
 
@@ -384,7 +384,7 @@ export async function POST(request: NextRequest) {
     // 9. Create variants
     let variantsCreated = 0;
     if (payload.variants?.length > 0) {
-      // Fetch variant stock one at a time, 300ms between calls
+      // Fetch variant stock one at a time, 1s between calls
       const targetCountry = warehouse === 'US' ? 'US' : 'CN';
       const variantStockMap = new Map<string, number>();
       for (let i = 0; i < payload.variants.length; i++) {
@@ -420,7 +420,7 @@ export async function POST(request: NextRequest) {
             color: parsed.color || null,
             size: parsed.size || null,
             stock_count: variantStock,
-            shipping_cost: shippingCost,
+            shipping_cost: variantShippingCost,
             is_active: variantStock > 0,
           },
           { onConflict: 'cj_vid' }
