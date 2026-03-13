@@ -182,13 +182,22 @@ export async function POST(request: NextRequest) {
 
     // Sync variants if available
     if (payload.variants?.length > 0) {
+      let variantIdx = 0;
       for (const variant of payload.variants) {
+        if (variantIdx === 0) {
+          console.log('VARIANT DEBUG:', JSON.stringify(variant, null, 2));
+        }
+        variantIdx++;
         console.log('[import-cj] variant fields:', Object.keys(variant).join(', '));
         console.log('[import-cj] variantSku:', variant.variantSku, 'variantKey:', variant.variantKey);
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
         const variantPricing = calculatePricing(variantPrice, shipCost);
         const parsed = parseVariantColorSize(variant, productName);
+        const cnInv = (variant.inventories || []).find(
+          (inv: any) => inv.countryCode === 'CN'
+        );
+        const variantStock = cnInv ? (cnInv.totalInventory ?? 999) : 999;
         await supabase.from('mi_product_variants').upsert(
           {
             product_id: inserted.id,
@@ -200,7 +209,7 @@ export async function POST(request: NextRequest) {
             sku: variant.variantSku || null,
             color: parsed.color || null,
             size: parsed.size || null,
-            stock_count: 0,
+            stock_count: variantStock,
             is_active: true,
           },
           { onConflict: 'cj_vid' }
