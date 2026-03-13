@@ -40,6 +40,7 @@ export async function PATCH(
   if (body.retail_price !== undefined) updates.retail_price = Number(body.retail_price);
   if (body.shipping_cost !== undefined) updates.shipping_cost = Number(body.shipping_cost);
   if (body.is_active !== undefined) updates.is_active = Boolean(body.is_active);
+  if (body.cj_vid !== undefined) updates.cj_vid = body.cj_vid;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

@@ -24,6 +24,9 @@ import {
   AlertTriangle,
   Image,
   Upload,
+  Copy,
+  ExternalLink,
+  Link2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserClient } from '@supabase/ssr';
@@ -82,6 +85,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [uploadingVariantImage, setUploadingVariantImage] = useState<string | null>(null);
   const [dragOverVariant, setDragOverVariant] = useState<string | null>(null);
   const variantFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // CJ Sourcing state
+  const [cjPidEdit, setCjPidEdit] = useState('');
+  const [cjPidEditing, setCjPidEditing] = useState(false);
+  const [cjRefreshing, setCjRefreshing] = useState(false);
+  const [cjDelisted, setCjDelisted] = useState(false);
+  const [cjPidSaving, setCjPidSaving] = useState(false);
+  const [cjPidConfirm, setCjPidConfirm] = useState(false);
+  const [highlightedVariants, setHighlightedVariants] = useState<Record<string, 'up' | 'down'>>({});
+  const [showInactiveVariants, setShowInactiveVariants] = useState(false);
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -399,6 +412,128 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     await fetchVariants();
   };
 
+  const formatRelativeTime = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  };
+
+  const isSyncStale = (dateStr: string | null) => {
+    if (!dateStr) return true;
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    return diffMs > 48 * 60 * 60 * 1000;
+  };
+
+  const handleCjRefresh = async () => {
+    setCjRefreshing(true);
+    setCjDelisted(false);
+    try {
+      const res = await fetch('/api/admin/products/refresh-cj-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: params.id }),
+      });
+      const data = await res.json();
+
+      if (data.delisted) {
+        setCjDelisted(true);
+        if (data.error) toast.error(data.error);
+        // Update last_synced_at on the original product
+        setOriginalProduct((prev: any) => ({ ...prev, last_synced_at: new Date().toISOString() }));
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to refresh CJ data');
+        return;
+      }
+
+      // Update last_synced_at
+      setOriginalProduct((prev: any) => ({ ...prev, last_synced_at: new Date().toISOString() }));
+
+      // Re-fetch variants
+      await fetchVariants();
+
+      // Process changes for highlighting
+      const changes: Array<{ variantId: string; name: string; oldCost: number; newCost: number; retailPrice: number }> = data.changes || [];
+      const highlights: Record<string, 'up' | 'down'> = {};
+      for (const c of changes) {
+        if (c.newCost !== c.oldCost) {
+          highlights[c.variantId] = c.newCost > c.oldCost ? 'up' : 'down';
+        }
+        // Check for selling at a loss
+        if (c.retailPrice > 0 && c.newCost > c.retailPrice) {
+          toast.error(`⚠️ ${c.name} is now selling at a loss — update pricing`);
+        }
+      }
+      setHighlightedVariants(highlights);
+
+      // Clear highlights after 5 seconds
+      if (Object.keys(highlights).length > 0) {
+        setTimeout(() => setHighlightedVariants({}), 5000);
+      }
+
+      const changedCount = changes.filter((c: any) => c.newCost !== c.oldCost || c.newStock !== c.oldStock).length;
+      toast.success(changedCount > 0 ? `Synced — ${changedCount} variant${changedCount !== 1 ? 's' : ''} updated` : 'Synced — all variants up to date');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to refresh CJ data');
+    } finally {
+      setCjRefreshing(false);
+    }
+  };
+
+  const handleCjPidSave = async () => {
+    const newPid = cjPidEdit.trim();
+    if (!newPid) return;
+    setCjPidSaving(true);
+    try {
+      // Update cj_pid and clear last_synced_at
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: params.id,
+          cj_pid: newPid,
+          last_synced_at: null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update CJ PID');
+      }
+
+      // Clear cj_vid on all variants via individual PATCH calls
+      for (const v of variants) {
+        await fetch(`/api/admin/variants/${v.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cj_vid: null }),
+        });
+      }
+
+      setOriginalProduct((prev: any) => ({ ...prev, cj_pid: newPid, last_synced_at: null }));
+      setCjPidEditing(false);
+      setCjPidConfirm(false);
+      toast.success('CJ PID updated — triggering refresh...');
+
+      // Auto-trigger refresh
+      setTimeout(() => handleCjRefresh(), 500);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save CJ PID');
+    } finally {
+      setCjPidSaving(false);
+    }
+  };
+
   const toggleVariantSort = (key: string) => {
     setVariantSort((prev) =>
       prev.key === key
@@ -416,12 +551,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const getVariantTotalCost = (v: any) => Number(v.cj_price || 0) + Number(v.shipping_cost || 0);
 
-  const sortedVariants = [...variants].sort((a, b) => {
+  const sortVariantList = (list: any[]) => [...list].sort((a, b) => {
     if (!variantSort.key) return 0;
     const dir = variantSort.dir === 'asc' ? 1 : -1;
     switch (variantSort.key) {
       case 'name': return dir * (a.name || '').localeCompare(b.name || '');
-      case 'stock': return dir * ((a.stock_count ?? 0) - (b.stock_count ?? 0));
+      case 'cjStock': return dir * ((a.cj_warehouse_stock ?? 0) - (b.cj_warehouse_stock ?? 0));
+      case 'factoryStock': return dir * ((a.factory_stock ?? 0) - (b.factory_stock ?? 0));
       case 'totalCost': return dir * (getVariantTotalCost(a) - getVariantTotalCost(b));
       case 'salePrice': return dir * ((Number(a.retail_price) || 0) - (Number(b.retail_price) || 0));
       case 'margin': return dir * (getVariantMargin(a) - getVariantMargin(b));
@@ -429,7 +565,27 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   });
 
-  const lowMarginVariants = variants.filter((v) => getVariantMargin(v) < 25 && Number(v.retail_price || 0) > 0);
+  const activeVariants = variants.filter((v) => v.is_active !== false);
+  const inactiveVariants = variants.filter((v) => v.is_active === false);
+  const sortedActiveVariants = sortVariantList(activeVariants);
+  const sortedInactiveVariants = sortVariantList(inactiveVariants);
+
+  // Margin warnings — grouped by severity
+  const sellingAtLoss = activeVariants.filter((v) => {
+    const retail = Number(v.retail_price || 0);
+    return retail > 0 && Number(v.cj_price || 0) > retail;
+  });
+  const thinMarginVariants = activeVariants.filter((v) => {
+    const margin = getVariantMargin(v);
+    const retail = Number(v.retail_price || 0);
+    return retail > 0 && margin >= 0 && margin < 15 && Number(v.cj_price || 0) <= retail;
+  });
+  const lowMarginVariants = activeVariants.filter((v) => {
+    const margin = getVariantMargin(v);
+    const retail = Number(v.retail_price || 0);
+    return retail > 0 && margin >= 15 && margin < 25;
+  });
+  const hasMarginWarnings = sellingAtLoss.length > 0 || thinMarginVariants.length > 0 || lowMarginVariants.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -642,111 +798,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
-        {/* Pricing */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Pricing</h2>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Retail Price <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  name="retail_price"
-                  value={form.retail_price}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Cost
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  name="cj_price"
-                  value={form.cj_price}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Shipping Cost ($)
-              </label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="number"
-                  name="shipping_cost"
-                  value={form.shipping_cost}
-                  onChange={handleChange}
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Charged at checkout. Set to 0 for free shipping.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Shipping Info */}
-        {!isDigital && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Shipping Info</h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Estimate
-                </label>
-                <input
-                  type="text"
-                  name="shipping_days"
-                  value={form.shipping_days}
-                  onChange={handleChange}
-                  placeholder="e.g. 8-15 business days"
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Shown to customers on the product page.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Processing Time
-                </label>
-                <input
-                  type="text"
-                  name="processing_time"
-                  value={form.processing_time}
-                  onChange={handleChange}
-                  placeholder="e.g. 1-3 days"
-                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Time before the order ships.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Images */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Images</h2>
@@ -914,6 +965,111 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
+        {/* Pricing */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Pricing</h2>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Retail Price <span className="text-danger">*</span>
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="retail_price"
+                  value={form.retail_price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Cost
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="cj_price"
+                  value={form.cj_price}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Shipping Cost ($)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="number"
+                  name="shipping_cost"
+                  value={form.shipping_cost}
+                  onChange={handleChange}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Charged at checkout. Set to 0 for free shipping.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Shipping Info */}
+        {!isDigital && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Shipping Info</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Delivery Estimate
+                </label>
+                <input
+                  type="text"
+                  name="shipping_days"
+                  value={form.shipping_days}
+                  onChange={handleChange}
+                  placeholder="e.g. 8-15 business days"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Shown to customers on the product page.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Processing Time
+                </label>
+                <input
+                  type="text"
+                  name="processing_time"
+                  value={form.processing_time}
+                  onChange={handleChange}
+                  placeholder="e.g. 1-3 days"
+                  className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Time before the order ships.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Digital File Upload */}
         {isDigital && (
           <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -967,24 +1123,229 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </div>
         )}
 
+        {/* CJ Sourcing */}
+        {originalProduct?.cj_pid !== undefined && (
+          <div className="bg-white border border-gray-200 border-l-[3px] border-l-[#c8a45e] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-[#1a1a2e] flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-[#c8a45e]" />
+                CJ Sourcing
+              </h2>
+              {originalProduct?.last_synced_at && (
+                <span className={`text-xs ${isSyncStale(originalProduct.last_synced_at) ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
+                  Last synced {formatRelativeTime(originalProduct.last_synced_at)}
+                </span>
+              )}
+              {!originalProduct?.last_synced_at && originalProduct?.cj_pid && (
+                <span className="text-xs text-amber-600 font-medium">Never synced</span>
+              )}
+            </div>
+
+            {cjDelisted && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-800">
+                  This product is no longer available on CJ. Consider relinking to a new PID.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {/* CJ PID field */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">CJ Product ID</label>
+                {cjPidEditing ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={cjPidEdit}
+                      onChange={(e) => setCjPidEdit(e.target.value)}
+                      placeholder="Enter CJ product ID..."
+                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40 font-mono"
+                    />
+                    {!cjPidConfirm ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (cjPidEdit.trim() !== (originalProduct?.cj_pid || '')) {
+                              setCjPidConfirm(true);
+                            } else {
+                              setCjPidEditing(false);
+                            }
+                          }}
+                          disabled={!cjPidEdit.trim()}
+                          className="px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                        >
+                          Save PID
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setCjPidEditing(false); setCjPidConfirm(false); }}
+                          className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-xs text-amber-800 mb-2">
+                          Changing the CJ PID will clear all variant links and trigger a fresh sync. Continue?
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCjPidSave}
+                            disabled={cjPidSaving}
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                          >
+                            {cjPidSaving ? 'Saving...' : 'Yes, change PID'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCjPidConfirm(false)}
+                            className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-[#1a1a2e] font-mono truncate">
+                      {originalProduct?.cj_pid || '—'}
+                    </code>
+                    {originalProduct?.cj_pid && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(originalProduct.cj_pid);
+                          toast.success('Copied CJ PID');
+                        }}
+                        className="p-2 text-gray-400 hover:text-gold-500 rounded-lg hover:bg-gold-50 transition-colors"
+                        title="Copy PID"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setCjPidEdit(originalProduct?.cj_pid || ''); setCjPidEditing(true); }}
+                      className="p-2 text-gray-400 hover:text-gold-500 rounded-lg hover:bg-gold-50 transition-colors"
+                      title="Edit PID"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              {originalProduct?.cj_pid && !cjPidEditing && (
+                <div className="flex items-center gap-2 pt-1">
+                  <a
+                    href={`https://cjdropshipping.com/product/-p-${originalProduct.cj_pid}.html`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View on CJ
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCjRefresh}
+                    disabled={cjRefreshing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${cjRefreshing ? 'animate-spin' : ''}`} />
+                    {cjRefreshing ? 'Refreshing...' : 'Refresh from CJ'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Variants */}
         {variants.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">
-              Variants
-              <span className="ml-2 text-sm font-normal text-gray-400">{variants.length}</span>
-            </h2>
+          <div className="bg-white border border-gray-200 border-l-[3px] border-l-[#c8a45e] rounded-2xl p-6 shadow-sm">
+            {/* Header row with title + refresh */}
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-semibold text-[#1a1a2e]">
+                Variants
+                <span className="ml-2 text-sm font-normal text-gray-400">{activeVariants.length} active</span>
+              </h2>
+              {originalProduct?.cj_pid && (
+                <button
+                  type="button"
+                  onClick={handleCjRefresh}
+                  disabled={cjRefreshing}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gold-500 hover:bg-gold-600 text-[#1a1a2e] text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${cjRefreshing ? 'animate-spin' : ''}`} />
+                  {cjRefreshing ? 'Refreshing...' : 'Refresh from CJ'}
+                </button>
+              )}
+            </div>
 
-            {/* Margin warning banner */}
-            {lowMarginVariants.length > 0 && (
-              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-800">
-                  <p className="font-semibold mb-1">Low margin warning (&lt;25%)</p>
-                  {lowMarginVariants.map((v: any) => (
-                    <p key={v.id}>{v.name || v.sku || 'Unnamed'} — {getVariantMargin(v).toFixed(1)}%</p>
-                  ))}
-                </div>
+            {/* Sync timestamp */}
+            <div className={`flex items-center gap-1.5 text-xs mb-4 ${originalProduct?.last_synced_at && !isSyncStale(originalProduct.last_synced_at) ? 'text-gray-400' : 'text-amber-600'}`}>
+              {originalProduct?.last_synced_at && isSyncStale(originalProduct.last_synced_at) && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              )}
+              {!originalProduct?.last_synced_at && (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+              )}
+              {originalProduct?.last_synced_at
+                ? `Prices & stock as of ${new Date(originalProduct.last_synced_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} ${new Date(originalProduct.last_synced_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+                : 'Never synced'}
+            </div>
+
+            {/* Margin warnings — grouped by severity */}
+            {hasMarginWarnings && (
+              <div className="mb-4 space-y-2">
+                {sellingAtLoss.length > 0 && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-red-800">
+                      <p className="font-semibold mb-1">Selling at a loss — raise price or deactivate</p>
+                      {sellingAtLoss.map((v: any) => (
+                        <p key={v.id}>{v.name || v.sku || 'Unnamed'} — cost ${Number(v.cj_price || 0).toFixed(2)} &gt; price ${Number(v.retail_price || 0).toFixed(2)}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {thinMarginVariants.length > 0 && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-800">
+                      <p className="font-semibold mb-1">Thin margin — consider raising price</p>
+                      {thinMarginVariants.map((v: any) => (
+                        <p key={v.id}>{v.name || v.sku || 'Unnamed'} — {getVariantMargin(v).toFixed(1)}%</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {lowMarginVariants.length > 0 && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-yellow-800">
+                      <p className="font-semibold mb-1">Low margin — monitor closely</p>
+                      {lowMarginVariants.map((v: any) => (
+                        <p key={v.id}>{v.name || v.sku || 'Unnamed'} — {getVariantMargin(v).toFixed(1)}%</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1030,6 +1391,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </div>
             )}
 
+            {/* Active variants table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -1037,10 +1399,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     <th className="pb-2 pr-2">
                       <input
                         type="checkbox"
-                        checked={selectedVariantIds.size === variants.length && variants.length > 0}
+                        checked={selectedVariantIds.size === activeVariants.length && activeVariants.length > 0}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedVariantIds(new Set(variants.map((v: any) => v.id)));
+                            setSelectedVariantIds(new Set(activeVariants.map((v: any) => v.id)));
                           } else {
                             setSelectedVariantIds(new Set());
                             setConfirmBulkDelete(false);
@@ -1050,23 +1412,21 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       />
                     </th>
                     {[
-                      { key: 'name', label: 'Name', align: 'text-left' },
-                      { key: '', label: 'SKU', align: 'text-left' },
-                      { key: 'stock', label: 'Stock', align: 'text-right' },
-                      { key: '', label: 'Cost', align: 'text-right' },
-                      { key: '', label: 'Shipping', align: 'text-right' },
-                      { key: 'totalCost', label: 'Total Cost', align: 'text-right' },
-                      { key: 'salePrice', label: 'Sale Price', align: 'text-right' },
-                      { key: 'margin', label: 'Margin', align: 'text-right' },
+                      { key: 'name', label: 'Variant', align: 'text-left' },
+                      { key: 'margin', label: 'Margin', align: 'text-center' },
+                      { key: 'totalCost', label: 'Cost + Ship = Total', align: 'text-center' },
+                      { key: 'salePrice', label: 'Sale Price', align: 'text-center' },
+                      { key: 'cjStock', label: 'CJ Stock', align: 'text-center' },
+                      { key: 'factoryStock', label: 'Factory', align: 'text-center' },
                     ].map(({ key, label, align }) => (
                       <th
                         key={label}
-                        className={`pb-2 font-medium text-gray-500 ${align} ${key ? 'cursor-pointer select-none hover:text-gray-700' : ''}`}
-                        onClick={key ? () => toggleVariantSort(key) : undefined}
+                        className={`pb-2 font-medium text-gray-500 ${align} cursor-pointer select-none hover:text-gray-700`}
+                        onClick={() => toggleVariantSort(key)}
                       >
                         <span className="inline-flex items-center gap-0.5">
                           {label}
-                          {key && variantSort.key === key && (
+                          {variantSort.key === key && (
                             variantSort.dir === 'asc'
                               ? <ChevronUp className="w-3 h-3" />
                               : <ChevronDown className="w-3 h-3" />
@@ -1078,12 +1438,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {sortedVariants.map((v: any) => {
-                    const isInactive = v.is_active === false;
-                    const rowClass = isInactive ? 'opacity-50' : '';
+                  {sortedActiveVariants.map((v: any) => {
+                    const margin = getVariantMargin(v);
+                    const marginPillColor = margin >= 35
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : margin >= 15
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-red-100 text-red-800';
                     return (
-                    <tr key={v.id} className={rowClass}>
-                      <td className="py-2 pr-2">
+                    <tr key={v.id} className="group">
+                      <td className="py-2.5 pr-2">
                         <input
                           type="checkbox"
                           checked={selectedVariantIds.has(v.id)}
@@ -1100,7 +1464,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       </td>
                       {editingVariantId === v.id ? (
                         <>
-                          <td className="py-2 pr-2">
+                          <td className="py-2.5 pr-3">
                             <input
                               type="text"
                               value={variantEdit.name}
@@ -1108,48 +1472,44 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                               className="w-full px-2 py-1 bg-white border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-gold-500/40"
                             />
                           </td>
-                          <td className="py-2 pr-2 text-gray-400 text-xs">{v.sku || '—'}</td>
-                          <td className="py-2 pr-2">
-                            <input
-                              type="number"
-                              value={variantEdit.stock_count}
-                              onChange={(e) => setVariantEdit((prev) => ({ ...prev, stock_count: e.target.value }))}
-                              min="0"
-                              className="w-20 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                            />
+                          {(() => {
+                            const editRetail = Number(variantEdit.retail_price) || 0;
+                            const editMargin = editRetail > 0
+                              ? ((editRetail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / editRetail * 100)
+                              : 0;
+                            const editPillColor = editMargin >= 35
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : editMargin >= 15
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-red-100 text-red-800';
+                            return (
+                              <td className="py-2.5 pr-3 text-center">
+                                <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold tabular-nums ${editPillColor}`}>
+                                  {editMargin.toFixed(1)}%
+                                </span>
+                              </td>
+                            );
+                          })()}
+                          <td className="py-2.5 pr-3 text-center text-xs text-gray-400">
+                            ${Number(v.cj_price || 0).toFixed(2)} + ${Number(v.shipping_cost || 0).toFixed(2)} = <span className="text-[#1a1a2e] font-semibold">${getVariantTotalCost(v).toFixed(2)}</span>
                           </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.cj_price || 0).toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.shipping_cost || 0).toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
-                            ${getVariantTotalCost(v).toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-2">
+                          <td className="py-2.5 pr-3 text-center">
                             <input
                               type="number"
                               value={variantEdit.retail_price}
                               onChange={(e) => setVariantEdit((prev) => ({ ...prev, retail_price: e.target.value }))}
                               step="0.01"
                               min="0"
-                              className="w-24 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                              className="w-24 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-gold-500/40"
                             />
                           </td>
-                          {(() => {
-                            const editRetail = Number(variantEdit.retail_price) || 0;
-                            const editMargin = editRetail > 0
-                              ? ((editRetail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / editRetail * 100)
-                              : 0;
-                            const editMarginColor = editMargin >= 30 ? 'text-emerald-600' : editMargin >= 15 ? 'text-amber-600' : 'text-danger';
-                            return (
-                              <td className={`py-2 pr-2 text-right text-xs font-medium ${editMarginColor}`}>
-                                {editMargin.toFixed(1)}%
-                              </td>
-                            );
-                          })()}
-                          <td className="py-2 text-right">
+                          <td className="py-2.5 pr-3 text-center tabular-nums text-xs text-gray-400">
+                            {v.cj_warehouse_stock != null ? v.cj_warehouse_stock : '—'}
+                          </td>
+                          <td className="py-2.5 pr-3 text-center tabular-nums text-xs text-gray-400">
+                            {v.factory_stock != null ? v.factory_stock : '—'}
+                          </td>
+                          <td className="py-2.5 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 type="button"
@@ -1171,36 +1531,39 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                         </>
                       ) : (
                         <>
-                          <td className={`py-2 pr-2 ${isInactive ? 'line-through text-gray-400' : 'text-[#1a1a2e]'}`}>{v.name || '—'}</td>
-                          <td className="py-2 pr-2 text-gray-400 text-xs font-mono">{v.sku || '—'}</td>
-                          <td className="py-2 pr-2 text-right">
-                            <span className={v.stock_count === 0 ? 'text-danger font-medium' : isInactive ? 'text-gray-400' : 'text-[#1a1a2e]'}>
-                              {v.stock_count ?? '—'}
+                          <td className="py-2.5 pr-3 text-[#1a1a2e]">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{v.name || '—'}</span>
+                              {v.sku && <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">{v.sku}</span>}
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-3 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold tabular-nums ${marginPillColor}`}>
+                              {margin.toFixed(1)}%
                             </span>
                           </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.cj_price || 0).toFixed(2)}
+                          <td className={`py-2.5 pr-3 text-center text-xs tabular-nums transition-colors duration-500 ${
+                            highlightedVariants[v.id] === 'up' ? 'text-amber-700 bg-amber-50' :
+                            highlightedVariants[v.id] === 'down' ? 'text-emerald-700 bg-emerald-50' :
+                            'text-gray-400'
+                          }`}>
+                            ${Number(v.cj_price || 0).toFixed(2)} + ${Number(v.shipping_cost || 0).toFixed(2)} = <span className="text-[#1a1a2e] font-semibold">${getVariantTotalCost(v).toFixed(2)}</span>
                           </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.shipping_cost || 0).toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
-                            ${getVariantTotalCost(v).toFixed(2)}
-                          </td>
-                          <td className={`py-2 pr-2 text-right ${isInactive ? 'text-gray-400' : 'text-[#1a1a2e]'}`}>
+                          <td className="py-2.5 pr-3 text-center text-[#1a1a2e] font-medium tabular-nums">
                             ${Number(v.retail_price || 0).toFixed(2)}
                           </td>
-                          {(() => {
-                            const margin = getVariantMargin(v);
-                            const marginColor = isInactive ? 'text-gray-400' : margin >= 30 ? 'text-emerald-600' : margin >= 15 ? 'text-amber-600' : 'text-danger';
-                            return (
-                              <td className={`py-2 pr-2 text-right text-xs font-medium ${marginColor}`}>
-                                {margin.toFixed(1)}%
-                              </td>
-                            );
-                          })()}
-                          <td className="py-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          <td className="py-2.5 pr-3 text-center">
+                            <span className={`tabular-nums ${v.cj_warehouse_stock === 0 ? 'text-danger font-medium' : v.cj_warehouse_stock != null ? 'text-[#1a1a2e]' : 'text-gray-400'}`}>
+                              {v.cj_warehouse_stock != null ? v.cj_warehouse_stock : '—'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 pr-3 text-center">
+                            <span className={`tabular-nums ${v.factory_stock === 0 ? 'text-gray-400' : v.factory_stock != null ? 'text-[#1a1a2e]' : 'text-gray-400'}`}>
+                              {v.factory_stock != null ? v.factory_stock : '—'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 type="button"
                                 onClick={() => handleVariantEdit(v)}
@@ -1213,10 +1576,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                                 type="button"
                                 disabled={variantSaving}
                                 onClick={() => handleToggleActive(v)}
-                                className={`p-1.5 rounded transition-colors ${v.is_active !== false ? 'text-gray-400 hover:text-amber-500 hover:bg-amber-50' : 'text-amber-500 hover:text-emerald-500 hover:bg-emerald-50'}`}
-                                title={v.is_active !== false ? 'Hide variant' : 'Activate variant'}
+                                className="p-1.5 text-gray-400 hover:text-amber-500 rounded hover:bg-amber-50 transition-colors"
+                                title="Hide variant"
                               >
-                                {v.is_active !== false ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                <EyeOff className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 type="button"
@@ -1236,6 +1599,87 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </tbody>
               </table>
             </div>
+
+            {/* Inactive variants — collapsed by default */}
+            {inactiveVariants.length > 0 && (
+              <div className="mt-4 border-t border-gray-100 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowInactiveVariants((prev) => !prev)}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${showInactiveVariants ? 'rotate-90' : ''}`} />
+                  {inactiveVariants.length} inactive variant{inactiveVariants.length !== 1 ? 's' : ''}
+                </button>
+
+                {showInactiveVariants && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody className="divide-y divide-gray-50">
+                        {sortedInactiveVariants.map((v: any) => (
+                          <tr key={v.id} className="opacity-50 group">
+                            <td className="py-2 pr-2 w-8">
+                              <input
+                                type="checkbox"
+                                checked={selectedVariantIds.has(v.id)}
+                                onChange={(e) => {
+                                  setSelectedVariantIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (e.target.checked) next.add(v.id);
+                                    else next.delete(v.id);
+                                    return next;
+                                  });
+                                }}
+                                className="w-3.5 h-3.5 rounded border-gray-300 text-gold-500 focus:ring-gold-500/40"
+                              />
+                            </td>
+                            <td className="py-2 pr-3 text-gray-400 line-through">{v.name || '—'}</td>
+                            <td className="py-2 pr-3 text-center">
+                              <span className="inline-block px-2.5 py-1 rounded-full text-xs font-bold tabular-nums bg-gray-100 text-gray-400">
+                                {getVariantMargin(v).toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="py-2 pr-3 text-center text-xs text-gray-400 tabular-nums">
+                              ${Number(v.cj_price || 0).toFixed(2)} + ${Number(v.shipping_cost || 0).toFixed(2)} = ${getVariantTotalCost(v).toFixed(2)}
+                            </td>
+                            <td className="py-2 pr-3 text-center text-gray-400 tabular-nums">
+                              ${Number(v.retail_price || 0).toFixed(2)}
+                            </td>
+                            <td className="py-2 pr-3 text-center text-gray-400 tabular-nums">
+                              {v.cj_warehouse_stock != null ? v.cj_warehouse_stock : '—'}
+                            </td>
+                            <td className="py-2 pr-3 text-center text-gray-400 tabular-nums">
+                              {v.factory_stock != null ? v.factory_stock : '—'}
+                            </td>
+                            <td className="py-2 text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  type="button"
+                                  disabled={variantSaving}
+                                  onClick={() => handleToggleActive(v)}
+                                  className="p-1.5 text-amber-500 hover:text-emerald-500 rounded hover:bg-emerald-50 transition-colors"
+                                  title="Activate variant"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingVariantId(v.id)}
+                                  className="p-1.5 text-gray-400 hover:text-danger rounded hover:bg-danger/10 transition-colors"
+                                  title="Delete variant"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Delete confirmation dialog */}
             {deletingVariantId && (
