@@ -204,6 +204,8 @@ export async function POST(request: NextRequest) {
     // Sync variants if available
     if (payload.variants?.length > 0) {
       for (const variant of payload.variants) {
+        console.log('[import-cj] variant fields:', Object.keys(variant).join(', '));
+        console.log('[import-cj] variantSku:', variant.variantSku, 'variantKey:', variant.variantKey);
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
         const variantPricing = calculatePricing(variantPrice, shipCost);
@@ -219,7 +221,7 @@ export async function POST(request: NextRequest) {
             sku: variant.variantSku || null,
             color: parsed.color || null,
             size: parsed.size || null,
-            stock_count: 100,
+            stock_count: 0,
             is_active: true,
           },
           { onConflict: 'cj_vid' }
