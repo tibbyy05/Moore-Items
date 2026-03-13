@@ -661,7 +661,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-green-800">
-                        Delivered in 2-5 business days
+                        Delivered in {product.shippingDays}
                       </p>
                       <p className="text-xs text-green-600">
                         Ships from United States · Free shipping on orders $50+
@@ -677,7 +677,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-amber-800">
-                        Delivered in 7-20 business days
+                        Delivered in {product.shippingDays}
                       </p>
                       <p className="text-xs text-amber-600">
                         Ships internationally · Free shipping on orders $50+
@@ -792,19 +792,15 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                           A link is also included in your confirmation email.
                         </p>
                       </div>
-                    ) : product.warehouse_status === 'US' ? (
-                      <div className="space-y-2 text-warm-700">
-                        <p>
-                          <strong>Estimated delivery:</strong> 2-5 business days
-                        </p>
-                        <p>Free shipping on orders over $50.</p>
-                      </div>
                     ) : (
                       <div className="space-y-2 text-warm-700">
                         <p>
-                          <strong>Estimated delivery:</strong> 7-20 business days
+                          <strong>Estimated delivery:</strong> {product.shippingDays}
                         </p>
-                        <p>Free shipping on orders over $50.</p>
+                        <p>
+                          {product.warehouse_status === 'US' ? 'Ships from United States.' : 'Ships internationally.'}{' '}
+                          Free shipping on orders over $50.
+                        </p>
                       </div>
                     )}
                   </AccordionContent>

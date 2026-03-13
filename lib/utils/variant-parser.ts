@@ -177,21 +177,32 @@ function parseVariantKeyString(variantKey: string): {
       }
     }
   }
-  // Space-separated: "Blue 380ml", "2pcs Pink", "Pink Simple Packaging", "White Pink"
+  // Slash-separated: "Blue / M", "Red / Large"
+  else if (raw.includes(' / ')) {
+    const parts = raw.split(' / ');
+    if (parts.length === 2) {
+      const [p1, p2] = parts;
+      if (isColor(p1)) color = titleCase(p1);
+      if (isSizeStr(p2)) size = p2.toUpperCase();
+      else if (isColor(p2) && !color) color = titleCase(p2);
+      if (!color && !size) color = titleCase(raw);
+    }
+  }
+  // Space-separated: "White Pink" (bicolor), "2pcs Pink"
+  // Single-concept names like "Blue 380ml" stay as color only
   else if (raw.includes(' ')) {
     const words = raw.split(' ');
     const firstWord = words[0];
     const restWords = words.slice(1).join(' ');
-    if (isColor(firstWord)) {
-      color = titleCase(firstWord);
-      if (isColor(restWords)) {
-        color = titleCase(raw); // bicolor: "White Pink"
-      } else {
-        size = restWords; // "Blue 380ml", "Pink Simple Packaging"
-      }
+    if (isColor(firstWord) && isColor(restWords)) {
+      color = titleCase(raw); // bicolor: "White Pink"
     } else if (/^\d+\s*pcs?$/i.test(firstWord)) {
       size = firstWord; // "2pcs Pink" → size=2pcs, color=Pink
       if (isColor(restWords)) color = titleCase(restWords);
+    } else if (isColor(raw)) {
+      color = titleCase(raw); // full string is a known color
+    } else if (isColor(firstWord)) {
+      color = titleCase(raw); // "Blue 380ml" → color="Blue 380ml", size=null
     }
   }
   // Pure color
