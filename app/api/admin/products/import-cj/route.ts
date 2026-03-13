@@ -103,36 +103,14 @@ export async function POST(request: NextRequest) {
       // stock check failed, fall through to detectUSWarehouse
     }
 
-    // Calculate shipping
-    let shippingCost = 0;
-    try {
-      if (payload.variants?.length > 0) {
-        const freight = await cjClient.calculateFreight({
-          startCountryCode: (hasUSStock || detectUSWarehouse(payload)) ? 'US' : 'CN',
-          endCountryCode: 'US',
-          products: [{ vid: payload.variants[0].vid, quantity: 1 }],
-        });
-        if (freight?.length > 0) {
-          const freightValues = freight
-            .map((f: any) => parsePriceValue(f.logisticPrice))
-            .filter((v: number | null): v is number => v !== null);
-          if (freightValues.length > 0) {
-            shippingCost = Math.min(...freightValues);
-          }
-        }
-      }
-    } catch {
-      // fallback
-    }
-    if (!shippingCost) {
-      shippingCost = Math.max(cjPriceParsed * 0.3, 3);
-    }
+    // Estimate shipping from product weight (avoids a CJ API call + 3s rate limit)
+    const weightG = Number(payload.productWeight) || 500;
+    const shippingCost = weightG > 2000 ? 8 : weightG > 500 ? 5 : 3;
 
     const cjPrice = parseFloat(String(cjPriceParsed));
     const shipCost = parseFloat(String(shippingCost));
     const isUSWarehouse = hasUSStock || detectUSWarehouse(payload);
     const warehouse: 'US' | 'CN' = isUSWarehouse ? 'US' : 'CN';
-    console.log('[import-cj] BUILD v2 - warehouse:', warehouse, 'stock default:', warehouse === 'CN' ? 0 : 100);
     const warehouseConfig = getPricingConfig(warehouse);
     const pricing = calculatePricing(cjPrice, shipCost, warehouseConfig.markupMultiplier);
     const shippingDays = warehouse === 'US' ? '2-5 days' : '7-16 days';
