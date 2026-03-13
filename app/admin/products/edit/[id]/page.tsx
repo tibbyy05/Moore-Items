@@ -781,9 +781,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     <th className="pb-2 font-medium text-gray-500">Name</th>
                     <th className="pb-2 font-medium text-gray-500">SKU</th>
                     <th className="pb-2 font-medium text-gray-500 text-right">Stock</th>
-                    <th className="pb-2 font-medium text-gray-500 text-right">Price</th>
                     <th className="pb-2 font-medium text-gray-500 text-right">Cost</th>
                     <th className="pb-2 font-medium text-gray-500 text-right">Shipping</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Total Cost</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Sale Price</th>
+                    <th className="pb-2 font-medium text-gray-500 text-right">Margin</th>
                     <th className="pb-2 font-medium text-gray-500 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -810,6 +812,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                               className="w-20 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
                             />
                           </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.cj_price || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
+                            ${Number(v.shipping_cost || 0).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
+                            ${(Number(v.cj_price || 0) + Number(v.shipping_cost || 0)).toFixed(2)}
+                          </td>
                           <td className="py-2 pr-2">
                             <input
                               type="number"
@@ -820,12 +831,18 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                               className="w-24 px-2 py-1 bg-white border border-gray-200 rounded text-sm text-right focus:outline-none focus:ring-2 focus:ring-gold-500/40"
                             />
                           </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.cj_price || 0).toFixed(2)}
-                          </td>
-                          <td className="py-2 pr-2 text-right text-gray-400 text-xs">
-                            ${Number(v.shipping_cost || 0).toFixed(2)}
-                          </td>
+                          {(() => {
+                            const editRetail = Number(variantEdit.retail_price) || 0;
+                            const editMargin = editRetail > 0
+                              ? ((editRetail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / editRetail * 100)
+                              : 0;
+                            const editMarginColor = editMargin >= 30 ? 'text-emerald-600' : editMargin >= 15 ? 'text-amber-600' : 'text-danger';
+                            return (
+                              <td className={`py-2 pr-2 text-right text-xs font-medium ${editMarginColor}`}>
+                                {editMargin.toFixed(1)}%
+                              </td>
+                            );
+                          })()}
                           <td className="py-2 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button
@@ -855,15 +872,30 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                               {v.stock_count ?? '—'}
                             </span>
                           </td>
-                          <td className="py-2 pr-2 text-right text-[#1a1a2e]">
-                            ${Number(v.retail_price || 0).toFixed(2)}
-                          </td>
                           <td className="py-2 pr-2 text-right text-gray-400 text-xs">
                             ${Number(v.cj_price || 0).toFixed(2)}
                           </td>
                           <td className="py-2 pr-2 text-right text-gray-400 text-xs">
                             ${Number(v.shipping_cost || 0).toFixed(2)}
                           </td>
+                          <td className="py-2 pr-2 text-right text-[#1a1a2e] font-semibold text-xs">
+                            ${(Number(v.cj_price || 0) + Number(v.shipping_cost || 0)).toFixed(2)}
+                          </td>
+                          <td className="py-2 pr-2 text-right text-[#1a1a2e]">
+                            ${Number(v.retail_price || 0).toFixed(2)}
+                          </td>
+                          {(() => {
+                            const retail = Number(v.retail_price || 0);
+                            const margin = retail > 0
+                              ? ((retail - Number(v.cj_price || 0) - Number(v.shipping_cost || 0)) / retail * 100)
+                              : 0;
+                            const marginColor = margin >= 30 ? 'text-emerald-600' : margin >= 15 ? 'text-amber-600' : 'text-danger';
+                            return (
+                              <td className={`py-2 pr-2 text-right text-xs font-medium ${marginColor}`}>
+                                {margin.toFixed(1)}%
+                              </td>
+                            );
+                          })()}
                           <td className="py-2 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button
