@@ -169,8 +169,8 @@ class CJClient {
     return tokenCache.accessToken;
   }
 
-  private async apiCall<T>(endpoint: string, options: RequestInit = {}, signal?: AbortSignal): Promise<T> {
-    await enforceRateLimit();
+  private async apiCall<T>(endpoint: string, options: RequestInit = {}, signal?: AbortSignal, skipRateLimit = false): Promise<T> {
+    if (!skipRateLimit) await enforceRateLimit();
     const token = await this.authenticate(signal);
     console.log('[cj] apiCall', endpoint);
 
@@ -243,6 +243,10 @@ class CJClient {
 
   async getVariants(vid: string): Promise<CJVariant> {
     return this.apiCall(`/product/variant/queryByVid?vid=${vid}`);
+  }
+
+  async getVariantStock(vid: string, signal?: AbortSignal): Promise<any[]> {
+    return this.apiCall(`/product/stock/queryByVid?vid=${vid}`, {}, signal, true);
   }
 
   async getCategories(): Promise<any[]> {

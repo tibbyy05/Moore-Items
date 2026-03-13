@@ -289,8 +289,8 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    } catch {
-      // fallback
+    } catch (freightErr: any) {
+      console.warn('[scout] Freight calculation failed, using fallback:', freightErr?.message);
     }
     if (!shippingCost) {
       shippingCost = Math.max(cjPrice * 0.3, 3);
@@ -384,44 +384,29 @@ export async function POST(request: NextRequest) {
     // 9. Create variants
     let variantsCreated = 0;
     if (payload.variants?.length > 0) {
-      let variantIdx = 0;
-      for (const variant of payload.variants) {
-        if (variantIdx === 0) {
-          console.log('VARIANT DEBUG:', JSON.stringify(variant, null, 2));
-          console.log('STOCK DATA DEBUG:', JSON.stringify(stockData, null, 2));
+      // Fetch variant stock one at a time, 300ms between calls
+      const targetCountry = warehouse === 'US' ? 'US' : 'CN';
+      const variantStockMap = new Map<string, number>();
+      for (let i = 0; i < payload.variants.length; i++) {
+        const v = payload.variants[i];
+        const vidStock = await cjClient.getVariantStock(v.vid).catch(() => null);
+        if (vidStock) {
+          const entries = Array.isArray(vidStock) ? vidStock : [];
+          const match = entries.find((inv: any) => inv.countryCode === targetCountry);
+          if (match) {
+            variantStockMap.set(v.vid, match.totalInventoryNum ?? 999);
+          }
         }
-        variantIdx++;
+        if (i < payload.variants.length - 1) await new Promise((r) => setTimeout(r, 1000));
+      }
 
+      for (const variant of payload.variants) {
         const variantPrice = parsePriceValue(variant.variantSellPrice);
         if (variantPrice === null || Number.isNaN(variantPrice)) continue;
 
         const variantPricing = calculatePricing(variantPrice, shippingCost);
         const parsed = parseVariantColorSize(variant, productName);
-
-        // Find variant stock — check US first, then CN, then inline inventories
-        let variantStock = 999;
-        for (const inv of stockData) {
-          if (inv.vid === variant.vid && inv.countryCode === 'US') {
-            variantStock = inv.quantity || inv.totalInventoryNum || 0;
-          }
-        }
-        if (variantStock === 999 && warehouse === 'CN') {
-          // Check stockData for CN entries
-          for (const inv of stockData) {
-            if (inv.vid === variant.vid && inv.countryCode === 'CN') {
-              variantStock = inv.totalInventory ?? inv.quantity ?? inv.totalInventoryNum ?? 999;
-            }
-          }
-          // Fallback: check variant's inline inventories array
-          if (variantStock === 999) {
-            const cnInv = (variant.inventories || []).find(
-              (inv: any) => inv.countryCode === 'CN'
-            );
-            if (cnInv) {
-              variantStock = cnInv.totalInventory ?? 999;
-            }
-          }
-        }
+        const variantStock = variantStockMap.get(variant.vid) ?? 999;
 
         const { error: variantError } = await supabase.from('mi_product_variants').upsert(
           {
