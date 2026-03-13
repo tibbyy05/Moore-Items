@@ -38,6 +38,7 @@ interface LandingPageProps {
     slug: string;
     warehouse: string;
     warehouse_status?: string | null;
+    shipping_days?: string | null;
     mi_categories: { name: string; slug: string } | null;
     mi_product_variants: Array<{
       id: string;
@@ -157,6 +158,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
       image: product.images?.[0] || '',
       warehouse: (product.warehouse || 'US') as 'US' | 'CN' | 'CA',
       warehouse_status: (product.warehouse_status as 'US' | 'CN' | 'DIGITAL') || null,
+      shippingDays: product.shipping_days || null,
     });
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 3000);

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const { data: products, error: productsError } = await supabase
       .from('mi_products')
-      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path, cj_raw_data, cj_pid')
+      .select('id, name, retail_price, images, stock_count, status, warehouse, digital_file_path, cj_raw_data, cj_pid, shipping_cost')
       .in('id', productIds);
 
     if (productsError || !products) {
@@ -264,69 +264,44 @@ export async function POST(request: NextRequest) {
     const allDigital = validatedItems.every((item) => item.isDigital);
     const physicalItems = validatedItems.filter((item) => !item.isDigital);
 
-    // Build Stripe shipping_options based on cart weight, subtotal, and warehouse
+    // Build Stripe shipping_options from per-product shipping_cost in the database
     const shippingOptions: Stripe.Checkout.SessionCreateParams.ShippingOption[] = [];
 
     if (!allDigital) {
-      const totalWeightGrams = physicalItems.reduce(
-        (sum, item) => sum + (item.productWeightGrams || 0) * item.quantity, 0
-      );
-      const hasCNItems = physicalItems.some(item => item.warehouse === 'CN');
-      const allCN = physicalItems.length > 0 && physicalItems.every(item => item.warehouse === 'CN');
-      const freeShipping = subtotal >= 50;
+      // Sum shipping_cost from each physical product (multiplied by quantity)
+      const totalShipping = physicalItems.reduce((sum, item) => {
+        const product = productMap.get(item.productId);
+        const productShippingCost = Number(product?.shipping_cost ?? 0);
+        return sum + productShippingCost * item.quantity;
+      }, 0);
+      const totalShippingCents = Math.round(totalShipping * 100);
 
-      // Weight-based US rate
-      let usRate: number;
-      if (totalWeightGrams < 500) {
-        usRate = 1.99;
-      } else if (totalWeightGrams > 11340) {
-        usRate = 9.99;
-      } else {
-        usRate = 4.99;
-      }
+      // Determine if any product ships from China
+      const isInternational = physicalItems.some(item => item.warehouse === 'CN');
 
-      console.log(`[checkout] Shipping calc: weight=${totalWeightGrams}g, subtotal=$${subtotal.toFixed(2)}, free=${freeShipping}, hasCN=${hasCNItems}, allCN=${allCN}, usRate=$${usRate}`);
+      console.log(`[checkout] Shipping calc: totalShipping=$${totalShipping.toFixed(2)}, isInternational=${isInternational}`);
 
-      // Free option first (subtotal >= $50)
-      if (freeShipping) {
+      if (totalShippingCents === 0) {
         shippingOptions.push({
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: 0, currency: 'usd' },
             display_name: 'Free Shipping',
             delivery_estimate: {
-              minimum: { unit: 'business_day' as const, value: 2 },
-              maximum: { unit: 'business_day' as const, value: 5 },
+              minimum: { unit: 'business_day' as const, value: isInternational ? 7 : 2 },
+              maximum: { unit: 'business_day' as const, value: isInternational ? 15 : 5 },
             },
           },
         });
-      }
-
-      // US weight-based rate (non-CN-only carts when not free)
-      if (!allCN && !freeShipping) {
+      } else {
         shippingOptions.push({
           shipping_rate_data: {
             type: 'fixed_amount',
-            fixed_amount: { amount: Math.round(usRate * 100), currency: 'usd' },
-            display_name: 'Standard Shipping',
+            fixed_amount: { amount: totalShippingCents, currency: 'usd' },
+            display_name: isInternational ? 'International Shipping' : 'Standard Shipping',
             delivery_estimate: {
-              minimum: { unit: 'business_day' as const, value: 2 },
-              maximum: { unit: 'business_day' as const, value: 5 },
-            },
-          },
-        });
-      }
-
-      // International option for any CN items
-      if (hasCNItems) {
-        shippingOptions.push({
-          shipping_rate_data: {
-            type: 'fixed_amount',
-            fixed_amount: { amount: 699, currency: 'usd' },
-            display_name: 'International Shipping',
-            delivery_estimate: {
-              minimum: { unit: 'business_day' as const, value: 7 },
-              maximum: { unit: 'business_day' as const, value: 15 },
+              minimum: { unit: 'business_day' as const, value: isInternational ? 7 : 2 },
+              maximum: { unit: 'business_day' as const, value: isInternational ? 15 : 5 },
             },
           },
         });

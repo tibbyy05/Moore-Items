@@ -66,6 +66,7 @@ export default function CartPage() {
           image: p.images?.[0] || '/placeholder.webp',
           warehouse: p.warehouse || 'CN',
           warehouse_status: p.warehouse_status || null,
+          shippingDays: p.shipping_days || null,
         });
 
         if (promo) {
@@ -272,6 +273,15 @@ export default function CartPage() {
                           </Link>
                           {item.variantName && (
                             <p className="text-sm text-warm-500 mt-1">{item.variantName}</p>
+                          )}
+                          {!item.isDigital && (
+                            <p className="text-xs text-warm-400 mt-1">
+                              {item.shippingDays
+                                ? `📦 Arrives in ${item.shippingDays}`
+                                : item.warehouse === 'CN'
+                                  ? '✈️ Arrives in 7–15 business days'
+                                  : '📦 Arrives in 2–5 business days'}
+                            </p>
                           )}
                         </div>
                         <button

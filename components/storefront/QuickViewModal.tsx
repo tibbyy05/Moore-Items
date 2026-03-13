@@ -84,6 +84,7 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
       warehouse: product.warehouse,
       warehouse_status: product.warehouse_status,
       isDigital: product.isDigital,
+      shippingDays: product.shippingDays || null,
     });
     setAddedState(true);
     window.setTimeout(() => setAddedState(false), 1500);

@@ -72,4 +72,5 @@ export interface CartItem {
   warehouse: 'US' | 'CN' | 'CA';
   warehouse_status?: 'US' | 'CN' | 'DIGITAL' | null;
   isDigital?: boolean;
+  shippingDays?: string | null;
 }

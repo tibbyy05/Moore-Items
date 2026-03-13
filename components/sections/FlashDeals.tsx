@@ -219,6 +219,7 @@ export function FlashDeals() {
                           variantId: null,
                           warehouse: product.warehouse,
                           isDigital: product.isDigital,
+                          shippingDays: product.shippingDays || null,
                         })
                       }
                     >

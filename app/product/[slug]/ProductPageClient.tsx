@@ -550,6 +550,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       warehouse: product.warehouse,
       warehouse_status: product.warehouse_status,
       isDigital: product.isDigital,
+      shippingDays: product.shippingDays || null,
     });
     setAddedState(true);
     window.setTimeout(() => setAddedState(false), 1500);

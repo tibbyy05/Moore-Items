@@ -36,6 +36,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
       image: product.images[0],
       warehouse: product.warehouse,
       isDigital: product.isDigital,
+      shippingDays: product.shippingDays || null,
     });
   };
 
