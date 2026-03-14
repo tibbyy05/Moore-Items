@@ -140,33 +140,33 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
 
   return (
     <div>
-      {/* Main display area */}
-      {activeVideoUrl ? (
-        <div className="w-full rounded-2xl overflow-hidden bg-black border border-warm-100">
+      {/* Main display area — fixed square container */}
+      <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-warm-100 bg-black">
+        {activeVideoUrl ? (
           <iframe
             src={`${activeVideoUrl}?autoplay=true&muted=true&loop=true&controls=true`}
-            className="w-full aspect-video"
+            className="w-full h-full"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="relative w-full aspect-square rounded-2xl overflow-hidden bg-white border border-warm-100 cursor-pointer"
-          onClick={() => setLightboxOpen(true)}
-          aria-label="Zoom product image"
-        >
-          <Image
-            src={activeImage}
-            alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            unoptimized
-          />
-        </button>
-      )}
+        ) : (
+          <button
+            type="button"
+            className="w-full h-full bg-white cursor-pointer"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="Zoom product image"
+          >
+            <Image
+              src={activeImage}
+              alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              unoptimized
+            />
+          </button>
+        )}
+      </div>
 
       {/* Thumbnail strip */}
       <div className="mt-4 flex items-center gap-2 w-full">
@@ -212,7 +212,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
                   alt="Video thumbnail"
                   width={64}
                   height={64}
-                  className="object-contain w-full h-full opacity-60"
+                  className="object-cover w-full h-full opacity-60"
                   unoptimized
                 />
               ) : null}
@@ -259,7 +259,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
                 alt={`${productName} - Image ${index + 1} of ${galleryImages.length}`}
                 width={64}
                 height={64}
-                className="object-contain w-full h-full"
+                className="object-cover w-full h-full"
                 unoptimized
               />
             </button>
