@@ -320,6 +320,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       );
 
       const variantImages = (rawProduct.mi_product_variants || [])
+        .filter((variant: any) => variant?.is_active === true)
         .map((variant: any) => variant?.image_url)
         .filter(
           (image: any): image is string => typeof image === 'string' && image.trim() !== ''

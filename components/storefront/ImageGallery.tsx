@@ -142,10 +142,10 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
     <div>
       {/* Main display area */}
       {activeVideoUrl ? (
-        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black border border-warm-100">
+        <div className="w-full rounded-2xl overflow-hidden bg-black border border-warm-100">
           <iframe
-            src={`${activeVideoUrl}?autoplay=true&muted=true`}
-            className="absolute inset-0 w-full h-full"
+            src={`${activeVideoUrl}?autoplay=true&muted=true&loop=true&controls=true`}
+            className="w-full aspect-video"
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
