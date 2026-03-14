@@ -54,6 +54,13 @@ export async function POST(request: NextRequest) {
   const file = formData.get('file') as File | null;
   const productId = formData.get('productId') as string | null;
 
+  console.log('[Upload Video] file:', file?.name, file?.type, file?.size);
+  console.log('[Upload Video] productId:', productId);
+  console.log('[Upload Video] CF vars:',
+    process.env.CLOUDFLARE_ACCOUNT_ID ? 'ACCOUNT_SET' : 'ACCOUNT_MISSING',
+    process.env.CLOUDFLARE_STREAM_TOKEN ? 'TOKEN_SET' : 'TOKEN_MISSING'
+  );
+
   if (!file) {
     return NextResponse.json({ error: 'No video file provided' }, { status: 400 });
   }
