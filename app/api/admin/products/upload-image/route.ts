@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 5 MB)' }, { status: 400 });
+    return NextResponse.json({ error: 'File too large (max 20 MB)' }, { status: 400 });
   }
 
   const adminSupabase = createAdminClient();

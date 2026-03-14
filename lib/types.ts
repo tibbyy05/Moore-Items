@@ -40,6 +40,14 @@ export interface Product {
   isDigital?: boolean;
   inStock: boolean;
   stockCount: number;
+  videoUrl?: string | null;
+  videos?: Array<{
+    cloudflare_id: string;
+    url: string;
+    status: 'processing' | 'ready';
+    thumbnail: string;
+    sort_order: number;
+  }> | null;
 }
 
 export interface Review {

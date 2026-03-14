@@ -3,19 +3,30 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface VideoEntry {
+  cloudflare_id: string;
+  url: string;
+  status: 'processing' | 'ready';
+  thumbnail: string;
+  sort_order: number;
+}
 
 interface ImageGalleryProps {
   images: string[];
   productName: string;
   activeImageIndex?: number;
+  videoUrl?: string | null;
+  videos?: VideoEntry[] | null;
 }
 
-export function ImageGallery({ images, productName, activeImageIndex }: ImageGalleryProps) {
+export function ImageGallery({ images, productName, activeImageIndex, videoUrl, videos }: ImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
@@ -27,6 +38,30 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
     return true;
   });
 
+  // Build sorted ready videos list (from videos array, falling back to legacy videoUrl)
+  const readyVideos: VideoEntry[] = (() => {
+    if (videos && videos.length > 0) {
+      return [...videos]
+        .filter((v) => v.status === 'ready')
+        .sort((a, b) => a.sort_order - b.sort_order);
+    }
+    // Legacy fallback: single videoUrl
+    if (videoUrl) {
+      return [{
+        cloudflare_id: 'legacy',
+        url: videoUrl,
+        status: 'ready' as const,
+        thumbnail: '',
+        sort_order: 0,
+      }];
+    }
+    return [];
+  })();
+
+  const processingVideos: VideoEntry[] = videos
+    ? videos.filter((v) => v.status === 'processing').sort((a, b) => a.sort_order - b.sort_order)
+    : [];
+
   useEffect(() => {
     if (
       activeImageIndex !== undefined &&
@@ -34,6 +69,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
       activeImageIndex < galleryImages.length
     ) {
       setActiveIndex(activeImageIndex);
+      setActiveVideoUrl(null);
     }
   }, [activeImageIndex]);
 
@@ -64,18 +100,12 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
 
   const handleNext = () => {
     if (galleryImages.length === 0) return;
-    setActiveIndex((prev) => {
-      const next = (prev + 1) % galleryImages.length;
-      return next;
-    });
+    setActiveIndex((prev) => (prev + 1) % galleryImages.length);
   };
 
   const handlePrev = () => {
     if (galleryImages.length === 0) return;
-    setActiveIndex((prev) => {
-      const next = (prev - 1 + galleryImages.length) % galleryImages.length;
-      return next;
-    });
+    setActiveIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
   };
 
   const handleTouchStart = (event: React.TouchEvent) => {
@@ -91,18 +121,14 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
     if (touchStartX.current === null || touchEndX.current === null) return;
     const delta = touchStartX.current - touchEndX.current;
     if (Math.abs(delta) < 40) return;
-    if (delta > 0) {
-      handleNext();
-    } else {
-      handlePrev();
-    }
+    if (delta > 0) handleNext();
+    else handlePrev();
   };
 
   const scrollThumbnails = (direction: 'left' | 'right') => {
     if (!thumbnailStripRef.current) return;
-    const scrollAmount = 160;
     thumbnailStripRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      left: direction === 'left' ? -160 : 160,
       behavior: 'smooth',
     });
   };
@@ -110,26 +136,41 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
   const activeImage =
     galleryImages[activeIndex] || galleryImages[0] || '/placeholder.svg';
 
+  const totalThumbnails = readyVideos.length + processingVideos.length + galleryImages.length;
+
   return (
     <div>
-      <button
-        type="button"
-        className="relative w-full aspect-square rounded-2xl overflow-hidden bg-white border border-warm-100 cursor-pointer"
-        onClick={() => setLightboxOpen(true)}
-        aria-label="Zoom product image"
-      >
-        <Image
-          src={activeImage}
-          alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
-          fill
-          className="object-contain"
-          sizes="(max-width: 1024px) 100vw, 50vw"
-          unoptimized
-        />
-      </button>
+      {/* Main display area */}
+      {activeVideoUrl ? (
+        <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-black border border-warm-100">
+          <iframe
+            src={`${activeVideoUrl}?autoplay=true&muted=true`}
+            className="absolute inset-0 w-full h-full"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="relative w-full aspect-square rounded-2xl overflow-hidden bg-white border border-warm-100 cursor-pointer"
+          onClick={() => setLightboxOpen(true)}
+          aria-label="Zoom product image"
+        >
+          <Image
+            src={activeImage}
+            alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
+            fill
+            className="object-contain"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            unoptimized
+          />
+        </button>
+      )}
 
+      {/* Thumbnail strip */}
       <div className="mt-4 flex items-center gap-2 w-full">
-        {galleryImages.length > 5 && (
+        {totalThumbnails > 5 && (
           <button
             type="button"
             onClick={() => scrollThumbnails('left')}
@@ -143,33 +184,88 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
           ref={thumbnailStripRef}
           className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
+          {/* Ready video thumbnails — before images */}
+          {readyVideos.map((video) => (
+            <button
+              key={video.cloudflare_id}
+              type="button"
+              className={cn(
+                'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-colors bg-navy-900',
+                activeVideoUrl === video.url
+                  ? 'border-gold-500'
+                  : 'border-transparent hover:border-warm-300'
+              )}
+              onClick={() => {
+                setActiveVideoUrl(video.url);
+              }}
+              aria-label="Play product video"
+            >
+              {video.thumbnail ? (
+                <img
+                  src={video.thumbnail}
+                  alt="Video thumbnail"
+                  className="w-full h-full object-cover opacity-70"
+                />
+              ) : galleryImages[0] ? (
+                <Image
+                  src={galleryImages[0]}
+                  alt="Video thumbnail"
+                  width={64}
+                  height={64}
+                  className="object-contain w-full h-full opacity-60"
+                  unoptimized
+                />
+              ) : null}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-black/60 flex items-center justify-center">
+                  <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                </div>
+              </div>
+            </button>
+          ))}
+
+          {/* Processing video placeholders — not clickable */}
+          {processingVideos.map((video) => (
+            <div
+              key={video.cloudflare_id}
+              className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-transparent bg-navy-900/80"
+            >
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+                <Clock className="w-3.5 h-3.5 text-warm-400 animate-pulse" />
+                <span className="text-[8px] text-warm-400 font-medium">Soon</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Image thumbnails */}
           {galleryImages.map((image, index) => (
-          <button
-            key={`${image}-${index}`}
-            type="button"
-            className={cn(
-              'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-colors bg-white',
-              index === activeIndex
-                ? 'border-gold-500'
-                : 'border-transparent hover:border-warm-300'
-            )}
-            onClick={() => {
-              setActiveIndex(index);
-            }}
-            aria-label={`View image ${index + 1}`}
-          >
-            <Image
-              src={image}
-              alt={`${productName} - Image ${index + 1} of ${galleryImages.length}`}
-              width={64}
-              height={64}
-              className="object-contain w-full h-full"
-              unoptimized
-            />
-          </button>
+            <button
+              key={`${image}-${index}`}
+              type="button"
+              className={cn(
+                'relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-colors bg-white',
+                !activeVideoUrl && index === activeIndex
+                  ? 'border-gold-500'
+                  : 'border-transparent hover:border-warm-300'
+              )}
+              onClick={() => {
+                setActiveIndex(index);
+                setActiveVideoUrl(null);
+              }}
+              aria-label={`View image ${index + 1}`}
+            >
+              <Image
+                src={image}
+                alt={`${productName} - Image ${index + 1} of ${galleryImages.length}`}
+                width={64}
+                height={64}
+                className="object-contain w-full h-full"
+                unoptimized
+              />
+            </button>
           ))}
         </div>
-        {galleryImages.length > 5 && (
+        {totalThumbnails > 5 && (
           <button
             type="button"
             onClick={() => scrollThumbnails('right')}
@@ -181,6 +277,7 @@ export function ImageGallery({ images, productName, activeImageIndex }: ImageGal
         )}
       </div>
 
+      {/* Lightbox */}
       {mounted &&
         createPortal(
           <div

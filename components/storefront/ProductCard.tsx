@@ -173,7 +173,7 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           ) : (
             <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
               <Globe className="w-3 h-3" />
-              <span>Delivered in 7-20 business days</span>
+              <span>Delivered in 8-15 business days</span>
             </div>
           )}
         </div>

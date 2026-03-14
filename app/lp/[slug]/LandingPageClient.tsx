@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, startTransition } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Check, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Check, ChevronDown, Play, X } from 'lucide-react';
 import { useCart } from '@/components/providers/CartProvider';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 
@@ -39,6 +39,16 @@ interface LandingPageProps {
     warehouse: string;
     warehouse_status?: string | null;
     shipping_days?: string | null;
+    delivery_time?: string | null;
+    shipping_estimate?: string | null;
+    video_url?: string | null;
+    videos?: Array<{
+      cloudflare_id: string;
+      url: string;
+      status: 'processing' | 'ready';
+      thumbnail: string;
+      sort_order: number;
+    }> | null;
     mi_categories: { name: string; slug: string } | null;
     mi_product_variants: Array<{
       id: string;
@@ -48,6 +58,7 @@ interface LandingPageProps {
       retail_price: number;
       stock_count: number;
       image_url: string | null;
+      is_active?: boolean;
     }> | null;
   };
 }
@@ -74,7 +85,9 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     whats_included_count: sections?.whats_included?.length,
   }));
   const tiers: DiscountTier[] = page.quantity_discounts || [];
-  const variants = product.mi_product_variants || [];
+  const allVariants = product.mi_product_variants || [];
+  // Defensive filter: only show active variants even if API didn't filter
+  const variants = allVariants.filter((v) => v.is_active !== false);
 
   // State
   const [selectedTierIdx, setSelectedTierIdx] = useState(() => {
@@ -85,6 +98,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     variants.length > 0 ? variants[0].id : null
   );
   const [addedToCart, setAddedToCart] = useState(false);
+  const [heroVideoPlaying, setHeroVideoPlaying] = useState(false);
 
   // Crossfade gallery state
   const galleryImgs: string[] = Array.isArray(sections.gallery_images) && sections.gallery_images.length > 0
@@ -120,6 +134,29 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
 
   const activeGalleryImg = galleryNext || galleryBase;
 
+  // Sync hero image when variant selection changes
+  useEffect(() => {
+    if (!selectedVariant?.image_url) return;
+    const img = selectedVariant.image_url;
+    if (img === galleryBase && !galleryNext) return;
+    if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    startTransition(() => {
+      setGalleryNext(img);
+      setFadeIn(false);
+    });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setFadeIn(true);
+      });
+    });
+    fadeTimer.current = setTimeout(() => {
+      setGalleryBase(img);
+      setGalleryNext(null);
+      setFadeIn(false);
+    }, 150);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariantId]);
+
   // Track view on mount (fire-and-forget)
   useEffect(() => {
     fetch('/api/lp/track-view', {
@@ -131,9 +168,11 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
 
   const selectedTier = tiers[selectedTierIdx] || { qty: 1, label: '1 Item', discount_pct: 0, badge: '' };
   const selectedVariant = variants.find((v) => v.id === selectedVariantId) || null;
-  const unitPrice = Math.round(product.retail_price * (1 - selectedTier.discount_pct / 100) * 100) / 100;
+  // Use selected variant's retail_price when available, fall back to product-level price
+  const basePrice = selectedVariant?.retail_price || product.retail_price;
+  const unitPrice = Math.round(basePrice * (1 - selectedTier.discount_pct / 100) * 100) / 100;
   const totalPrice = Math.round(unitPrice * selectedTier.qty * 100) / 100;
-  const savings = Math.round((product.retail_price * selectedTier.qty - totalPrice) * 100) / 100;
+  const savings = Math.round((basePrice * selectedTier.qty - totalPrice) * 100) / 100;
 
   // Unique variant values
   const colors = Array.from(new Set(variants.filter((v) => v.color).map((v) => v.color!)));
@@ -171,6 +210,17 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   const heroImg = page.hero_image_url || product.images?.[0] || '';
   const featureImg1 = sections.feature1_image || product.images?.[1] || product.images?.[0] || '';
   const featureImg2 = sections.feature2_image || product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
+
+  // First ready video from videos array, falling back to legacy video_url
+  const heroVideoUrl = (() => {
+    if (product.videos && product.videos.length > 0) {
+      const readyVideo = [...product.videos]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .find((v) => v.status === 'ready');
+      if (readyVideo) return readyVideo.url;
+    }
+    return product.video_url || null;
+  })();
 
   return (
     <>
@@ -222,16 +272,43 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                 {sections.hero?.cta_text || 'Shop Now'}
               </button>
               <p className="mt-4 text-sm" style={{ color: `${CREAM}b3` }}>
-                &#10003; Free US Shipping &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
+                &#10003; Free Shipping on $50+ &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
               </p>
             </div>
             {heroImg && (
               <div className="flex justify-center">
-                <img
-                  src={heroImg}
-                  alt={product.name}
-                  className="rounded-xl max-h-96 object-contain"
-                />
+                {heroVideoPlaying && heroVideoUrl ? (
+                  <div className="relative w-full max-h-96 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                    <iframe
+                      src={`${heroVideoUrl}?autoplay=true&muted=true`}
+                      className="absolute inset-0 w-full h-full"
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setHeroVideoPlaying(false)}
+                      className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative cursor-pointer" onClick={() => heroVideoUrl && setHeroVideoPlaying(true)}>
+                    <img
+                      src={heroImg}
+                      alt={product.name}
+                      className="rounded-xl max-h-96 object-contain"
+                    />
+                    {heroVideoUrl && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors">
+                          <Play className="w-7 h-7 text-white fill-white ml-1" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -317,9 +394,9 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
             {/* Tier rows */}
             <div className="space-y-3">
               {tiers.map((tier, i) => {
-                const tierUnit = Math.round(product.retail_price * (1 - tier.discount_pct / 100) * 100) / 100;
+                const tierUnit = Math.round(basePrice * (1 - tier.discount_pct / 100) * 100) / 100;
                 const tierTotal = Math.round(tierUnit * tier.qty * 100) / 100;
-                const tierOriginal = Math.round(product.retail_price * tier.qty * 100) / 100;
+                const tierOriginal = Math.round(basePrice * tier.qty * 100) / 100;
                 const tierSaved = Math.round((tierOriginal - tierTotal) * 100) / 100;
                 const isSelected = selectedTierIdx === i;
 
@@ -370,7 +447,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                         <span className="text-xs text-gray-500 ml-0.5">each</span>
                         {tier.discount_pct > 0 && (
                           <span className="text-xs text-gray-400 line-through ml-2">
-                            ${product.retail_price.toFixed(2)}
+                            ${basePrice.toFixed(2)}
                           </span>
                         )}
                         {tier.qty > 1 && (
@@ -477,9 +554,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
             <p className={`text-center text-xs font-medium mt-4 ${product.warehouse_status === 'DIGITAL' ? 'text-violet-600' : product.warehouse_status === 'US' ? 'text-green-600' : 'text-amber-600'}`}>
               {product.warehouse_status === 'DIGITAL'
                 ? '✓ Instant download — delivered to your email'
-                : product.warehouse_status === 'US'
-                  ? '✓ In stock — delivered in 2–5 business days'
-                  : '✓ In stock — delivered in 7–20 business days'}
+                : `✓ In stock — delivered in ${product.delivery_time || product.shipping_days || product.shipping_estimate || '7-15 business days'}`}
             </p>
           </div>
         </div>
@@ -645,7 +720,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               {sections.closing_cta.cta_text || 'Order Now'}
             </button>
             <p className="mt-4 text-sm" style={{ color: `${CREAM}b3` }}>
-              &#10003; Free US Shipping &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
+              &#10003; Free Shipping on $50+ &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
             </p>
           </div>
         </section>

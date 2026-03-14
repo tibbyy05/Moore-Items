@@ -20,6 +20,14 @@ export interface ProductPageData {
   badge: string | null;
   cj_pid: string | null;
   digital_file_path: string | null;
+  video_url: string | null;
+  videos: Array<{
+    cloudflare_id: string;
+    url: string;
+    status: 'processing' | 'ready';
+    thumbnail: string;
+    sort_order: number;
+  }> | null;
   mi_categories: { name: string; slug: string } | null;
   mi_product_variants: Array<{
     id: string;

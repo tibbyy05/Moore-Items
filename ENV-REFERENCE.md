@@ -23,3 +23,4 @@
 | `AUTO_IMPORT_SECRET` | Secret token to authenticate auto-import cron/webhook requests. | Yes |
 | `CJ_WEBHOOK_SECRET` | HMAC secret to verify incoming CJ Dropshipping webhook payloads. | Yes |
 | `HMAC_SECRET` | General-purpose HMAC secret for request signing and verification. | Yes |
+| `BRIEFING_SECRET` | Secret token to authenticate daily briefing cron/webhook requests. | Yes |

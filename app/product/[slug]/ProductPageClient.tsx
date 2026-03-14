@@ -368,6 +368,8 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
           ? rawProduct.status === 'active'
           : rawProduct.stock_count > 0,
         stockCount: rawProduct.stock_count || 0,
+        videoUrl: rawProduct.video_url || null,
+        videos: rawProduct.videos || null,
       };
 
       setProduct(mappedProduct);
@@ -612,6 +614,8 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
               images={product.images}
               productName={product.name}
               activeImageIndex={galleryIndex}
+              videoUrl={product.videoUrl}
+              videos={product.videos}
             />
 
             <div>

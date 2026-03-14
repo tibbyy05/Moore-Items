@@ -27,6 +27,8 @@ import {
   Copy,
   ExternalLink,
   Link2,
+  Video,
+  Play,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserClient } from '@supabase/ssr';
@@ -46,7 +48,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>(
     []
   );
-  const [imageUrls, setImageUrls] = useState<string[]>(['']);
   const [isDigital, setIsDigital] = useState(false);
   const [digitalFile, setDigitalFile] = useState<File | null>(null);
   const [existingFilePath, setExistingFilePath] = useState<string | null>(null);
@@ -56,6 +57,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [uploadImageError, setUploadImageError] = useState<string | null>(null);
   const [pasteUrl, setPasteUrl] = useState('');
   const imageUploadRef = useRef<HTMLInputElement>(null);
+  // Unified media gallery state
+  type MediaItem =
+    | { type: 'image'; url: string; sort_order: number }
+    | { type: 'video'; cloudflare_id: string; url: string; thumbnail: string; status: string; sort_order: number };
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const videoUploadRef = useRef<HTMLInputElement>(null);
+  const [deletingMediaIdx, setDeletingMediaIdx] = useState<number | null>(null);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -127,14 +141,30 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             processing_time: product.processing_time || '',
             status: product.status || 'pending',
           });
-          setImageUrls(
-            product.images && product.images.length > 0 ? [...product.images] : ['']
-          );
           setIsDigital(
             !!product.digital_file_path ||
               product.mi_categories?.slug === 'digital-downloads'
           );
           setExistingFilePath(product.digital_file_path || null);
+          // Build unified media items: videos first (sorted), then images
+          const sortedVideos = (product.videos || [])
+            .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((v: any, i: number) => ({
+              type: 'video' as const,
+              cloudflare_id: v.cloudflare_id,
+              url: v.url,
+              thumbnail: v.thumbnail,
+              status: v.status,
+              sort_order: i,
+            }));
+          const imgItems = (product.images || [])
+            .filter((u: string) => u && u.trim())
+            .map((url: string, i: number) => ({
+              type: 'image' as const,
+              url,
+              sort_order: sortedVideos.length + i,
+            }));
+          setMediaItems([...sortedVideos, ...imgItems]);
         } else {
           toast.error('Product not found');
           routerRef.current.push('/admin/products');
@@ -167,94 +197,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         return;
       }
     }
-  };
-
-  const handleImageChange = (index: number, value: string) => {
-    setImageUrls((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  };
-
-  const addImageField = () => {
-    if (imageUrls.length < 10) setImageUrls((prev) => [...prev, '']);
-  };
-
-  const removeImageField = (index: number) => {
-    setImageUrls((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      return next.length > 0 ? next : [''];
-    });
-  };
-
-  const moveImage = (index: number, direction: -1 | 1) => {
-    setImageUrls((prev) => {
-      const target = index + direction;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  };
-
-  const setAsMain = (index: number) => {
-    if (index === 0) return;
-    setImageUrls((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(index, 1);
-      next.unshift(item);
-      return next;
-    });
-  };
-
-  const handleImageUpload = async (file: File) => {
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Image must be under 20 MB');
-      return;
-    }
-    setUploadImageError(null);
-    setUploadingImage(true);
-    try {
-      const path = `products/${params.id}/${crypto.randomUUID()}-${file.name}`;
-      const { error } = await supabaseStorage.storage
-        .from('landing-page-images')
-        .upload(path, file, { upsert: false });
-      if (error) throw new Error(error.message);
-      const { data: urlData } = supabaseStorage.storage
-        .from('landing-page-images')
-        .getPublicUrl(path);
-      const url = urlData.publicUrl;
-      setImageUrls((prev) => {
-        const emptyIdx = prev.findIndex((u) => !u.trim());
-        if (emptyIdx >= 0) {
-          const next = [...prev];
-          next[emptyIdx] = url;
-          return next;
-        }
-        return [...prev, url];
-      });
-    } catch (err: any) {
-      setUploadImageError(err.message || 'Upload failed');
-    } finally {
-      setUploadingImage(false);
-      if (imageUploadRef.current) imageUploadRef.current.value = '';
-    }
-  };
-
-  const handleAddPasteUrl = () => {
-    const url = pasteUrl.trim();
-    if (!url.startsWith('http')) return;
-    setImageUrls((prev) => {
-      const emptyIdx = prev.findIndex((u) => !u.trim());
-      if (emptyIdx >= 0) {
-        const next = [...prev];
-        next[emptyIdx] = url;
-        return next;
-      }
-      return [...prev, url];
-    });
-    setPasteUrl('');
   };
 
   const fetchVariants = async () => {
@@ -629,7 +571,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         digitalFilePath = null;
       }
 
-      const images = imageUrls.map((u) => u.trim()).filter(Boolean);
+      // Split unified media items back into images[] and videos[]
+      const images = mediaItems
+        .filter((m): m is MediaItem & { type: 'image' } => m.type === 'image')
+        .map((m) => m.url);
+      const videos = mediaItems
+        .filter((m): m is MediaItem & { type: 'video' } => m.type === 'video')
+        .map((m, i) => ({
+          cloudflare_id: m.cloudflare_id,
+          url: m.url,
+          thumbnail: m.thumbnail,
+          status: m.status,
+          sort_order: i,
+        }));
       const cjPrice = parseFloat(form.cj_price) || 0;
       const shippingCost = parseFloat(form.shipping_cost) || 0;
       const stripeFee = Math.round((retailPrice * 0.029 + 0.3) * 100) / 100;
@@ -645,6 +599,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         description: form.description.trim(),
         category_id: form.category_id || null,
         images: images.length > 0 ? images : null,
+        videos,
         cj_price: cjPrice,
         shipping_cost: shippingCost,
         retail_price: retailPrice,
@@ -714,7 +669,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl">
         {/* Basic Info */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Basic Information</h2>
@@ -798,121 +753,97 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </div>
         </div>
 
-        {/* Images */}
+        {/* Media Gallery */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Images</h2>
-          <p className="text-xs text-gray-400 mb-4">First image is the main product image shown on cards and product pages.</p>
+          <h2 className="text-base font-semibold text-[#1a1a2e] mb-1">Media Gallery</h2>
+          <p className="text-xs text-gray-400 mb-4">First item is the hero media shown on product cards and pages. Videos appear before images in the storefront gallery.</p>
 
-          {/* Thumbnail grid */}
-          {imageUrls.some((u) => u.trim()) && (
-            <div className="grid grid-cols-4 gap-3 mb-4">
-              {imageUrls.map((url, index) => {
-                if (!url.trim()) return null;
-                const isMain = index === 0;
-                return (
-                  <div
-                    key={index}
-                    className={`relative group rounded-xl overflow-hidden border-2 ${isMain ? 'border-gold-500' : 'border-gray-200'}`}
-                  >
-                    <div className="aspect-square bg-gray-100">
-                      <img
-                        src={url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '';
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
-
-                    {/* Position badge */}
-                    <span className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isMain ? 'bg-gold-500 text-white' : 'bg-black/50 text-white'}`}>
-                      {isMain ? 'Main' : index + 1}
-                    </span>
-
-                    {/* Controls overlay */}
-                    <div className="absolute inset-x-0 bottom-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 py-1.5">
-                      {!isMain && (
-                        <button
-                          type="button"
-                          onClick={() => setAsMain(index)}
-                          title="Set as main image"
-                          className="p-1 text-gold-400 hover:text-gold-300 transition-colors"
-                        >
-                          <Star className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => moveImage(index, -1)}
-                        disabled={index === 0}
-                        title="Move left"
-                        className="p-1 text-white hover:text-gray-300 transition-colors disabled:opacity-30"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveImage(index, 1)}
-                        disabled={index === imageUrls.length - 1}
-                        title="Move right"
-                        className="p-1 text-white hover:text-gray-300 transition-colors disabled:opacity-30"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeImageField(index)}
-                        title="Remove image"
-                        className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+          {/* Wrapping grid of media cards with native drag-and-drop */}
+          {mediaItems.length > 0 && (
+            <div
+              className="grid grid-cols-5 gap-3 mb-4"
+              onDragOver={(e) => e.preventDefault()}
+            >
+              {mediaItems.map((item, idx) => (
+                <MediaCard
+                  key={item.type === 'video' ? item.cloudflare_id : `img-${idx}-${item.url.slice(-20)}`}
+                  item={item}
+                  index={idx}
+                  total={mediaItems.length}
+                  productId={params.id}
+                  deleting={deletingMediaIdx === idx}
+                  isDragging={draggingIdx === idx}
+                  isDragOver={dragOverIdx === idx}
+                  isDragActive={draggingIdx !== null}
+                  onDragStart={() => { setDraggingIdx(idx); setDragOverIdx(null); }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverIdx(idx);
+                  }}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={() => {
+                    if (draggingIdx === null || draggingIdx === idx) {
+                      setDragOverIdx(null);
+                      return;
+                    }
+                    setMediaItems((prev) => {
+                      const next = [...prev];
+                      const [moved] = next.splice(draggingIdx, 1);
+                      next.splice(idx, 0, moved);
+                      return next.map((m, i) => ({ ...m, sort_order: i }));
+                    });
+                    setDraggingIdx(null);
+                    setDragOverIdx(null);
+                  }}
+                  onDragEnd={() => { setDraggingIdx(null); setDragOverIdx(null); }}
+                  onStatusReady={(cfId) => {
+                    setMediaItems((prev) =>
+                      prev.map((m) =>
+                        m.type === 'video' && m.cloudflare_id === cfId
+                          ? { ...m, status: 'ready' }
+                          : m
+                      )
+                    );
+                  }}
+                  onDelete={async () => {
+                    if (item.type === 'video') {
+                      setDeletingMediaIdx(idx);
+                      try {
+                        const res = await fetch('/api/admin/products/delete-video', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ productId: params.id, cloudflareId: item.cloudflare_id }),
+                        });
+                        if (!res.ok) {
+                          const err = await res.json();
+                          throw new Error(err.error || 'Failed to delete video');
+                        }
+                        setMediaItems((prev) =>
+                          prev.filter((_, i) => i !== idx).map((m, i) => ({ ...m, sort_order: i }))
+                        );
+                        toast.success('Video deleted');
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to delete video');
+                      } finally {
+                        setDeletingMediaIdx(null);
+                      }
+                    } else {
+                      setMediaItems((prev) =>
+                        prev.filter((_, i) => i !== idx).map((m, i) => ({ ...m, sort_order: i }))
+                      );
+                    }
+                  }}
+                  onVideoClick={(url) => setPreviewVideoUrl(url)}
+                  onImageClick={(url) => setPreviewImageUrl(url)}
+                />
+              ))}
             </div>
           )}
 
-          {/* Add image URL input */}
-          <div className="space-y-3">
-            {imageUrls.map((url, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 w-5 text-right flex-shrink-0">{index + 1}</span>
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => handleImageChange(index, e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
-                />
-                {imageUrls.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeImageField(index)}
-                    className="p-2 text-gray-400 hover:text-danger rounded-lg hover:bg-danger/10 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ))}
-            {imageUrls.length < 10 && (
-              <button
-                type="button"
-                onClick={addImageField}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gold-500 transition-colors"
-              >
-                <ImagePlus className="w-4 h-4" />
-                Add another image
-              </button>
-            )}
-          </div>
-
-          {/* Upload + Paste */}
-          <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+          {/* Add media buttons */}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            {/* Hidden file inputs */}
             <input
               ref={imageUploadRef}
               type="file"
@@ -920,9 +851,96 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) handleImageUpload(file);
+                if (file) {
+                  // Upload image then append to mediaItems
+                  (async () => {
+                    if (file.size > 20 * 1024 * 1024) {
+                      toast.error('Image must be under 20 MB');
+                      return;
+                    }
+                    setUploadImageError(null);
+                    setUploadingImage(true);
+                    try {
+                      const path = `products/${params.id}/${crypto.randomUUID()}-${file.name}`;
+                      const { error } = await supabaseStorage.storage
+                        .from('landing-page-images')
+                        .upload(path, file, { upsert: false });
+                      if (error) throw new Error(error.message);
+                      const { data: urlData } = supabaseStorage.storage
+                        .from('landing-page-images')
+                        .getPublicUrl(path);
+                      setMediaItems((prev) => [
+                        ...prev,
+                        { type: 'image', url: urlData.publicUrl, sort_order: prev.length },
+                      ]);
+                    } catch (err: any) {
+                      setUploadImageError(err.message || 'Upload failed');
+                      toast.error(err.message || 'Image upload failed');
+                    } finally {
+                      setUploadingImage(false);
+                      if (imageUploadRef.current) imageUploadRef.current.value = '';
+                    }
+                  })();
+                }
               }}
             />
+            <input
+              ref={videoUploadRef}
+              type="file"
+              accept=".mp4,.mov,.webm,video/mp4,video/quicktime,video/webm"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 500 * 1024 * 1024) {
+                  toast.error('Video must be under 500 MB');
+                  return;
+                }
+                setUploadingVideo(true);
+                setVideoUploadProgress(0);
+
+                const progressInterval = setInterval(() => {
+                  setVideoUploadProgress((prev) => prev >= 90 ? prev : prev + Math.random() * 10);
+                }, 500);
+
+                try {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  formData.append('productId', params.id);
+
+                  const res = await fetch('/api/admin/products/upload-video', {
+                    method: 'POST',
+                    body: formData,
+                  });
+
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+                  setVideoUploadProgress(100);
+                  setMediaItems((prev) => [
+                    ...prev,
+                    {
+                      type: 'video',
+                      cloudflare_id: data.videoId,
+                      url: `https://iframe.videodelivery.net/${data.videoId}`,
+                      status: 'processing',
+                      thumbnail: `https://videodelivery.net/${data.videoId}/thumbnails/thumbnail.jpg`,
+                      sort_order: prev.length,
+                    },
+                  ]);
+                  toast.success('Video uploaded — processing will complete shortly');
+                } catch (err: any) {
+                  toast.error(err.message || 'Video upload failed');
+                } finally {
+                  clearInterval(progressInterval);
+                  setUploadingVideo(false);
+                  setVideoUploadProgress(0);
+                  if (videoUploadRef.current) videoUploadRef.current.value = '';
+                }
+              }}
+            />
+
+            {/* Add Image button */}
             <button
               type="button"
               onClick={() => imageUploadRef.current?.click()}
@@ -937,32 +955,74 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               ) : (
                 <>
                   <ImagePlus className="w-3.5 h-3.5" />
-                  Upload Image
+                  Add Image
                 </>
               )}
             </button>
+
+            {/* Add Video button */}
+            {uploadingVideo ? (
+              <div className="flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-gold-600" />
+                <span className="text-sm text-gray-600">Uploading video...</span>
+                <div className="w-24 bg-gray-200 rounded-full h-1.5">
+                  <div
+                    className="h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(videoUploadProgress, 100)}%`, backgroundColor: '#c8a45e' }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => videoUploadRef.current?.click()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gold-500 text-gold-600 text-sm font-medium rounded-lg hover:bg-gold-50 transition-colors"
+              >
+                <Video className="w-3.5 h-3.5" />
+                Add Video
+              </button>
+            )}
+
+            {/* Paste URL */}
             <div className="flex items-center gap-1.5">
               <input
                 type="text"
                 value={pasteUrl}
                 onChange={(e) => setPasteUrl(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPasteUrl(); } }}
-                placeholder="Or paste image URL..."
-                className="w-56 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const url = pasteUrl.trim();
+                    if (url.startsWith('http')) {
+                      setMediaItems((prev) => [...prev, { type: 'image', url, sort_order: prev.length }]);
+                      setPasteUrl('');
+                    }
+                  }
+                }}
+                placeholder="Paste image URL..."
+                className="w-48 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
               />
               <button
                 type="button"
-                onClick={handleAddPasteUrl}
+                onClick={() => {
+                  const url = pasteUrl.trim();
+                  if (url.startsWith('http')) {
+                    setMediaItems((prev) => [...prev, { type: 'image', url, sort_order: prev.length }]);
+                    setPasteUrl('');
+                  }
+                }}
                 disabled={!pasteUrl.trim().startsWith('http')}
                 className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
               >
                 Add
               </button>
             </div>
-            {uploadImageError && (
-              <p className="text-xs text-danger w-full">{uploadImageError}</p>
-            )}
           </div>
+
+          <p className="text-xs text-gray-400 mt-2">Images: JPEG, PNG, WebP, GIF (max 20 MB) · Videos: MP4, MOV, WebM (max 500 MB)</p>
+          {uploadImageError && (
+            <p className="text-xs text-danger mt-1">{uploadImageError}</p>
+          )}
         </div>
 
         {/* Pricing */}
@@ -1854,6 +1914,285 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </Link>
         </div>
       </form>
+
+      {/* Video preview modal */}
+      {previewVideoUrl && (
+        <VideoPreviewModal
+          videoUrl={previewVideoUrl}
+          onClose={() => setPreviewVideoUrl(null)}
+        />
+      )}
+
+      {/* Image lightbox modal */}
+      {previewImageUrl && (
+        <ImageLightbox
+          imageUrl={previewImageUrl}
+          onClose={() => setPreviewImageUrl(null)}
+        />
+      )}
     </>
+  );
+}
+
+/* ─── MediaCard sub-component ────────────────────────────────── */
+
+type MediaItemType =
+  | { type: 'image'; url: string; sort_order: number }
+  | { type: 'video'; cloudflare_id: string; url: string; thumbnail: string; status: string; sort_order: number };
+
+function MediaCard({
+  item,
+  index,
+  total,
+  productId,
+  deleting,
+  isDragging,
+  isDragOver,
+  isDragActive,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  onStatusReady,
+  onDelete,
+  onVideoClick,
+  onImageClick,
+}: {
+  item: MediaItemType;
+  index: number;
+  total: number;
+  productId: string;
+  deleting: boolean;
+  isDragging: boolean;
+  isDragOver: boolean;
+  isDragActive: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  onStatusReady: (cfId: string) => void;
+  onDelete: () => void;
+  onVideoClick: (url: string) => void;
+  onImageClick: (url: string) => void;
+}) {
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [localStatus, setLocalStatus] = useState(
+    item.type === 'video' ? item.status : 'ready'
+  );
+
+  // Poll for processing videos
+  useEffect(() => {
+    if (item.type !== 'video' || localStatus !== 'processing') return;
+
+    const cfId = item.cloudflare_id;
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `/api/admin/products/video-status?videoId=${cfId}&productId=${productId}`
+        );
+        const data = await res.json();
+        if (data.status === 'ready') {
+          setLocalStatus('ready');
+          onStatusReady(cfId);
+          if (pollRef.current) clearInterval(pollRef.current);
+        }
+      } catch {}
+    };
+
+    poll();
+    pollRef.current = setInterval(poll, 5000);
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localStatus, item.type === 'video' ? item.cloudflare_id : '', productId]);
+
+  // Sync if parent updates status
+  useEffect(() => {
+    if (item.type === 'video') setLocalStatus(item.status);
+  }, [item.type === 'video' ? item.status : '']);
+
+  const isVideo = item.type === 'video';
+  const isFirst = index === 0;
+
+  const handleClick = () => {
+    if (isVideo) {
+      if (localStatus === 'ready') onVideoClick(item.url);
+    } else {
+      onImageClick(item.url);
+    }
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      className={`relative flex-shrink-0 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing transition-all duration-150 ease-out ${
+        isDragging
+          ? 'opacity-40 scale-95 shadow-sm'
+          : isDragOver
+            ? 'ring-2 ring-[#c8a45e] scale-105 brightness-110 shadow-xl'
+            : isDragActive
+              ? 'opacity-70 shadow-md'
+              : 'shadow-md hover:shadow-xl'
+      } ${isFirst && !isDragOver ? 'ring-2 ring-[#c8a45e]' : !isDragOver ? 'border border-gray-200' : ''}`}
+      style={{ width: 240, height: 240 }}
+    >
+      {/* Clickable thumbnail */}
+      <div
+        className={`absolute inset-0 ${isVideo && localStatus !== 'ready' ? '' : 'cursor-pointer'}`}
+        onClick={handleClick}
+      >
+        {isVideo ? (
+          localStatus === 'processing' ? (
+            <div className="w-full h-full bg-navy-900 flex flex-col items-center justify-center gap-1.5">
+              <RefreshCw className="w-6 h-6 text-gold-400 animate-spin" />
+              <span className="text-xs text-gray-300 font-medium">Processing...</span>
+            </div>
+          ) : (
+            <>
+              <img
+                src={item.thumbnail}
+                alt="Video thumbnail"
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                  <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                </div>
+              </div>
+            </>
+          )
+        ) : (
+          <img
+            src={item.url}
+            alt=""
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
+      </div>
+
+      {/* Type badge — top-left */}
+      <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full text-[9px] font-semibold tracking-wide bg-black/40 text-white backdrop-blur-sm pointer-events-none">
+        {isVideo ? 'VID' : 'IMG'}
+      </span>
+
+      {/* Hero badge — bottom-left */}
+      {isFirst && (
+        <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[11px] font-bold font-playfair tracking-wide pointer-events-none" style={{ backgroundColor: '#c8a45e', color: '#0f1629' }}>
+          Hero
+        </span>
+      )}
+
+      {/* Delete button — top-right on hover */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        disabled={deleting}
+        className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/50 text-red-400 hover:text-red-300 hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50 backdrop-blur-sm"
+        title="Delete"
+      >
+        {deleting ? (
+          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="w-3.5 h-3.5" />
+        )}
+      </button>
+    </div>
+  );
+}
+
+/* ─── VideoPreviewModal sub-component ────────────────────────── */
+
+function VideoPreviewModal({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-[800px] rounded-2xl overflow-hidden shadow-2xl bg-black"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white shadow transition-colors"
+          aria-label="Close video preview"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+        <div style={{ aspectRatio: '16/9' }}>
+          <iframe
+            src={`${videoUrl}?autoplay=true&muted=false`}
+            className="w-full h-full"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── ImageLightbox sub-component ────────────────────────────── */
+
+function ImageLightbox({ imageUrl, onClose }: { imageUrl: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/80" />
+      <div
+        className="relative"
+        style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute -top-3 -right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white shadow transition-colors"
+          aria-label="Close image preview"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+        <img
+          src={imageUrl}
+          alt=""
+          className="rounded-lg"
+          style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain' }}
+        />
+      </div>
+    </div>
   );
 }

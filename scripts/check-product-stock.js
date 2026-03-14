@@ -24,7 +24,7 @@ for (const line of envContent.split('\n')) {
   if (!process.env[key]) process.env[key] = val;
 }
 
-const SLUG = 'vintage-court-lantern-sleeves-large-lapel-jacket-ybqy';
+const SLUG = process.argv[2]
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CJ_API_KEY = process.env.CJ_API_KEY;
