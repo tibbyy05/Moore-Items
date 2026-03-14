@@ -4,9 +4,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const runtime = 'nodejs';
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
-const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
-
 async function requireAdmin() {
   const supabase = await createServerSupabaseClient();
   const {
@@ -44,71 +41,55 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let formData: FormData;
+  let body: { productId?: string; fileName?: string; fileSize?: number };
   try {
-    formData = await request.formData();
+    body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const file = formData.get('file') as File | null;
-  const productId = formData.get('productId') as string | null;
+  const { productId, fileName, fileSize } = body;
 
-  console.log('[Upload Video] file:', file?.name, file?.type, file?.size);
-  console.log('[Upload Video] productId:', productId);
-  console.log('[Upload Video] CF vars:',
-    process.env.CLOUDFLARE_ACCOUNT_ID ? 'ACCOUNT_SET' : 'ACCOUNT_MISSING',
-    process.env.CLOUDFLARE_STREAM_TOKEN ? 'TOKEN_SET' : 'TOKEN_MISSING'
-  );
-
-  if (!file) {
-    return NextResponse.json({ error: 'No video file provided' }, { status: 400 });
-  }
+  console.log('[Upload Video] productId:', productId, 'fileName:', fileName, 'fileSize:', fileSize);
 
   if (!productId) {
     return NextResponse.json({ error: 'No productId provided' }, { status: 400 });
   }
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json(
-      { error: 'Only MP4, MOV, and WebM videos are allowed' },
-      { status: 400 }
-    );
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: 'File too large (max 500 MB)' }, { status: 400 });
+  if (!fileName) {
+    return NextResponse.json({ error: 'No fileName provided' }, { status: 400 });
   }
 
   try {
-    // Upload to Cloudflare Stream
-    const cfFormData = new FormData();
-    cfFormData.append('file', file);
-
+    // Step 1: Request a direct upload URL from Cloudflare Stream
     const cfResponse = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream`,
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`,
       {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${streamToken}`,
+          'Content-Type': 'application/json',
         },
-        body: cfFormData,
+        body: JSON.stringify({ maxDurationSeconds: 3600 }),
       }
     );
 
     const cfData = await cfResponse.json();
 
     if (!cfResponse.ok || !cfData.success) {
-      console.error('[Upload Video] Cloudflare error:', cfData);
+      console.error('[Upload Video] Cloudflare direct_upload error:', cfData);
       return NextResponse.json(
-        { error: cfData.errors?.[0]?.message || 'Cloudflare Stream upload failed' },
+        { error: cfData.errors?.[0]?.message || 'Failed to get upload URL from Cloudflare' },
         { status: 502 }
       );
     }
 
     const uid = cfData.result.uid;
+    const uploadURL = cfData.result.uploadURL;
 
-    // Get current videos array
+    console.log('[Upload Video] Got direct upload URL, uid:', uid);
+
+    // Step 2: Save pending video entry to mi_products.videos
     const adminSupabase = createAdminClient();
     const { data: product, error: fetchError } = await adminSupabase
       .from('mi_products')
@@ -143,10 +124,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save video' }, { status: 500 });
     }
 
+    // Step 3: Return upload URL and video ID to client
     return NextResponse.json({
       success: true,
+      uploadURL,
       videoId: uid,
-      status: 'processing',
     });
   } catch (err: any) {
     console.error('[Upload Video] Error:', err);

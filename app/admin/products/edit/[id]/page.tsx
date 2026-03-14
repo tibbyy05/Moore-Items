@@ -899,32 +899,58 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 setUploadingVideo(true);
                 setVideoUploadProgress(0);
 
-                const progressInterval = setInterval(() => {
-                  setVideoUploadProgress((prev) => prev >= 90 ? prev : prev + Math.random() * 10);
-                }, 500);
-
                 try {
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  formData.append('productId', params.id);
-
+                  // Step 1: Get direct upload URL from our API
                   const res = await fetch('/api/admin/products/upload-video', {
                     method: 'POST',
-                    body: formData,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      productId: params.id,
+                      fileName: file.name,
+                      fileSize: file.size,
+                    }),
                   });
 
                   const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || 'Upload failed');
+                  if (!res.ok) throw new Error(data.error || 'Failed to get upload URL');
+
+                  const { uploadURL, videoId } = data;
+
+                  // Step 2: Upload file directly to Cloudflare via XHR for progress
+                  await new Promise<void>((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', uploadURL, true);
+
+                    xhr.upload.onprogress = (event) => {
+                      if (event.lengthComputable) {
+                        setVideoUploadProgress(Math.round((event.loaded / event.total) * 100));
+                      }
+                    };
+
+                    xhr.onload = () => {
+                      if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve();
+                      } else {
+                        reject(new Error(`Upload failed (${xhr.status})`));
+                      }
+                    };
+
+                    xhr.onerror = () => reject(new Error('Upload failed — network error'));
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    xhr.send(formData);
+                  });
 
                   setVideoUploadProgress(100);
                   setMediaItems((prev) => [
                     ...prev,
                     {
                       type: 'video',
-                      cloudflare_id: data.videoId,
-                      url: `https://iframe.videodelivery.net/${data.videoId}`,
+                      cloudflare_id: videoId,
+                      url: `https://iframe.videodelivery.net/${videoId}`,
                       status: 'processing',
-                      thumbnail: `https://videodelivery.net/${data.videoId}/thumbnails/thumbnail.jpg`,
+                      thumbnail: `https://videodelivery.net/${videoId}/thumbnails/thumbnail.jpg`,
                       sort_order: prev.length,
                     },
                   ]);
@@ -932,7 +958,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 } catch (err: any) {
                   toast.error(err.message || 'Video upload failed');
                 } finally {
-                  clearInterval(progressInterval);
                   setUploadingVideo(false);
                   setVideoUploadProgress(0);
                   if (videoUploadRef.current) videoUploadRef.current.value = '';
