@@ -181,6 +181,46 @@ export default function VariantSelector({
             {matrix.allColors.map((color) => {
               const isSelected = color === selectedColor;
               const isAvailable = availableColors.has(color);
+              const imageUrl = matrix.colorToImage.get(color);
+
+              // Image thumbnail swatch (when variant has an image)
+              if (imageUrl) {
+                return (
+                  <button
+                    key={color}
+                    onClick={() => isAvailable && handleColorClick(color)}
+                    disabled={!isAvailable}
+                    title={isAvailable ? color : `${color} (out of stock)`}
+                    className={`
+                      w-16 h-16 rounded-md overflow-hidden transition-all relative flex-shrink-0
+                      ${isSelected
+                        ? 'ring-2 ring-[#c8a45e] ring-offset-2 scale-110'
+                        : isAvailable
+                          ? 'hover:scale-105 hover:shadow-md cursor-pointer'
+                          : 'cursor-not-allowed'
+                      }
+                    `}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={color}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Out of stock: dark overlay + diagonal strikethrough */}
+                    {!isAvailable && (
+                      <span
+                        className="absolute inset-0 rounded-md"
+                        style={{
+                          background: 'rgba(0,0,0,0.45)',
+                          backgroundImage: 'linear-gradient(135deg, transparent 45%, rgba(255,255,255,0.6) 45%, rgba(255,255,255,0.6) 55%, transparent 55%)',
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              }
+
+              // Fallback: color dot swatch (when no variant image)
               const hex = getColorHex(color);
               const isLight = isLightColor(hex);
 
