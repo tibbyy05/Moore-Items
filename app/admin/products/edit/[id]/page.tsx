@@ -1044,7 +1044,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 mt-2">Images: JPEG, PNG, WebP, GIF (max 20 MB) · Videos: MP4, MOV, WebM (max 500 MB)</p>
+          <p className="text-xs text-gray-400 mt-2">Images: 800×800px square recommended (JPEG, PNG, WebP, GIF · max 20MB) · Videos: MP4, MOV, WebM · max 500MB</p>
           {uploadImageError && (
             <p className="text-xs text-danger mt-1">{uploadImageError}</p>
           )}

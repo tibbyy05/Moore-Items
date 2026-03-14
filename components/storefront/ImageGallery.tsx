@@ -161,7 +161,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
             src={activeImage}
             alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
             fill
-            className="object-contain"
+            className="object-cover"
             sizes="(max-width: 1024px) 100vw, 50vw"
             unoptimized
           />
