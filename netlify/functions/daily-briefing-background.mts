@@ -35,6 +35,7 @@ export default async (req: Request) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     sevenDaysAgo.setHours(0, 0, 0, 0);
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
     const yesterdayStartISO = yesterdayStart.toISOString();
     const yesterdayEndISO = yesterdayEnd.toISOString();
@@ -125,9 +126,9 @@ export default async (req: Request) => {
     const { data: stuckOrders } = await supabase
       .from('mi_orders')
       .select('id, order_number, created_at, total')
-      .eq('fulfillment_status', 'unfulfilled')
+      .eq('fulfillment_status', 'pending')
       .eq('payment_status', 'paid')
-      .lt('created_at', twentyFourHoursAgo);
+      .lt('created_at', threeDaysAgo);
 
     const stuckCount = stuckOrders?.length ?? 0;
 
