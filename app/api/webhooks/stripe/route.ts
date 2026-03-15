@@ -140,7 +140,9 @@ export async function POST(request: NextRequest) {
               || 'Customer';
 
             // Send customer confirmation (only if we have a recipient)
-            if (toEmail) {
+            if (!event.livemode) {
+              console.log(`[Webhook] Test mode — skipping emails for #${order.order_number}`);
+            } else if (toEmail) {
               // Generate download links for digital items
               const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mooreitems.com';
               const downloadLinks: Array<{ itemName: string; downloadUrl: string }> = [];
@@ -200,28 +202,32 @@ export async function POST(request: NextRequest) {
               console.log(`[Webhook] Order confirmation email sent for #${order.order_number}`);
             }
 
-            // ---- ADMIN NOTIFICATION (always fires, fire-and-forget) ----
-            try {
-              sendNewOrderAdminNotification({
-                orderNumber: order.order_number,
-                customerName,
-                customerEmail: toEmail || '',
-                items: itemsFetched
-                  ? orderItems.map(item => ({
-                      name: item.name,
-                      quantity: item.quantity,
-                      price: item.unit_price,
-                      variant_info: item.variant_info || undefined,
-                    }))
-                  : [{ name: 'Order details pending — items not yet available', quantity: 1, price: order.total || (session.amount_total || 0) / 100 }],
-                total: order.total || (session.amount_total || 0) / 100,
-                timestamp: new Date().toISOString(),
-                orderId: orderId,
-                shippingAddress: shippingAddress || undefined,
-                estimatedDelivery,
-              }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
-            } catch (adminEmailError) {
-              console.error('[Webhook] Admin order notification failed:', adminEmailError);
+            // ---- ADMIN NOTIFICATION (always fires in live mode, fire-and-forget) ----
+            if (!event.livemode) {
+              // Already logged above — skip admin email too
+            } else {
+              try {
+                sendNewOrderAdminNotification({
+                  orderNumber: order.order_number,
+                  customerName,
+                  customerEmail: toEmail || '',
+                  items: itemsFetched
+                    ? orderItems.map(item => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.unit_price,
+                        variant_info: item.variant_info || undefined,
+                      }))
+                    : [{ name: 'Order details pending — items not yet available', quantity: 1, price: order.total || (session.amount_total || 0) / 100 }],
+                  total: order.total || (session.amount_total || 0) / 100,
+                  timestamp: new Date().toISOString(),
+                  orderId: orderId,
+                  shippingAddress: shippingAddress || undefined,
+                  estimatedDelivery,
+                }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
+              } catch (adminEmailError) {
+                console.error('[Webhook] Admin order notification failed:', adminEmailError);
+              }
             }
           }
         } catch (emailError) {
@@ -231,52 +237,63 @@ export async function POST(request: NextRequest) {
         // ---- END EMAIL ----
 
         // Fulfillment: handle digital vs physical orders
-        try {
-          if (isAllDigital) {
-            // All-digital order: mark as delivered immediately
-            await supabase
-              .from('mi_orders')
-              .update({
-                fulfillment_status: 'delivered',
-                notes: '[fulfillment] Digital order — delivered instantly',
-              })
-              .eq('id', orderId);
-            console.log(`[Webhook] Order ${orderId}: All-digital order, marked as delivered`);
-          } else {
-            // Trigger CJ fulfillment (skips gracefully for non-CJ products)
-            const result = await fulfillCJOrder(orderId);
-            if (result.skipped) {
-              // No CJ items — mark as unfulfilled for manual handling
-              await supabase
-                .from('mi_orders')
-                .update({
-                  fulfillment_status: hasDigitalItems ? 'processing' : 'unfulfilled',
-                  notes: hasDigitalItems
-                    ? '[fulfillment] Mixed order — digital items delivered, physical items require fulfillment'
-                    : '[fulfillment] Non-CJ order — requires manual fulfillment',
-                })
-                .eq('id', orderId);
-              console.log(`[Webhook] Order ${orderId}: ${result.message}`);
-            } else if (!result.success) {
-              console.error('CJ fulfillment failed', result.message);
-              await supabase
-                .from('mi_orders')
-                .update({
-                  fulfillment_status: 'failed',
-                  notes: `[fulfillment] ${new Date().toISOString()} ${result.message || 'CJ order creation failed'}`,
-                })
-                .eq('id', orderId);
-            }
-          }
-        } catch (error: any) {
-          console.error('CJ fulfillment error', error);
+        if (!event.livemode) {
+          console.log(`[Webhook] Test mode order — skipping CJ fulfillment for ${orderId}`);
           await supabase
             .from('mi_orders')
             .update({
-              fulfillment_status: 'failed',
-              notes: `[fulfillment] ${new Date().toISOString()} ${error?.message || 'Unexpected fulfillment error'}`,
+              fulfillment_status: isAllDigital ? 'delivered' : 'unfulfilled',
+              notes: 'TEST MODE — CJ fulfillment skipped',
             })
             .eq('id', orderId);
+        } else {
+          try {
+            if (isAllDigital) {
+              // All-digital order: mark as delivered immediately
+              await supabase
+                .from('mi_orders')
+                .update({
+                  fulfillment_status: 'delivered',
+                  notes: '[fulfillment] Digital order — delivered instantly',
+                })
+                .eq('id', orderId);
+              console.log(`[Webhook] Order ${orderId}: All-digital order, marked as delivered`);
+            } else {
+              // Trigger CJ fulfillment (skips gracefully for non-CJ products)
+              const result = await fulfillCJOrder(orderId);
+              if (result.skipped) {
+                // No CJ items — mark as unfulfilled for manual handling
+                await supabase
+                  .from('mi_orders')
+                  .update({
+                    fulfillment_status: hasDigitalItems ? 'processing' : 'unfulfilled',
+                    notes: hasDigitalItems
+                      ? '[fulfillment] Mixed order — digital items delivered, physical items require fulfillment'
+                      : '[fulfillment] Non-CJ order — requires manual fulfillment',
+                  })
+                  .eq('id', orderId);
+                console.log(`[Webhook] Order ${orderId}: ${result.message}`);
+              } else if (!result.success) {
+                console.error('CJ fulfillment failed', result.message);
+                await supabase
+                  .from('mi_orders')
+                  .update({
+                    fulfillment_status: 'failed',
+                    notes: `[fulfillment] ${new Date().toISOString()} ${result.message || 'CJ order creation failed'}`,
+                  })
+                  .eq('id', orderId);
+              }
+            }
+          } catch (error: any) {
+            console.error('CJ fulfillment error', error);
+            await supabase
+              .from('mi_orders')
+              .update({
+                fulfillment_status: 'failed',
+                notes: `[fulfillment] ${new Date().toISOString()} ${error?.message || 'Unexpected fulfillment error'}`,
+              })
+              .eq('id', orderId);
+          }
         }
       }
 
