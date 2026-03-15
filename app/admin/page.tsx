@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/StatCard';
 import { BarChart } from '@/components/admin/BarChart';
 import {
+  BarChart3 as RechartsIcon,
   DollarSign,
   ShoppingCart,
   ShoppingBag,
@@ -13,7 +14,18 @@ import {
   RefreshCw,
   ExternalLink,
   Users,
+  Eye,
+  Calendar,
+  CalendarDays,
 } from 'lucide-react';
+import {
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -45,37 +57,58 @@ const PERIOD_OPTIONS = [
   { value: 'all_time', label: 'All Time' },
 ] as const;
 
-function useLiveVisitors() {
-  const [count, setCount] = useState(0);
+interface VisitorStats {
+  activeNow: number;
+  todayCount: number;
+  weekCount: number;
+  monthCount: number;
+  dailyData: Array<{ date: string; visitors: number }>;
+  loading: boolean;
+}
+
+function useVisitorStats(): VisitorStats {
+  const [stats, setStats] = useState<Omit<VisitorStats, 'loading'>>({
+    activeNow: 0,
+    todayCount: 0,
+    weekCount: 0,
+    monthCount: 0,
+    dailyData: [],
+  });
   const [loading, setLoading] = useState(true);
 
-  const fetchVisitors = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/realtime-visitors');
+      const res = await fetch('/api/admin/visitors');
       const data = await res.json();
       if (data.debug) {
-        console.error('[realtime-visitors]', data.debug);
+        console.error('[visitors]', data.debug);
       }
-      setCount(data.activeUsers ?? 0);
+      setStats({
+        activeNow: data.activeNow ?? 0,
+        todayCount: data.todayCount ?? 0,
+        weekCount: data.weekCount ?? 0,
+        monthCount: data.monthCount ?? 0,
+        dailyData: data.dailyData ?? [],
+      });
     } catch {
-      // keep last known count
+      // keep last known stats
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchVisitors();
-    const interval = setInterval(fetchVisitors, 60_000);
+    fetchStats();
+    const interval = setInterval(fetchStats, 60_000);
     return () => clearInterval(interval);
-  }, [fetchVisitors]);
+  }, [fetchStats]);
 
-  return { count, loading };
+  return { ...stats, loading };
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const liveVisitors = useLiveVisitors();
+  const visitors = useVisitorStats();
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -159,16 +192,17 @@ export default function AdminDashboard() {
         </select>
       </div>
 
-      <div className="grid grid-cols-7 gap-6 mb-8">
+      {/* Visitors Section */}
+      <div className="grid grid-cols-4 gap-4 mb-4">
         <StatCard
-          label="Live Visitors"
+          label="Live Now"
           value={
-            liveVisitors.loading ? (
+            visitors.loading ? (
               '\u2014'
             ) : (
               <span className="flex items-center">
                 <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse mr-2" />
-                {liveVisitors.count}
+                {visitors.activeNow}
               </span>
             )
           }
@@ -177,6 +211,62 @@ export default function AdminDashboard() {
           iconBgClassName="bg-green-50"
           iconClassName="text-green-500"
         />
+        <StatCard
+          label="Today"
+          value={visitors.loading ? '\u2014' : visitors.todayCount.toString()}
+          subtitle="Unique visitors"
+          icon={Eye}
+          iconBgClassName="bg-blue-50"
+          iconClassName="text-blue-500"
+        />
+        <StatCard
+          label="This Week"
+          value={visitors.loading ? '\u2014' : visitors.weekCount.toString()}
+          subtitle="Last 7 days"
+          icon={Calendar}
+          iconBgClassName="bg-indigo-50"
+          iconClassName="text-indigo-500"
+        />
+        <StatCard
+          label="This Month"
+          value={visitors.loading ? '\u2014' : visitors.monthCount.toString()}
+          subtitle="Last 30 days"
+          icon={CalendarDays}
+          iconBgClassName="bg-purple-50"
+          iconClassName="text-purple-500"
+        />
+      </div>
+
+      {visitors.dailyData.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-8 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-500 mb-3">Visitors — Last 7 Days</h3>
+          <ResponsiveContainer width="100%" height={120}>
+            <RechartsBarChart data={visitors.dailyData} barSize={24}>
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 11, fill: '#9ca3af' }}
+                axisLine={false}
+                tickLine={false}
+                width={30}
+              />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                formatter={(value: number) => [value, 'Visitors']}
+              />
+              <Bar dataKey="visitors" fill="#c8a45e" radius={[4, 4, 0, 0]} />
+            </RechartsBarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Main Stat Cards */}
+      <div className="grid grid-cols-6 gap-6 mb-8">
         <StatCard
           label={`Revenue ${periodLabel}`}
           value={`$${revenue.toFixed(2)}`}
@@ -208,7 +298,7 @@ export default function AdminDashboard() {
           <StatCard
             label="Needs Polish"
             value={needsPolish.toString()}
-            subtitle={priceDriftCount > 0 ? `⚠ ${priceDriftCount} price drifts` : 'All prices stable'}
+            subtitle={priceDriftCount > 0 ? `\u26a0 ${priceDriftCount} price drifts` : 'All prices stable'}
             icon={Sparkles}
             iconBgClassName="bg-violet-50"
             iconClassName="text-violet-500"
