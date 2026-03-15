@@ -60,13 +60,16 @@ export async function GET() {
       }
     );
 
+    console.log('[GA4] status:', res.status);
+    const responseText = await res.text();
+    console.log('[GA4] body:', responseText.substring(0, 500));
+
     if (!res.ok) {
-      const responseText = await res.text();
       console.error(`[realtime-visitors] GA4 API error ${res.status}:`, responseText);
       return NextResponse.json({ activeUsers: 0, debug: `GA4 API ${res.status}: ${responseText}` });
     }
 
-    const data = await res.json();
+    const data = JSON.parse(responseText);
     const activeUsers = Number(data.rows?.[0]?.metricValues?.[0]?.value ?? 0);
 
     return NextResponse.json({ activeUsers });
