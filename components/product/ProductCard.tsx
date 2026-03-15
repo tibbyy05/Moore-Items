@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, ShoppingCart } from 'lucide-react';
+import { Heart, ShoppingCart, Truck, Globe, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Product } from '@/lib/types';
 import { StarRating } from '@/components/ui/star-rating';
@@ -116,6 +116,22 @@ export function ProductCard({ product, priority = false, className }: ProductCar
           compareAtPrice={product.compareAtPrice}
           size="sm"
         />
+        {product.isDigital ? (
+          <div className="flex items-center gap-1 text-violet-600 text-xs mt-1">
+            <Download className="w-3 h-3" />
+            <span>Instant download</span>
+          </div>
+        ) : product.warehouse === 'US' ? (
+          <div className="flex items-center gap-1 text-green-600 text-xs mt-1">
+            <Truck className="w-3 h-3" />
+            <span>Delivered in 2–5 business days</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
+            <Globe className="w-3 h-3" />
+            <span>Delivered in 7–15 business days</span>
+          </div>
+        )}
       </div>
     </Link>
   );

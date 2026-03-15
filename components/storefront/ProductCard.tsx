@@ -165,15 +165,15 @@ export function ProductCard({ product, priority = false, className }: ProductCar
               <Download className="w-3 h-3" />
               <span>Instant download</span>
             </div>
-          ) : product.warehouse_status === 'US' ? (
+          ) : (product.warehouse_status === 'US' || product.warehouse === 'US') ? (
             <div className="flex items-center gap-1 text-green-600 text-xs mt-1">
               <Truck className="w-3 h-3" />
-              <span>Delivered in 2-5 business days</span>
+              <span>Delivered in 2–5 business days</span>
             </div>
           ) : (
             <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
               <Globe className="w-3 h-3" />
-              <span>Delivered in 8-15 business days</span>
+              <span>Delivered in 7–15 business days</span>
             </div>
           )}
         </div>
