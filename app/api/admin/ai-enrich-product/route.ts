@@ -9,7 +9,9 @@ Always treat the current product name and description as the source of truth. CJ
 
 For product titles: lead with the most searchable descriptor and include all core function keywords naturally. Keep under 70 characters.
 
-For meta titles: identify all primary function keywords from the product name and description (e.g. a product that both blends and juices should include both 'blender' and 'juicer'). Capture multiple search intents by including all core use-case terms. Format as: '[Primary Keywords] | [Benefit or Use Case]'. Keep under 60 characters.`;
+For meta titles: identify all primary function keywords from the product name and description (e.g. a product that both blends and juices should include both 'blender' and 'juicer'). Capture multiple search intents by including all core use-case terms. Format as: '[Primary Keywords] | [Benefit or Use Case]'. Keep under 60 characters.
+
+In the description, always include a short 'Perfect For Making' or 'Great For' section as an h3 with a bullet list of 4–6 specific use cases relevant to the product (e.g. smoothies, iced coffee, protein shakes, detox drinks for a blender). These should be concrete, specific things the customer can make or do with the product — not generic benefits. This section drives both SEO long-tail traffic and purchase intent.`;
 
 async function requireAdmin(request: NextRequest) {
   const supabase = await createServerSupabaseClient();

@@ -63,12 +63,8 @@ const SECTION_KEYS = [
   { label: 'How To Use', variants: ['how to use', 'usage'] },
 ];
 
-const SPEC_PATTERNS = [
-  /\b\d+(\.\d+)?\s?(cm|mm|inches|inch|in|ft|lbs?|kg|g)\b/i,
-  /\bmaterial\s*:/i,
-  /\bdimensions?\b/i,
-  /\bweight\b/i,
-];
+// Only match dedicated spec lines formatted as "Label: Value" or "Label — Value"
+const SPEC_LINE_PATTERN = /^[\w\s]{1,30}\s*[:\u2013\u2014\-]\s*.+/;
 
 function titleCase(value: string) {
   return value
@@ -115,10 +111,10 @@ function cleanDescriptionHtml(html: string) {
 
 function extractSpecs(text: string) {
   const lines = text
-    .split(/[\n•\-]+/)
+    .split(/[\n•]+/)
     .map((line) => line.trim())
     .filter(Boolean);
-  const matches = lines.filter((line) => SPEC_PATTERNS.some((pattern) => pattern.test(line)));
+  const matches = lines.filter((line) => SPEC_LINE_PATTERN.test(line) && line.length < 80);
   return Array.from(new Set(matches)).slice(0, 6);
 }
 
