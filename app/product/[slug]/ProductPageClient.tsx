@@ -82,8 +82,11 @@ function titleCase(value: string) {
 function cleanDescriptionHtml(html: string) {
   let cleaned = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<img[^>]*>/gi, '')
-    .replace(/<video[\s\S]*?<\/video>/gi, '');
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+    .replace(/<object[\s\S]*?<\/object>/gi, '')
+    .replace(/<video[\s\S]*?<\/video>/gi, '')
+    .replace(/<img[^>]*>/gi, '');
 
   MARKETING_PHRASES.forEach((phrase) => {
     cleaned = cleaned.replace(new RegExp(phrase, 'gi'), '');
