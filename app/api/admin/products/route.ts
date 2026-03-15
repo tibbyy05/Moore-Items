@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
   const category = searchParams.get('category');
   const warehouse = searchParams.get('warehouse');
+  const source = searchParams.get('source');
   const search = searchParams.get('search');
   const rawSortBy = searchParams.get('sortBy') || 'created_at';
   const sortOrder = searchParams.get('sortOrder') || 'desc';
@@ -86,6 +87,12 @@ export async function GET(request: NextRequest) {
     if (status && status !== 'all') q = q.eq('status', status);
     if (categoryId) q = q.eq('category_id', categoryId);
     if (warehouse && warehouse !== 'all') q = q.eq('warehouse', warehouse);
+    if (source && source !== 'all') {
+      if (source === 'cj') q = q.eq('supplier', 'cj');
+      else if (source === 'aliexpress') q = q.eq('supplier', 'aliexpress');
+      else if (source === 'digital') q = q.eq('warehouse', 'DIGITAL');
+      else if (source === 'manual') q = q.eq('supplier', 'manual').neq('warehouse', 'DIGITAL');
+    }
     if (search) q = q.or(`name.ilike.%${search}%,cj_pid.ilike.%${search}%`);
     return q;
   }

@@ -164,7 +164,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               url,
               sort_order: sortedVideos.length + i,
             }));
-          setMediaItems([...sortedVideos, ...imgItems]);
+          const allMedia = [...sortedVideos, ...imgItems].sort((a, b) => a.sort_order - b.sort_order);
+          setMediaItems(allMedia);
         } else {
           toast.error('Product not found');
           routerRef.current.push('/admin/products');
@@ -663,7 +664,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           <ArrowLeft className="w-4 h-4" />
           Back to Products
         </Link>
-        <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Edit Product</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-[28px] font-playfair font-bold text-[#1a1a2e]">Edit Product</h1>
+          {originalProduct?.slug && (
+            <a
+              href={`${process.env.NEXT_PUBLIC_SITE_URL || ''}/product/${originalProduct.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:border-gold-500 hover:text-gold-600 transition-colors"
+            >
+              View on Storefront
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
         <p className="text-sm text-gray-500 mt-1">
           Update product details{originalProduct?.cj_pid ? ' · CJ Product' : ''}.
         </p>

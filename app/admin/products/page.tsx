@@ -80,7 +80,7 @@ export default function ProductsPage() {
   const [statusMenuId, setStatusMenuId] = useState<string | null>(null);
   const [warehouseFilter, setWarehouseFilter] = useState<'all' | 'US' | 'CN' | 'CA'>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [categories, setCategories] = useState<Array<{ id: string; name: string; slug: string }>>(
     []
   );
@@ -118,6 +118,9 @@ export default function ProductsPage() {
   const [editingShippingId, setEditingShippingId] = useState<string | null>(null);
   const [editShipping, setEditShipping] = useState('');
   const [savedShippingId, setSavedShippingId] = useState<string | null>(null);
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
 
 
   useEffect(() => {
@@ -135,6 +138,7 @@ export default function ProductsPage() {
         if (warehouseFilter !== 'all') params.set('warehouse', warehouseFilter);
         if (categoryFilter !== 'all') params.set('category', categoryFilter);
         if (statusFilter !== 'all') params.set('status', statusFilter);
+        if (sourceFilter !== 'all') params.set('source', sourceFilter);
 
         const response = await fetch(`/api/admin/products?${params.toString()}`, {
           signal: controller.signal,
@@ -159,11 +163,11 @@ export default function ProductsPage() {
     return () => {
       controller.abort();
     };
-  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, page, sortField, sortDirection, refreshKey]);
+  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, sourceFilter, page, sortField, sortDirection, refreshKey]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter]);
+  }, [searchQuery, warehouseFilter, categoryFilter, statusFilter, sourceFilter]);
 
   useEffect(() => {
     const handleRefresh = () => setRefreshKey((key) => key + 1);
@@ -193,10 +197,15 @@ export default function ProductsPage() {
     fetchCategories();
   }, []);
 
-  const filteredProducts =
-    warehouseFilter === 'all'
-      ? products
-      : products.filter((product) => product.warehouse === warehouseFilter);
+  const filteredProducts = products.filter((product) => {
+    if (warehouseFilter !== 'all' && product.warehouse !== warehouseFilter) return false;
+    const minP = parseFloat(priceMin);
+    const maxP = parseFloat(priceMax);
+    const retail = Number(product.retail_price || 0);
+    if (!isNaN(minP) && retail < minP) return false;
+    if (!isNaN(maxP) && retail > maxP) return false;
+    return true;
+  });
 
   // Sorting is done server-side via sortBy/sortOrder params
   const sortedProducts = filteredProducts;
@@ -221,7 +230,7 @@ export default function ProductsPage() {
     align?: 'left' | 'right';
   }) => (
     <th
-      className={`text-${align} py-3 px-4 text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none ${
+      className={`text-${align} py-3 px-2 text-[11px] font-semibold uppercase tracking-wider cursor-pointer select-none ${
         sortField === field ? 'text-gray-700' : 'text-gray-500'
       }`}
       onClick={() => handleSort(field)}
@@ -522,8 +531,8 @@ export default function ProductsPage() {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-2xl p-6 mb-6 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="search"
@@ -568,6 +577,35 @@ export default function ProductsPage() {
             <option value="CN">China Warehouse</option>
             <option value="CA">Canada Warehouse</option>
           </select>
+          <select
+            value={sourceFilter}
+            onChange={(event) => setSourceFilter(event.target.value)}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <option value="all">All Sources</option>
+            <option value="cj">CJ</option>
+            <option value="aliexpress">AliExpress</option>
+            <option value="manual">Manual</option>
+            <option value="digital">Digital</option>
+          </select>
+          <div className="flex items-center gap-1.5 text-sm text-gray-500">
+            <span className="whitespace-nowrap">Price: $</span>
+            <input
+              type="number"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              placeholder="min"
+              className="w-16 px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+            />
+            <span>—</span>
+            <input
+              type="number"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              placeholder="max"
+              className="w-16 px-2 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+            />
+          </div>
         </div>
       </div>
 
@@ -615,12 +653,12 @@ export default function ProductsPage() {
         </div>
       )}
 
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden w-full">
+        <div>
           <table className="w-full">
             <thead>
               <tr className="bg-gray-100 border-b border-gray-200">
-                <th className="py-3 px-4 w-12">
+                <th className="py-3 px-2 w-12">
                   <input
                     type="checkbox"
                     checked={
@@ -637,18 +675,15 @@ export default function ProductsPage() {
                 <SortableHeader field="margin_percent" label="Margin" align="right" />
                 <SortableHeader field="availability" label="Availability" align="right" />
                 <SortableHeader field="warehouse" label="Warehouse" />
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="text-left py-3 px-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Source
                 </th>
                 <SortableHeader field="rating" label="Rating" />
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="text-left py-3 px-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Reviews
                 </th>
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Shipping
-                </th>
                 <SortableHeader field="status" label="Status" />
-                <th className="text-left py-3 px-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="text-left py-3 px-2 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -659,7 +694,7 @@ export default function ProductsPage() {
                   key={product.id}
                   className="border-b border-gray-200 last:border-0 hover:bg-gray-50 transition-colors"
                 >
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <input
                       type="checkbox"
                       checked={selectedIds.includes(product.id)}
@@ -667,21 +702,21 @@ export default function ProductsPage() {
                       className="w-4 h-4 rounded border-gray-300 text-gold-500 focus:ring-gold-500"
                     />
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                      <div className="w-14 h-14 rounded-md bg-gray-100 overflow-hidden flex-shrink-0">
                         <img
                           src={product.images?.[0] || '/placeholder.svg'}
                           alt={product.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div>
+                      <div className="max-w-[200px]">
                         <Link
                           href={`/product/${product.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-semibold text-[#1a1a2e] line-clamp-1 hover:text-gold-500"
+                          className="text-sm font-semibold text-[#1a1a2e] truncate block hover:text-gold-500"
                         >
                           {product.name}
                         </Link>
@@ -739,12 +774,12 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <span className="inline-block px-2.5 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">
                       {product.mi_categories?.name || 'Uncategorized'}
                     </span>
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     {isDigital(product) ? (
                       <span className="text-xs text-gray-400">N/A</span>
                     ) : (
@@ -761,7 +796,7 @@ export default function ProductsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     {editingPriceId === product.id ? (
                       <input
                         type="number"
@@ -789,7 +824,7 @@ export default function ProductsPage() {
                       </div>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <span
                       className={`text-sm font-semibold ${
                         Number(product.margin_percent || 0) >= 55
@@ -802,14 +837,14 @@ export default function ProductsPage() {
                       {Number(product.margin_percent || 0).toFixed(0)}%
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-right text-sm">
+                  <td className="py-4 px-2 text-right text-sm">
                     {product.status === 'active' ? (
                       <span className="text-emerald-600 font-medium">In Stock</span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     {isDigital(product) ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-100 text-violet-700 border border-violet-200 rounded-md text-xs font-semibold">
                         Digital
@@ -828,7 +863,7 @@ export default function ProductsPage() {
                       </span>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     {(() => {
                       const s = (product.supplier || '').toLowerCase();
                       if (s === 'cj' || s === 'cjdropshipping')
@@ -864,7 +899,7 @@ export default function ProductsPage() {
                       return <span className="text-xs text-gray-300">—</span>;
                     })()}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     {Number(product.average_rating || product.rating || 0) > 0 ? (
                       <div className="flex items-center gap-1">
                         <StarRating
@@ -879,47 +914,12 @@ export default function ProductsPage() {
                       <span className="text-xs text-gray-400 italic">No reviews</span>
                     )}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <span className="text-xs text-gray-500">
                       {product.review_count || 0}
                     </span>
                   </td>
-                  <td className="py-4 px-4">
-                    {isDigital(product) ? (
-                      <span className="text-xs text-gray-500">Instant</span>
-                    ) : editingShippingId === product.id ? (
-                      <input
-                        type="text"
-                        value={editShipping}
-                        onChange={(e) => setEditShipping(e.target.value)}
-                        onBlur={() => handleSaveShipping(product.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleSaveShipping(product.id);
-                          if (e.key === 'Escape') setEditingShippingId(null);
-                        }}
-                        autoFocus
-                        className="w-20 px-2 py-1 bg-white border border-gold-500 rounded text-xs text-[#1a1a2e] focus:outline-none"
-                        placeholder="e.g. 3-7"
-                      />
-                    ) : (
-                      <div className="flex items-center gap-1.5 group">
-                        <span className="text-xs text-gray-500">
-                          {product.shipping_estimate || product.shipping_days || '—'}
-                        </span>
-                        {savedShippingId === product.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        ) : (
-                          <button
-                            onClick={() => handleStartEditShipping(product)}
-                            className="p-0.5 opacity-0 group-hover:opacity-100 hover:bg-gray-100 rounded transition-all"
-                          >
-                            <Pencil className="w-3 h-3 text-gray-400" />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <div className="relative">
                       <button
                         onClick={() =>
@@ -943,7 +943,7 @@ export default function ProductsPage() {
                       )}
                     </div>
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-2">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setPolishProduct({
