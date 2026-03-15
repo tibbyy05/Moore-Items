@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createBrowserClient } from '@supabase/ssr';
+import { RichTextEditor } from '@/components/admin/RichTextEditor';
 
 const supabaseStorage = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -80,6 +81,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     shipping_days: '',
     processing_time: '',
     status: 'pending' as 'active' | 'pending' | 'hidden',
+    meta_title: '',
+    meta_description: '',
   });
 
   // Variant management
@@ -102,6 +105,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   // What's Included
   const [whatsIncluded, setWhatsIncluded] = useState<string[]>([]);
+
+  // AI Enrich
+  const AI_FIELDS = ['title', 'description', 'meta_title', 'meta_description', 'whats_included'] as const;
+  type AIField = typeof AI_FIELDS[number];
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<Record<string, any> | null>(null);
+  const [acceptedFields, setAcceptedFields] = useState<Set<AIField>>(new Set(AI_FIELDS));
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
 
   // CJ Sourcing state
   const [cjPidEdit, setCjPidEdit] = useState('');
@@ -143,6 +154,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             shipping_days: product.shipping_days || '',
             processing_time: product.processing_time || '',
             status: product.status || 'pending',
+            meta_title: product.meta_title || '',
+            meta_description: product.meta_description || '',
           });
           setIsDigital(
             !!product.digital_file_path ||
@@ -616,6 +629,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         processing_time: form.processing_time.trim() || null,
         whats_included: whatsIncluded.filter((s) => s.trim() !== ''),
         status: form.status,
+        meta_title: form.meta_title.trim() || null,
+        meta_description: form.meta_description.trim() || null,
       };
 
       if (isDigital) {
@@ -645,6 +660,64 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     } finally {
       setSaving(false);
       setUploadingFile(false);
+    }
+  };
+
+  const handleAiEnrich = async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch('/api/admin/ai-enrich-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: params.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'AI enrichment failed');
+        return;
+      }
+      if (data.enrichedError) {
+        toast.error(data.enrichedError);
+        return;
+      }
+      if (data.enriched) {
+        setAiSuggestions(data.enriched);
+        setAcceptedFields(new Set(AI_FIELDS));
+        setAiDrawerOpen(true);
+        toast.success('AI suggestions ready');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'AI enrichment failed');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const toggleField = (field: AIField) => {
+    setAcceptedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(field)) next.delete(field);
+      else next.add(field);
+      return next;
+    });
+  };
+
+  const AI_FIELD_LABELS: Record<AIField, string> = {
+    title: 'Title',
+    description: 'Description',
+    meta_title: 'Meta Title',
+    meta_description: 'Meta Description',
+    whats_included: "What's Included",
+  };
+
+  const getCurrentValue = (field: AIField): string => {
+    switch (field) {
+      case 'title': return form.name || '';
+      case 'description': return form.description || '';
+      case 'whats_included': return whatsIncluded.join(', ') || '';
+      case 'meta_title': return originalProduct?.meta_title || '';
+      case 'meta_description': return originalProduct?.meta_description || '';
+      default: return '';
     }
   };
 
@@ -691,7 +764,24 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl">
         {/* Basic Info */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">Basic Information</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-[#1a1a2e]">Basic Information</h2>
+            <button
+              type="button"
+              onClick={handleAiEnrich}
+              disabled={aiLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#c8a45e] text-[#c8a45e] text-sm font-medium rounded-lg hover:bg-[#c8a45e]/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {aiLoading ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Improving...
+                </>
+              ) : (
+                <>{'\u2728'} AI Improve</>
+              )}
+            </button>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -708,13 +798,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                name="description"
+              <RichTextEditor
                 value={form.description}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Describe the product..."
-                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40 resize-y"
+                onChange={(html) => setForm((prev) => ({ ...prev, description: html }))}
               />
             </div>
 
@@ -808,6 +894,47 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </label>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* SEO */}
+        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-[#1a1a2e] mb-4">SEO</h2>
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Meta Title</label>
+                <span className={`text-xs ${form.meta_title.length > 60 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {form.meta_title.length}/60
+                </span>
+              </div>
+              <input
+                type="text"
+                name="meta_title"
+                value={form.meta_title}
+                onChange={handleChange}
+                maxLength={60}
+                placeholder="SEO-optimized page title"
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700">Meta Description</label>
+                <span className={`text-xs ${form.meta_description.length > 155 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {form.meta_description.length}/155
+                </span>
+              </div>
+              <textarea
+                name="meta_description"
+                value={form.meta_description}
+                onChange={handleChange}
+                maxLength={155}
+                rows={2}
+                placeholder="Concise, conversion-focused description for search results"
+                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40 resize-none"
+              />
+            </div>
           </div>
         </div>
 
@@ -2012,6 +2139,149 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           imageUrl={previewImageUrl}
           onClose={() => setPreviewImageUrl(null)}
         />
+      )}
+
+      {/* AI Suggestions Drawer */}
+      {aiDrawerOpen && aiSuggestions && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 z-40"
+            onClick={() => setAiDrawerOpen(false)}
+          />
+          {/* Drawer */}
+          <div className="fixed right-0 top-0 h-full w-[480px] bg-white shadow-2xl z-50 flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-[#1a1a2e]">{'\u2728'} AI Suggestions</h3>
+              <button
+                type="button"
+                onClick={() => setAiDrawerOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable field cards */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              {AI_FIELDS.map((field) => {
+                const accepted = acceptedFields.has(field);
+                const suggested = aiSuggestions[field];
+                const current = getCurrentValue(field);
+
+                return (
+                  <div
+                    key={field}
+                    className={`rounded-xl border p-4 transition-all ${
+                      accepted
+                        ? 'border-l-4 border-l-green-500 border-t border-r border-b border-gray-200 bg-white'
+                        : 'border border-gray-200 bg-gray-50 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-sm font-bold text-[#1a1a2e]">
+                        {AI_FIELD_LABELS[field]}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!accepted) toggleField(field);
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            accepted
+                              ? 'text-green-600 bg-green-50'
+                              : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                          }`}
+                          title="Accept"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (accepted) toggleField(field);
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            !accepted
+                              ? 'text-gray-600 bg-gray-200'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'
+                          }`}
+                          title="Reject"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Current value */}
+                    <div className="mb-2">
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Current</span>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                        {current || <span className="italic">Empty</span>}
+                      </p>
+                    </div>
+
+                    {/* Suggested value */}
+                    <div>
+                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Suggested</span>
+                      <div className="mt-1 rounded-lg bg-gray-50 p-3 text-sm text-[#1a1a2e]">
+                        {field === 'description' ? (
+                          <div
+                            className="prose prose-sm max-w-none [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-2 [&_h2]:mb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1 [&_p]:text-sm [&_p]:my-1 [&_ul]:my-1 [&_li]:text-sm"
+                            dangerouslySetInnerHTML={{ __html: suggested || '' }}
+                          />
+                        ) : field === 'whats_included' ? (
+                          <ul className="list-disc list-inside space-y-0.5">
+                            {(Array.isArray(suggested) ? suggested : []).map((item: string, i: number) => (
+                              <li key={i} className="text-sm">{item}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm">{suggested || <span className="italic text-gray-400">No suggestion</span>}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Sticky footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-white">
+              <p className="text-xs text-gray-500 text-center mb-3">
+                {acceptedFields.size} of {AI_FIELDS.length} fields selected
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (acceptedFields.has('title') && aiSuggestions.title) {
+                    setForm((prev) => ({ ...prev, name: aiSuggestions.title }));
+                  }
+                  if (acceptedFields.has('description') && aiSuggestions.description) {
+                    setForm((prev) => ({ ...prev, description: aiSuggestions.description }));
+                  }
+                  if (acceptedFields.has('whats_included') && Array.isArray(aiSuggestions.whats_included)) {
+                    setWhatsIncluded(aiSuggestions.whats_included);
+                  }
+                  if (acceptedFields.has('meta_title') && aiSuggestions.meta_title) {
+                    setForm((prev) => ({ ...prev, meta_title: aiSuggestions.meta_title }));
+                  }
+                  if (acceptedFields.has('meta_description') && aiSuggestions.meta_description) {
+                    setForm((prev) => ({ ...prev, meta_description: aiSuggestions.meta_description }));
+                  }
+                  setAiDrawerOpen(false);
+                  toast.success('AI suggestions applied — review and save when ready.');
+                }}
+                disabled={acceptedFields.size === 0}
+                className="w-full px-4 py-2.5 bg-[#c8a45e] hover:bg-[#b8944e] text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Apply Accepted Fields
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </>
   );
