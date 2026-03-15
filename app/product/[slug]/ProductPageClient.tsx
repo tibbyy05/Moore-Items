@@ -592,7 +592,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       <Header />
       <CartDrawer />
 
-      <main className="bg-white">
+      <main className="bg-white overflow-x-hidden">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <nav className="flex items-center gap-1.5 text-sm mb-8">
             <Link href="/" className="text-warm-500 hover:text-gold-600 transition-colors">

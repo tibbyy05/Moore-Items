@@ -191,7 +191,7 @@ export function Header() {
       {showMobileMenu && (
         <div className="md:hidden fixed inset-0 z-50 bg-navy-950 text-white">
           <div className="absolute inset-0" onClick={() => setShowMobileMenu(false)} />
-          <div className="relative ml-auto h-full w-full bg-navy-900 p-6 animate-slide-in-right overflow-y-auto">
+          <div className="relative ml-auto h-full w-full bg-navy-900 p-6 animate-slide-in-right overflow-y-auto overflow-x-hidden">
             <div className="flex items-center justify-between mb-8">
               <span className="text-lg font-playfair text-gold-400">Menu</span>
               <button
@@ -227,6 +227,13 @@ export function Header() {
             </form>
 
             <nav className="space-y-6">
+              <Link
+                href="/"
+                className="block text-base font-semibold text-white hover:text-gold-400"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                Home
+              </Link>
               <Link
                 href={isAuthenticated ? '/account' : '/login'}
                 className="block text-base font-semibold text-white hover:text-gold-400"

@@ -68,7 +68,7 @@ export function SearchBar() {
   }, [query]);
 
   return (
-    <div ref={containerRef} className="relative w-[200px] sm:w-[260px] md:w-[320px] lg:w-[360px]">
+    <div ref={containerRef} className="relative w-full max-w-[200px] sm:max-w-[260px] md:max-w-[320px] lg:max-w-[360px] min-w-0">
       <div className="flex items-center gap-2 rounded-full border border-warm-200 bg-white px-3 py-2 shadow-sm focus-within:border-gold-400 focus-within:ring-2 focus-within:ring-gold-200/50">
         <Search className="w-4 h-4 text-warm-400" />
         <input
@@ -99,11 +99,11 @@ export function SearchBar() {
 
       <div
         className={cn(
-          'absolute left-0 right-0 mt-2 bg-white border border-warm-200 rounded-2xl shadow-xl overflow-hidden transition-all',
+          'absolute left-0 mt-2 bg-white border border-warm-200 rounded-2xl shadow-xl overflow-hidden transition-all z-[60] w-[min(360px,calc(100vw-2rem))]',
           isFocused || query ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
         )}
       >
-        <div className="max-h-[320px] overflow-y-auto">
+        <div className="max-h-[60vh] overflow-y-auto">
           {loading ? (
             <div className="p-4 text-sm text-warm-500">Searching...</div>
           ) : results.length === 0 && query ? (
