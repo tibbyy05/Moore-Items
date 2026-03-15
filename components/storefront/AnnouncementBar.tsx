@@ -12,7 +12,7 @@ const MESSAGES = [
 export function AnnouncementBar() {
   return (
     <div className="bg-[#0f1629] text-white text-[11px] sm:text-xs tracking-widest overflow-hidden">
-      <div className="h-9 flex items-center">
+      <div className="h-9 flex items-center overflow-hidden">
         <div className="flex animate-ticker whitespace-nowrap">
           {MESSAGES.map((message, index) => (
             <div key={`a-${index}`} className="flex items-center gap-3 px-6">

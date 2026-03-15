@@ -199,7 +199,7 @@ export default async function Home() {
 
         <CategoryShowcase />
 
-        <section className="bg-white py-16 sm:py-20">
+        <section className="bg-white py-16 sm:py-20 overflow-x-hidden">
           <div className="max-w-[1600px] mx-auto px-4">
             <div className="flex items-end justify-between mb-8">
               <div>

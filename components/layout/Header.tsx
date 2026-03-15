@@ -71,7 +71,7 @@ export function Header() {
   }, [showMobileMenu]);
 
   return (
-    <header className="sticky top-0 z-40">
+    <header className="sticky top-0 z-40 overflow-x-clip">
       <AnnouncementBar />
 
       <div
