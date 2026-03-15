@@ -4,8 +4,8 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 14, 2026 (Session 42)
-**Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch Meta ads**. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.**
+**Last Updated:** March 15, 2026 (Session 44)
+**Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch Meta ads**. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.** **Session 44 — Mobile UX overhaul (2 critical + 12 medium + 6 low fixes), shipping times fixed everywhere (dynamic warehouse-aware), availability pipeline hardened (checkout + stock sync + webhooks), order pipeline fixed (variant required, variant_info saved, race condition retries, failed fulfillment surfaced), Featured Product homepage section + admin picker, hero rotation slowed to 12s, CJPacket Ordinary confirmed for CN→US shipping.**
 
 ---
 
@@ -52,6 +52,8 @@ The core competitive advantage: zero platform fees, full automation from product
 
 **Major Milestone (Mar 9 — Session 35):** Admin dashboard upgrades + SEO fixes. (1) **Live Visitors Counter** — GA4 Realtime API integrated into admin dashboard. Google Analytics Data API enabled in Google Cloud Console, service account `mooreitems-analytics@mooreitems.iam.gserviceaccount.com` created with Viewer access to GA4 property (ID: 525869349). `app/api/admin/realtime-visitors/route.ts` calls `runRealtimeReport` for `activeUsers` metric. Service account JSON key stored in `mi_settings` table (key: `ga4_service_account_key`) instead of env var — Lambda 4KB env var limit was exceeded when stored in Netlify; moving to Supabase fixed the deploy error. `GA4_PROPERTY_ID=525869349` remains as env var. Dashboard polls every 60 seconds with green pulsing dot indicator. (2) **Admin Dashboard stat card overhaul** — Conversion Rate card removed (was always 0.0% — no pageView data in DB to divide against). Replaced with **Needs Fulfillment**: queries `mi_orders` where `payment_status='paid' AND fulfillment_status='unfulfilled'`, turns red when count > 0, links to `/admin/orders`. **Needs Polish** card updated: now shows price drift count as subtitle (⚠ N price drifted / "All prices stable"), links to `/admin/catalog-health`. Both new counts added to dashboard API `Promise.all` as `pendingFulfillment` and `priceDriftCount`. `StatCard.tsx` already supported `subtitle` and `React.ReactNode` values. (3) **Soft 404 fixes** — Google Search Console flagged 14 soft 404s (inactive/hidden product pages returning HTTP 200 with empty content). Fixed `app/product/[slug]/page.tsx`: both `generateMetadata` and `ProductPage` now call `notFound()` from `next/navigation` when product is missing or `status !== 'active'`. Search Console Validate Fix submitted. (4) **Sitemap www → non-www** — entire sitemap was serving `https://www.mooreitems.com/` URLs despite canonical domain being `https://mooreitems.com/`. Root cause: `SITE_URL` / `BASE_URL` constants had www prefix. Fixed across 7 files: `lib/seo/constants.ts`, `app/sitemap.xml/route.ts`, `app/robots.ts`, `app/layout.tsx` (metadataBase), `app/api/feeds/google-merchant/route.ts`, `app/api/webhooks/stripe/route.ts` (abandoned cart URL), `lib/email/templates/new-order-admin.ts`. Bonus fix: abandoned cart recovery emails and admin order email links were also pointing to www URLs. Sitemap resubmitted to Search Console — all 2,583 pages now indexed with correct non-www URLs.
 
+**Major Milestone (Mar 15 — Session 44):** Comprehensive mobile UX overhaul + shipping/availability/order pipeline hardening + Featured Product homepage section. **(1) Mobile UX Overhaul** — full audit found 2 critical, 12 medium, 6 low issues. Root-level horizontal overflow fixed (html/body overflow-x-hidden + 3 source causes: AnnouncementBar ticker, Header sticky, Best Sellers carousel). Product page image constrained to h-[40vh], overflow-x-hidden on main + content container, min-w-0 on gallery flex children. Header cart icon always visible (flex-shrink-0), search bar max-w-[160px] cap. QuickViewModal image constrained to max-h-[45vh] on mobile. ShoppingAssistant FAB moved to bottom-24 on mobile with z-30 to avoid sticky bar overlap. Email popup centered with mx-4, max-w-md on mobile. All touch targets increased to 44px (hamburger, cart drawer close, cart remove, back button). Safe-area padding added to mobile menu for notched phones. View All buttons visible on mobile, swipe hints added to carousels. Order confirmation flex-wrap on item rows. Breadcrumb href fixed from "\" to "/". **(2) Shipping Times Fixed Everywhere** — product cards now read warehouse field dynamically (both ProductCard files). Cart summary warehouse detection fixed to use warehouse field (not warehouse_status) with dynamic US/CN/mixed/digital banners. Order confirmation page uses dynamic delivery estimate from shipping_days → warehouse fallback. Order emails use dynamic delivery estimate matching product shipping_days. **(3) Availability Pipeline Hardened** — checkout layer 2 removed stale product-level stock_count check, added variant is_active check. Checkout layer 3 CJ API errors now cross-check DB stock before blocking (DB is source of truth). Stock sync product-level stock_count updated from variant totals after each batch. Structured error logging for persistent CJ API failures. Webhook reconcileProductStatus toggles is_active in sync with stock_count. **(4) Order Pipeline Fixed** — variant required: first available variant auto-selected on page load, inline error blocks add-to-cart if no variant selected, server-side guard in checkout rejects orders without variant_id. variant_info now written to mi_order_items at checkout (color · size). Order email race condition fixed with 3-attempt retry loop (2s delays). Order email variable shadowing bug fixed. Dynamic delivery estimates in order emails. Order confirmation shows variant color/size. Fulfillment race condition retry loop added. Silent fulfillment failures now set fulfillment_status='failed' (surfaced in admin). Admin orders Failed tab with red badge and retry fulfillment button. Stripe test mode skips CJ fulfillment and emails when event.livemode===false. CJ shipping method changed from 'CJPacket' to 'CJPacket Ordinary' for CN warehouse orders. CJ default shipping rule configured in CJ dashboard (Cost Priority, CJPacket Ordinary). **(5) Featured Product Section** — new full-width navy section on homepage below hero. Two-column layout: left = large product image, right = gold "Featured This Week" label, Playfair name, star rating, price with savings badge, benefit bullets (HTML-stripped from description), Shop Now + Add to Cart buttons. Admin picker at /admin/featured-product with live search, toast feedback, remove button. Stored in mi_settings key: featured_product_id. Featured Product link added to admin sidebar under STORE section. **(6) Hero Rotation** — HeroGrid.tsx interval changed 4000ms → 12000ms, HeroSlider.tsx changed 6000ms → 12000ms. **(7) Digital Downloads** — category image added: public/images/categories/digital-downloads.jpg.
+
 **Pre-Ads Status (updated Session 27):**
 - ✅ Cookie consent / GDPR banner — live (Session 27)
 - ✅ Admin refund workflow — built and tested (Session 27)
@@ -69,8 +71,8 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ Supabase database with 14+ tables (all prefixed `mi_`)
 - ✅ CJ Dropshipping API integration (auth with globalThis token caching, product sync, pricing engine)
 - ✅ Stripe checkout integration (hosted Checkout Sessions, webhooks) — **LIVE MODE**
-- ✅ Order fulfillment pipeline (Stripe webhook → CJ createOrderV2 with **warehouse-aware routing**: USPS+ for US, CJPacket for CN, tracking sync)
-- ✅ **Smart fulfillment routing** — CJ US products → USPS+, CJ CN products → CJPacket, digital products → instant delivery, mixed orders handled correctly
+- ✅ Order fulfillment pipeline (Stripe webhook → CJ createOrderV2 with **warehouse-aware routing**: USPS+ for US, CJPacket Ordinary for CN, tracking sync)
+- ✅ **Smart fulfillment routing** — CJ US products → USPS+, CJ CN products → CJPacket Ordinary, digital products → instant delivery, mixed orders handled correctly
 - ✅ SendGrid email integration (order confirmation emails, auth emails via SMTP)
 - ✅ Shared React providers (AuthProvider, CategoriesProvider) — eliminates duplicate API calls
 - ✅ **Git version control** — GitHub repo at `tibbyy05/Moore-Items`
@@ -108,7 +110,7 @@ The core competitive advantage: zero platform fees, full automation from product
 **China Warehouse Expansion (NEW — Session 20):**
 - ✅ **Dual-warehouse product catalog** — ~2,439 US warehouse products + ~71 CN warehouse products live across 9 categories
 - ✅ **CN pricing config** — `lib/config/pricing.ts` exports `CN_PRICING_CONFIG` (2.2x markup, 45% min margin, $5 shipping estimate) and `getPricingConfig(warehouse)` helper
-- ✅ **Warehouse-aware CJ fulfillment** — `lib/cj/fulfill-order.ts` routes each product to its correct warehouse: US → `USPS+`/`wareHouseCountryCode: 'US'`, CN → `CJPacket`/`wareHouseCountryCode: 'CN'`; per-product routing in mixed orders
+- ✅ **Warehouse-aware CJ fulfillment** — `lib/cj/fulfill-order.ts` routes each product to its correct warehouse: US → `USPS+`/`wareHouseCountryCode: 'US'`, CN → `CJPacket Ordinary`/`wareHouseCountryCode: 'CN'`; per-product routing in mixed orders
 - ✅ **Dual-warehouse webhook stock sync** — `app/api/webhooks/cj/route.ts` tracks stock per country code (US + CN), matches against product's actual warehouse; US products use US stock, CN products use CN stock
 - ✅ **CN import pipeline** — `scripts/import-cn-products.js` imports CN warehouse products from CJ with CN-specific pricing, shipping estimates (7-15 days), and margin thresholds (45%)
 - ✅ **Product card CN badge** — amber Globe icon with "Delivered in 7-15 days" for CN products (green Truck "Delivered in 2-5 days" for US unchanged)
@@ -191,7 +193,7 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **`force-dynamic` rendering** on all 8 storefront pages — prevents stale pricing from build cache
 
 **Admin Dashboard (Cleaned Up — Feb 24, Fixed — Feb 28):**
-- ✅ **Sidebar reorganized** — grouped into STORE (Dashboard, Products, Add Product, Pricing), OPERATIONS (Orders, Customers), TOOLS (US Stock), COMING SOON (Analytics Beta, Landing Pages, Ad Campaigns greyed out with badges)
+- ✅ **Sidebar reorganized** — grouped into STORE (Dashboard, Products, Import Products, Hero Images, Featured Product), OPERATIONS (Orders, Customers, Promo Codes, Landing Pages), TOOLS (Catalog Health), SETTINGS (Pricing, Shipping), COMING SOON (Analytics Beta, Ad Campaigns greyed out with badges)
 - ✅ **Dashboard** — real data only, fake change percentages removed, "Needs Polish" stat card (violet), Quick Actions row (Add Product, Reprice All with confirmation, View Store)
 - ✅ **Dashboard RLS fix** — uses admin service role client via `/api/admin/dashboard` to bypass RLS and show all orders/customers (Session 14)
 - ✅ **Dashboard time filter** — dropdown: Today, This Week, Last Week, This Month, Last Month, This Quarter, All Time (Session 14)
@@ -349,7 +351,7 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Category description collapse** — truncated to 120 chars with "Read more" toggle in gold; full text in DOM for SEO; extracted to `components/storefront/CategoryDescription.tsx` client component (Session 34)
 
 **Storefront Pages:**
-- ✅ Homepage: Split hero, 12-category showcase (4×3 grid, name-only cards with images), best sellers carousel, **social proof stats section** (3,000+ Products, 39,000+ Reviews, 2-5 Days, 100% Secure with gold icons), value prop banner, new arrivals grid, deals grid with savings badges, newsletter signup, recently viewed
+- ✅ Homepage: Split hero, **Featured This Week section** (full-width navy, two-column product spotlight, admin-configurable via mi_settings — Session 44), 12-category showcase (4×3 grid, name-only cards with images), best sellers carousel, **social proof stats section** (3,000+ Products, 39,000+ Reviews, 2-5 Days, 100% Secure with gold icons), value prop banner, new arrivals grid, deals grid with savings badges, newsletter signup, recently viewed
 - ✅ Shop All with category/subcategory pill filters (12 categories), **URL-synced filters**
 - ✅ Category pages with subcategory tags (12 categories)
 - ✅ Trending page (sorted by review_count — most popular)
@@ -386,7 +388,7 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ SVG favicon (gold "M" on navy circle)
 - ✅ Animated scrolling ticker banner (replaced static announcement bar)
 - ✅ Footer: 4-column navy layout, all 12 category links + policy links, payment icons, "Powered by Ai-genda.com"
-- ✅ Mobile responsive: hamburger menu drawer (12 categories), bottom sheet filters, full-screen assistant, accordion footer, proper touch targets
+- ✅ Mobile responsive: hamburger menu drawer (12 categories), bottom sheet filters, full-screen assistant, accordion footer, proper touch targets, **full mobile UX audit completed (Session 44)** — 44px touch targets, safe-area padding, overflow-x fixes, constrained images, swipe hints
 - ✅ Product badges removed (no NEW/SALE/US SHIP overlays — cleaner look)
 - ✅ Image gallery with lightbox (fullscreen, keyboard arrows, Escape close, image counter)
 - ✅ Category images compressed (all 12 at ~100-270KB each, down from 6-9MB originals)
@@ -409,9 +411,9 @@ The core competitive advantage: zero platform fees, full automation from product
 - ⚠️ **Emails going to spam** — normal for new sender, improves with sending volume and reputation
 - ⚠️ **SendGrid free tier delay** — ~7 minute delivery delay, improves with sender reputation
 
-**Order Pipeline:**
+**Order Pipeline (Updated Session 44):**
 - ✅ Stripe webhook → order status update → smart fulfillment routing
-- ✅ **CJ products** → CJ createOrderV2 (USPS+, US warehouse)
+- ✅ **CJ products** → CJ createOrderV2 (USPS+ for US, CJPacket Ordinary for CN)
 - ✅ **Digital products** → instant delivery (fulfillment_status: 'delivered')
 - ✅ **Mixed orders** → CJ items fulfilled, digital items delivered, note added
 - ✅ **Webhook backup** — confirmation page updates payment status from Stripe if webhook missed
@@ -424,6 +426,13 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Debug logging** — CJ API payloads and responses logged in fulfill-order.ts (Session 13)
 - ✅ **Pipeline validated end-to-end** — Stripe → CJ → manual payment → shipping confirmed (Session 13)
 - ✅ **CJ stock validation at checkout** — verifies CJ product availability before creating Stripe session, blocks delisted products (Session 15)
+- ✅ **Variant required everywhere** — first available variant auto-selected on page load, inline error blocks add-to-cart without variant, server-side guard rejects orders without variant_id (Session 44)
+- ✅ **variant_info saved** — color · size written to mi_order_items at checkout for order tracking (Session 44)
+- ✅ **Order email race condition fixed** — 3-attempt retry loop with 2s delays for Supabase eventual consistency (Session 44)
+- ✅ **Fulfillment race condition fixed** — same retry loop added to fulfill-order.ts (Session 44)
+- ✅ **Failed fulfillment surfaced** — fulfillment_status set to 'failed' (not just logged), admin Failed tab with red badge + retry button (Session 44)
+- ✅ **Stripe test mode safe** — CJ fulfillment and emails skipped when event.livemode===false (Session 44)
+- ✅ **CJPacket Ordinary** — confirmed CN→US shipping method; CJ default shipping rule configured (Cost Priority, CJPacket Ordinary) (Session 44)
 
 **Performance Optimizations:**
 - ✅ **AuthProvider** — single `getUser()` + `mi_customers` fetch, shared via React Context (was 4+ duplicate calls)
@@ -805,7 +814,7 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 | `mi_customer_addresses` | Saved shipping addresses — RLS enabled |
 | `mi_analytics_events` | Page views, add-to-cart, purchases |
 | `mi_admin_profiles` | Admin users extending auth.users |
-| `mi_settings` | Persistent key-value store — CJ token cache (`cj_token`), pricing config (`pricing_config`) |
+| `mi_settings` | Persistent key-value store — CJ token cache (`cj_token`), pricing config (`pricing_config`), featured product (`featured_product_id`), GA4 service account key (`ga4_service_account_key`) |
 | `mi_category_pricing` | Per-category pricing rules — min_price, target_margin, markup_override per category slug |
 
 ### RLS Policies Summary
@@ -907,7 +916,7 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 - Endpoint: `POST /shopping/order/createOrderV2`
 - **Warehouse-aware routing (Session 20):**
   - US products: `fromCountryCode: 'US'`, `logisticName: 'USPS+'`, `wareHouseCountryCode: 'US'`
-  - CN products: `fromCountryCode: 'CN'`, `logisticName: 'CJPacket'`, `wareHouseCountryCode: 'CN'`
+  - CN products: `fromCountryCode: 'CN'`, `logisticName: 'CJPacket Ordinary'`, `wareHouseCountryCode: 'CN'`
   - Mixed orders: each product specifies its own `wareHouseCountryCode` — CJ splits shipments automatically
 - ✅ **Pay-per-order supported** — PayPal, credit card, Stripe, Klarna available at checkout (no wallet pre-funding needed)
 - **Workflow:** API creates order in CJ → order appears in CJ dashboard → pay with credit card in dashboard → CJ ships
@@ -1026,6 +1035,8 @@ Per product:
 3. **Live Preview:** Admin pricing page calculates retail/margin client-side from current form state
 
 **Note:** Repricing skips manual/digital products (cj_price = 0). Digital products ARE subject to category min price floors currently (known issue — Kids Printable Activity Bundle at $7.99 instead of original $4.99).
+
+**Auto-Reprice (Session 43):** Stock sync background function now auto-corrects CJ cost drift <25% using `CEIL((new_cj_price + COALESCE(shipping_cost, 3.00)) * 2.0) - 0.01`. Drift >=25% is flagged for manual review with `recommendedPrice` in `price_drift_details`.
 
 ### Shipping Cost Calculation (Customer-Facing)
 ```
@@ -1709,7 +1720,7 @@ AUTO_IMPORT_SECRET=mooreimp2026
 80. **Supplements stay hidden regardless of audit** — liability decision (Session 16) overrides AI recommendation to reactivate; no quality control on dropshipped ingestibles (Session 19)
 81. **Audit before building** — full code + database audit before CN expansion revealed system was already 80% CN-ready, reduced estimated work from 7-9 sessions to 1 session (Session 20)
 82. **Separate pricing config per warehouse over single config** — CN needs higher markup (2.2x vs 2.0x) and higher shipping estimate ($5 vs $3) to cover longer shipping risk and international logistics costs (Session 20)
-83. **CJPacket over ePacket for CN logistics** — CJ's own logistics has better integration, decent speed (7-15 days), and reliable tracking for US-bound shipments (Session 20)
+83. **CJPacket Ordinary over ePacket for CN logistics** — CJ's own logistics has better integration, decent speed (7-15 days), and reliable tracking for US-bound shipments (Session 20). Updated from 'CJPacket' to 'CJPacket Ordinary' — the correct method name (Session 44). CJ default shipping rule configured in dashboard (Cost Priority, CJPacket Ordinary)
 84. **Per-product wareHouseCountryCode over per-order** — allows mixed US+CN orders where each product specifies its own warehouse; CJ handles shipment splitting automatically (Session 20)
 85. **Dual-country stock tracking in webhooks** — collect all stock data (US + CN), then match to product's warehouse; future-proofs for multi-warehouse products (Session 20)
 86. **CN pricing: 2.2x markup, 45% min margin** — higher than US (2.0x, 40%) to compensate for longer delivery, higher return risk, and more expensive international shipping (Session 20)
@@ -2498,7 +2509,7 @@ AUTO_IMPORT_SECRET=mooreimp2026
 - **CJ fulfillment routing (lib/cj/fulfill-order.ts):**
   - Added product warehouse lookup via `warehouseMap`
   - `fromCountryCode`: CN for CN-only orders, US for US/mixed
-  - `logisticName`: CJPacket for CN, USPS+ for US
+  - `logisticName`: CJPacket Ordinary for CN, USPS+ for US
   - `wareHouseCountryCode`: per-product routing from actual warehouse data
   - Mixed orders: each product specifies its own warehouse
 - **Webhook handler (app/api/webhooks/cj/route.ts):**
@@ -4004,3 +4015,107 @@ Rewrote `app/api/admin/products/upload-video/route.ts`:
 - Next.js 404s on API routes can indicate a silent compile/runtime error inside the route file — check dev server terminal, not just the browser console
 - Tiptap SSR error fixed with `immediatelyRender: false` in `useEditor` config
 - AI enrichment prompt should teach Claude how to reason about keywords, never hardcode product-specific terms
+
+---
+
+#### Session 43 — Catalog Health Cleanup & Auto-Reprice (March 15, 2026)
+
+**Recently Completed:**
+
+- ✅ 10 missing-category products (null `category_id`) AI-categorized using `scripts/ai-categorize-remaining.js` — Storage & Organization (2), Home & Furniture (3), Garden & Outdoor (2), Tools & Hardware (2), Kitchen & Dining (1)
+- ✅ 2 placeholder-price products hidden: "Gray Hardtop Gazebo with Steel Roof and Curtains" (set `status: 'hidden'`), "Red Faux Leather 3-Piece Sofa Set" (already hidden)
+- ✅ 24 price-drift-flagged products manually repriced using `CEIL((new_cj_price + COALESCE(shipping_cost, 3.00)) * 2.0) - 0.01` formula — updated `cj_price`, `retail_price`, cleared `price_drift_flagged`
+- ✅ Category `product_count` refreshed across all 13 categories — old counts were stale (included non-active products), now reflect only `status=active`
+- ✅ Daily briefing stuck order query fixed (`netlify/functions/daily-briefing-background.mts`): `fulfillment_status` value corrected from `'unfulfilled'` → `'pending'`, time window changed from 24 hours → 3 days
+- ✅ Confirmed 0 actual orphaned products (products with `category_id` pointing to nonexistent category) — health check orphan detection may be a false positive; needs audit
+- ✅ Auto-reprice logic added to stock sync (`netlify/functions/stock-sync-background.mts`): drift <25% auto-applies `CEIL((new_cj_price + shipping) * 2.0) - 0.01` and updates `cj_price`, `retail_price`, clears flag; drift >=25% flags for manual review with `recommendedPrice` stored in `price_drift_details`
+
+**Infrastructure Patterns Established:**
+
+- Stock sync auto-reprice: CJ cost drift <25% is auto-corrected during hourly stock sync using `CEIL((new_cj_price + COALESCE(shipping_cost, 3.00)) * 2.0) - 0.01`; drift >=25% is flagged with `recommendedPrice` in `price_drift_details` for manual review via admin health check
+
+**Key Learnings This Session**
+
+- `mi_products` uses `status` column (`'active'`, `'hidden'`, `'pending'`, `'out_of_stock'`) — there is no `is_active` boolean column
+- `mi_orders` has no generic `status` column — use `payment_status` (e.g., `'paid'`) and `fulfillment_status` (e.g., `'pending'`, `'fulfilled'`) separately
+- `scripts/fix-prices.js` uses hardcoded 2.0× markup from static `PRICING_CONFIG`, not the DB pricing config (which has 1.6× US / 1.8× CN) — do not run for targeted repricing; use the drift reprice formula directly
+- Health check "price drift" is about CJ supplier cost changes (variant `cj_price` vs current CJ API price), not markup formula drift — the 975 "drifted" products from comparing against DB config multipliers were false positives
+
+---
+
+#### Session 44 — Mobile UX Overhaul + Pipeline Hardening + Featured Product (March 15, 2026)
+
+**Mobile UX Overhaul (2 critical, 12 medium, 6 low fixes):**
+
+- ✅ Root-level horizontal overflow fixed — html/body overflow-x-hidden + 3 source causes: AnnouncementBar ticker, Header sticky positioning, Best Sellers carousel
+- ✅ Product page: image constrained to h-[40vh], overflow-x-hidden on main + content container, min-w-0 on gallery flex children
+- ✅ Header: cart icon always visible (flex-shrink-0), search bar max-w-[160px] cap on mobile
+- ✅ QuickViewModal: image constrained to max-h-[45vh] on mobile
+- ✅ ShoppingAssistant FAB: moved to bottom-24 on mobile, z-30 to avoid sticky bar overlap
+- ✅ Email popup: centered with mx-4, max-w-md on mobile
+- ✅ All touch targets increased to 44px minimum (hamburger, cart drawer close, cart remove, back button)
+- ✅ Safe-area padding added to mobile menu for notched phones (env(safe-area-inset-bottom))
+- ✅ View All buttons visible on mobile, swipe hint added to carousels ("Swipe to see more →")
+- ✅ Order confirmation: flex-wrap on item rows for narrow screens
+- ✅ Breadcrumb href fixed from "\" to "/"
+
+**Shipping Times Fixed Everywhere:**
+
+- ✅ Product cards (both ProductCard files): now read warehouse field dynamically instead of hardcoded strings
+- ✅ Cart summary: warehouse detection fixed to use `warehouse` field (not `warehouse_status`) with dynamic US/CN/mixed/digital banners
+- ✅ Order confirmation page: dynamic delivery estimate from shipping_days → warehouse fallback
+- ✅ Order emails: dynamic delivery estimate matching product shipping_days
+- ✅ Featured product section: delivery badge removed (not a selling point for featured spotlight)
+
+**Availability Pipeline Hardened:**
+
+- ✅ Checkout layer 2: removed stale product-level stock_count check, added variant `is_active` check
+- ✅ Checkout layer 3: CJ API errors now cross-check DB stock before blocking — DB is source of truth
+- ✅ Stock sync: product-level stock_count updated from variant totals after each batch
+- ✅ Stock sync: structured error logging for persistent CJ API failures
+- ✅ Webhook reconcileProductStatus: `is_active` toggled in sync with stock_count
+- ✅ CJ API confirmed: returns 200 for live products even when website/API desync occurs
+
+**Order Pipeline Fixed:**
+
+- ✅ Variant required: first available variant auto-selected on page load
+- ✅ Variant required: inline error blocks add-to-cart if no variant selected
+- ✅ Variant required: server-side guard in checkout rejects orders without variant_id
+- ✅ `variant_info` now written to mi_order_items at checkout (color · size)
+- ✅ Order email race condition: 3-attempt retry loop with 2s delays (was returning empty data)
+- ✅ Order email variable shadowing bug fixed (typeof rawItems pattern replaced with explicit type)
+- ✅ Order email: dynamic delivery estimate using shipping_days from mi_products
+- ✅ Order confirmation page: shows variant color/size, dynamic delivery estimate
+- ✅ Fulfillment race condition: same retry loop added to fulfill-order.ts
+- ✅ Silent fulfillment failures: fulfillment_status now set to 'failed' (not just logged)
+- ✅ Admin orders: Failed tab added with red badge, retry fulfillment button
+- ✅ Stripe test mode: CJ fulfillment and emails skipped when event.livemode === false
+- ✅ CJ shipping method: 'CJPacket' → 'CJPacket Ordinary' for CN warehouse orders
+- ✅ CJ default shipping rule configured in CJ dashboard (Cost Priority, CJPacket Ordinary)
+
+**Featured Product Section (NEW):**
+
+- ✅ `components/storefront/FeaturedProduct.tsx` — full-width navy (#0f1629) section on homepage below hero
+- ✅ Two-column layout: left = large product image, right = gold label, Playfair heading, star rating, price with savings badge, benefit bullets (HTML-stripped from description), urgency signal, Shop Now + Add to Cart CTAs
+- ✅ `app/api/featured-product/route.ts` — public GET with 5-min revalidation cache
+- ✅ `app/api/admin/featured-product/route.ts` — GET/POST/DELETE with requireAdmin() guard
+- ✅ `app/admin/featured-product/page.tsx` — admin picker with current product display, live search, click-to-select, remove button, toast feedback
+- ✅ Stored in mi_settings key: `featured_product_id` (value: `{ id: uuid }`)
+- ✅ Featured Product link added to admin sidebar under STORE section (Crown icon)
+- ✅ Component returns null when no featured product set (renders nothing)
+
+**Hero Rotation:**
+
+- ✅ HeroGrid.tsx interval: 4000ms → 12000ms (12 seconds)
+- ✅ HeroSlider.tsx interval: 6000ms → 12000ms (12 seconds)
+
+**Digital Downloads:**
+
+- ✅ Category image added: `public/images/categories/digital-downloads.jpg`
+
+**Key Learnings This Session:**
+
+- CJPacket Ordinary is the correct CN→US shipping method (not plain CJPacket) — configured as CJ dashboard default rule
+- DB is the source of truth for stock, not CJ API — CJ returns 200 for live products even during desync
+- Order emails need retry loops because Supabase writes from Stripe webhook may not be immediately consistent
+- `warehouse_status` and `warehouse` are different fields — cart/shipping logic should use `warehouse` (the actual product field), not `warehouse_status` (a derived display field)

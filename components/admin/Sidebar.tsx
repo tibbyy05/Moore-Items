@@ -19,6 +19,7 @@ import {
   Activity,
   Sparkles,
   ImageIcon,
+  Crown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +50,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/products', label: 'Products', icon: Package, count: null },
       { href: '/admin/catalog/import', label: 'Import Products', icon: Sparkles, count: null },
       { href: '/admin/hero-images', label: 'Hero Images', icon: ImageIcon, count: null },
+      { href: '/admin/featured-product', label: 'Featured Product', icon: Crown, count: null },
     ],
   },
   {

@@ -104,7 +104,7 @@ export function HeroGrid({ pool }: { pool: HeroProduct[] }) {
             });
             setFadingSlot(null);
           }, 500);
-        }, 4000);
+        }, 12000);
         timers.push(interval);
       };
 

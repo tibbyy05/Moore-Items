@@ -11,6 +11,7 @@ import { RecentlyViewed } from '@/components/storefront/RecentlyViewed';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { CategoryShowcase } from '@/components/storefront/CategoryShowcase';
 import { HeroGrid } from '@/components/storefront/HeroGrid';
+import { FeaturedProduct } from '@/components/storefront/FeaturedProduct';
 
 export const dynamic = 'force-dynamic';
 
@@ -196,6 +197,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <FeaturedProduct />
 
         <CategoryShowcase />
 
