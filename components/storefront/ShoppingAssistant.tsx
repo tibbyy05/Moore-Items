@@ -140,7 +140,7 @@ export function ShoppingAssistant() {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          'fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-xl flex items-center justify-center',
+          'fixed bottom-24 right-4 z-30 md:bottom-6 md:right-6 md:z-40 w-14 h-14 rounded-full shadow-xl flex items-center justify-center',
           'bg-[#c8a45e] text-white transition-transform hover:scale-105',
           shouldPulse && !open && 'animate-pulse'
         )}
@@ -163,7 +163,7 @@ export function ShoppingAssistant() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="sm:hidden p-1 rounded-full hover:bg-white/10"
+              className="sm:hidden p-3 rounded-full hover:bg-white/10"
               aria-label="Close assistant"
             >
               <ArrowLeft className="w-4 h-4" />

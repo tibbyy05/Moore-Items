@@ -210,7 +210,7 @@ export default async function Home() {
                   Most loved by our customers
                 </h2>
               </div>
-              <CustomButton variant="secondary" asChild className="hidden sm:inline-flex">
+              <CustomButton variant="secondary" asChild className="inline-flex">
                 <Link href="/shop?sort=best-selling">View All</Link>
               </CustomButton>
             </div>
@@ -224,6 +224,7 @@ export default async function Home() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-warm-400 text-center mt-1 sm:hidden">Swipe to see more &rarr;</p>
           </div>
         </section>
 
@@ -238,7 +239,7 @@ export default async function Home() {
                   The latest additions to our collection
                 </h2>
               </div>
-              <CustomButton variant="secondary" asChild className="hidden sm:inline-flex">
+              <CustomButton variant="secondary" asChild className="inline-flex">
                 <Link href="/new-arrivals">View All</Link>
               </CustomButton>
             </div>
@@ -261,7 +262,7 @@ export default async function Home() {
                   Save big on these limited-time offers
                 </h2>
               </div>
-              <CustomButton variant="secondary" asChild className="hidden sm:inline-flex">
+              <CustomButton variant="secondary" asChild className="inline-flex">
                 <Link href="/deals">View All Deals</Link>
               </CustomButton>
             </div>

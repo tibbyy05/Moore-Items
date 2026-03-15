@@ -286,7 +286,7 @@ export default function CartPage() {
                         </div>
                         <button
                           onClick={() => removeItem(item.productId, item.variantId ?? undefined)}
-                          className="p-2 rounded-lg hover:bg-warm-50 text-warm-400 hover:text-danger transition-colors"
+                          className="p-3 rounded-lg hover:bg-warm-50 text-warm-400 hover:text-danger transition-colors"
                           aria-label="Remove item"
                         >
                           <X className="w-4 h-4" />

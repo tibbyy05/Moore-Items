@@ -592,7 +592,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       <Header />
       <CartDrawer />
 
-      <main className="bg-white overflow-x-hidden">
+      <main className="bg-white overflow-x-hidden pb-20 md:pb-0">
         <div className="max-w-7xl mx-auto px-4 py-8">
           <nav className="flex items-center gap-1.5 text-sm mb-8">
             <Link href="/" className="text-warm-500 hover:text-gold-600 transition-colors">
@@ -609,7 +609,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
             <span className="text-warm-700 break-words">{product.name}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 mb-16">
+          <div className="grid lg:grid-cols-2 gap-5 lg:gap-12 mb-16">
             <ImageGallery
               images={product.images}
               productName={product.name}

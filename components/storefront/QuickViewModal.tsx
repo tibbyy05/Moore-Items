@@ -124,12 +124,12 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
         </button>
 
         <div className="grid md:grid-cols-2 gap-0">
-          <div className="relative aspect-square bg-warm-50">
+          <div className="relative max-h-[45vh] md:max-h-none aspect-auto md:aspect-square bg-warm-50">
             <Image
               src={product.images[0] || '/placeholder.svg'}
               alt={product.name}
               fill
-              className="object-cover"
+              className="object-contain md:object-cover"
               sizes="(max-width: 768px) 100vw, 50vw"
               unoptimized
             />

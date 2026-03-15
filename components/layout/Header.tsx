@@ -84,7 +84,7 @@ export function Header() {
           <div className="flex items-center justify-between h-20 sm:h-24">
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-2 -ml-2"
+              className="md:hidden p-3 -ml-3"
               aria-label="Menu"
             >
               {showMobileMenu ? (
@@ -191,7 +191,7 @@ export function Header() {
       {showMobileMenu && (
         <div className="md:hidden fixed inset-0 z-50 bg-navy-950 text-white">
           <div className="absolute inset-0" onClick={() => setShowMobileMenu(false)} />
-          <div className="relative ml-auto h-full w-full bg-navy-900 p-6 animate-slide-in-right overflow-y-auto overflow-x-hidden">
+          <div className="relative ml-auto h-full w-full bg-navy-900 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] animate-slide-in-right overflow-y-auto overflow-x-hidden">
             <div className="flex items-center justify-between mb-8">
               <span className="text-lg font-playfair text-gold-400">Menu</span>
               <button

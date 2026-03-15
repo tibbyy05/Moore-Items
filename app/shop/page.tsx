@@ -252,7 +252,7 @@ export default function ShopPage() {
   };
 
   const tagButtonClass = (isActive: boolean) =>
-    `px-3 py-1.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
+    `px-3 py-2.5 rounded-full text-xs font-semibold transition-colors whitespace-nowrap ${
       isActive
         ? 'bg-gold-500 text-white'
         : 'bg-warm-100 text-warm-700 hover:bg-warm-200'

@@ -49,7 +49,7 @@ export function CartDrawer() {
           </h2>
           <button
             onClick={closeCart}
-            className="p-2 rounded-lg hover:bg-warm-50 transition-colors"
+            className="p-3 rounded-lg hover:bg-warm-50 transition-colors"
             aria-label="Close cart"
           >
             <X className="w-5 h-5 text-warm-500" />
@@ -102,7 +102,7 @@ export function CartDrawer() {
 
               <CustomButton variant="secondary" size="lg" className="w-full" asChild>
                 <Link href="/cart" onClick={closeCart}>
-                  Checkout
+                  Checkout &rarr;
                 </Link>
               </CustomButton>
             </div>

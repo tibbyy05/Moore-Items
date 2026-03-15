@@ -160,7 +160,7 @@ export default function OrderConfirmationPage() {
                     {items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-4 border-b border-warm-100 pb-4 last:border-0 last:pb-0"
+                        className="flex flex-wrap items-center gap-4 border-b border-warm-100 pb-4 last:border-0 last:pb-0"
                       >
                         <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-warm-50 flex-shrink-0">
                           {item.image_url ? (
@@ -173,7 +173,7 @@ export default function OrderConfirmationPage() {
                             />
                           ) : null}
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="font-semibold text-warm-900">{item.name}</p>
                           <p className="text-sm text-warm-500">Qty {item.quantity}</p>
                           {item.is_digital && (
