@@ -84,7 +84,7 @@ export function Header() {
           <div className="flex items-center justify-between h-20 sm:h-24">
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="md:hidden p-3 -ml-3"
+              className="md:hidden p-3 -ml-3 flex-shrink-0"
               aria-label="Menu"
             >
               {showMobileMenu ? (
@@ -152,8 +152,10 @@ export function Header() {
               </Link>
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <SearchBar />
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="flex-1 min-w-0 max-w-[160px] sm:max-w-none">
+                <SearchBar />
+              </div>
 
               <Link
                 href={isAuthenticated ? '/account' : '/login'}
@@ -163,7 +165,7 @@ export function Header() {
                 <User className="w-5 h-5 text-warm-700" />
               </Link>
 
-              <div className="relative">
+              <div className="relative flex-shrink-0 ml-2">
                 <button
                   onClick={openCart}
                   className="relative p-2 rounded-lg hover:bg-warm-50 transition-colors"

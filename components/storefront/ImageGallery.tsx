@@ -140,8 +140,8 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
 
   return (
     <div>
-      {/* Main display area — fixed square container */}
-      <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-warm-100 bg-black">
+      {/* Main display area — constrained on mobile so product info is visible above fold */}
+      <div className="relative w-full h-[40vh] md:h-auto md:aspect-square md:max-h-none rounded-2xl overflow-hidden border border-warm-100 bg-black">
         {activeVideoUrl ? (
           <iframe
             src={`${activeVideoUrl}?autoplay=true&muted=true&loop=true&controls=true`}
@@ -160,7 +160,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
               src={activeImage}
               alt={`${productName} - Image ${activeIndex + 1} of ${galleryImages.length}`}
               fill
-              className="object-cover"
+              className="object-contain md:object-cover"
               sizes="(max-width: 1024px) 100vw, 50vw"
               unoptimized
             />
@@ -169,7 +169,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
       </div>
 
       {/* Thumbnail strip */}
-      <div className="mt-4 flex items-center gap-2 w-full">
+      <div className="mt-4 flex items-center gap-2 w-full min-w-0">
         {totalThumbnails > 5 && (
           <button
             type="button"
@@ -182,7 +182,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
         )}
         <div
           ref={thumbnailStripRef}
-          className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className="flex flex-nowrap gap-2 overflow-x-auto pb-2 w-full min-w-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {/* Ready video thumbnails — before images */}
           {readyVideos.map((video) => (
