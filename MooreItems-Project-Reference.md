@@ -4,7 +4,7 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 13, 2026 (Session 40)
+**Last Updated:** March 14, 2026 (Session 41)
 **Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch Meta ads**. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.**
 
 ---
@@ -436,6 +436,16 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Product card lazy loading** — `loading="lazy"` with explicit dimensions
 - ✅ **Category images compressed** — 80MB → 1.7MB total (sharp, max-width 1200px, JPEG quality 80)
 
+**Admin Product Edit Overhaul (Sessions 38–41):**
+- ✅ **Unified Media Gallery** — images + videos in a single drag-and-drop grid (native HTML5 drag API, no library). 240×240px square cards, visual feedback (opacity/scale/gold ring on drop target), image lightbox, video preview modal
+- ✅ **Cloudflare Stream direct upload** — browser uploads video directly to Cloudflare via one-time `uploadURL`, bypassing Netlify's 6MB serverless limit. XHR progress tracking in UI
+- ✅ **Direct browser-to-Supabase image upload** — product images and variant images upload from browser to Supabase Storage, bypassing API routes entirely
+- ✅ **Image swatches** — variant color swatches on product cards and product page, driven by variant `image_url`
+- ✅ **CJ/factory stock split columns** — admin product edit shows CJ stock and factory stock separately with live refresh
+- ✅ **Products list page improvements** — full-width table, default Active filter, server-side Source filter (CJ/AliExpress/Digital/Manual), price min/max filter, larger thumbnails, truncated product names
+- ✅ **Storefront gallery fixes** — consistent aspect-square container for image/video, object-cover on main image and thumbnails, active-only variant images in gallery
+- ✅ **View on Storefront button** — product edit page links directly to live product page
+
 **Security (Session 30 — Full Audit):**
 - ✅ **CJ webhook secret validation** — `timingSafeEqual` check on `CJ_WEBHOOK_SECRET` query param; rejects all unsigned requests with 401; URL-safe hex secret; webhooks re-registered with correct CJ API format
 - ✅ **scripts/register-cj-webhooks.js** — New script; reads `CJ_API_KEY` + `CJ_WEBHOOK_SECRET` from `.env.local`, fetches fresh token, registers all 4 webhook topics (stock, product, logistics, order) in single call to `/v1/webhook/set`
@@ -462,10 +472,15 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Admin refund workflow** — Stripe refund button in orders, `app/api/admin/orders/refund/route.ts`, refund columns on `mi_orders` (Session 27)
 - ⏳ **Stripe Tax** — Florida registration submitted (confirmation #249-6800-6526), awaiting certificate number email; once received add to Stripe Tax → Registrations
 - ❌ **Meta Ads first campaigns** — everything ready (Pixel, Business Portfolio, social profiles), just needs execution
-- ❌ Landing page builder (admin feature)
+- ~~❌ Landing page builder (admin feature)~~ ✅ RESOLVED (Session 32 — AI-generated landing pages with admin builder, public /lp/[slug] pages)
 - ❌ Ad campaign manager (admin feature)
 - ❌ Blog/content section (Phase 4 SEO — long-term content play)
 - ❌ Unified import pipeline (spec written in Session 15 — replaces 9-script sequence with single command, **use AI categorization not keywords**)
+- ⏳ **Raise blender retail price** — currently priced too low relative to cost
+- ⏳ **Fix White Pink variant** — variant has incorrect data or display issue
+- ⏳ **Health check summary email** — daily catalog health script should email results instead of just logging
+- ⏳ **Free shipping threshold** — implement free shipping over a certain order value to boost AOV
+- ⏳ **More product videos** — expand Cloudflare Stream video coverage across catalog
 
 ---
 
@@ -3883,3 +3898,81 @@ Both the main product Images section and variant image uploads now upload direct
 
 **Key Learnings This Session**
 - Netlify serverless functions have a hard 6MB request body limit — large file uploads must go directly from the browser to Supabase Storage using the client-side SDK, not through an API route.
+
+---
+
+#### Session 41 — Media Gallery Overhaul + Products List Improvements (March 14, 2026)
+
+**Goal:** Rebuild the admin product edit media gallery with native drag-and-drop and Cloudflare Stream direct upload; improve storefront image gallery; overhaul the products list page with filters and better layout.
+
+---
+
+**Unified Media Gallery — Rebuilt ✅**
+
+Completely rebuilt the media gallery in `app/admin/products/edit/[id]/page.tsx`:
+- Replaced `@hello-pangea/dnd` library with native HTML5 Drag and Drop API (draggable, onDragStart, onDragOver, onDrop, onDragEnd)
+- Unified images and videos into a single `MediaItem` discriminated union type (`type: 'image' | 'video'`)
+- Layout: responsive wrapping grid (`grid grid-cols-5 gap-3`) with 240×240px square cards
+- Drag visual feedback: `dragOverIdx` state drives gold ring on drop target (`ring-2 ring-[#c8a45e] scale-105 brightness-110`), opacity-40/scale-95 on dragged item, opacity-70 on others
+- Image lightbox via portal (Escape key, bg-black/80, 90vw×90vh)
+- Video preview modal with 16:9 Cloudflare iframe
+- Hero badge sorted correctly on reload (items sorted by `sort_order` on load)
+- "View on Storefront" button with ExternalLink icon
+- Form container widened to `max-w-7xl`
+
+---
+
+**Cloudflare Stream Direct Upload — Built ✅**
+
+Rewrote `app/api/admin/products/upload-video/route.ts`:
+- API now accepts JSON `{ productId, fileName, fileSize }` instead of FormData with file
+- Calls Cloudflare `direct_upload` endpoint to get one-time `uploadURL` + `uid`
+- Saves pending video entry to `mi_products.videos` with `status: "processing"`
+- Returns `{ success, uploadURL, videoId }` to client
+- Browser uploads directly to Cloudflare via XHR with progress tracking (`xhr.upload.onprogress`)
+- Eliminates Netlify's 6MB serverless function body limit for video files
+
+---
+
+**Storefront Image Gallery Fixes ✅**
+
+`components/storefront/ImageGallery.tsx`:
+- Single `aspect-square` container wrapping both image and video — prevents layout jumps when switching
+- `object-cover` on main image (was `object-contain`)
+- `object-cover` on all thumbnails (was `object-contain`)
+- Video iframe: `w-full h-full` with params `?autoplay=true&muted=true&loop=true&controls=true`
+
+`app/product/[slug]/ProductPageClient.tsx`:
+- Gallery only includes variant images from **active** variants (`variant.is_active === true`)
+
+---
+
+**Products List Page Improvements ✅**
+
+`app/admin/products/page.tsx`:
+- Default status filter changed from "all" to "active"
+- Source filter dropdown (CJ / AliExpress / Digital / Manual) — server-side filtering
+- Price min/max inputs (client-side filter on `retail_price`)
+- Larger thumbnails: `w-14 h-14` (was `w-11 h-11`)
+- Removed Shipping column to save horizontal space
+- Reduced cell padding: `px-2` (was `px-4`)
+- Product name truncation: `max-w-[200px]` with `truncate`
+
+`app/api/admin/products/route.ts`:
+- Added `source` query param with server-side filtering:
+  - `cj` → `supplier = 'cj'`
+  - `aliexpress` → `supplier = 'aliexpress'`
+  - `digital` → `warehouse = 'DIGITAL'`
+  - `manual` → `supplier = 'manual' AND warehouse != 'DIGITAL'`
+
+---
+
+**Key Learnings This Session**
+- CJ shipping cost is per-product, stored in `mi_products.shipping_cost` — not a flat rate. Each product's margin calculation must use its own shipping cost.
+- CJ stock response structure: `data[0].variants[].variantInventories[]` — must drill into `variantInventories` array for per-variant stock counts.
+- Git submodules (like `.claude/skills/`) are separate repos — changes inside them don't appear in the parent repo's `git status`.
+- Cloudflare Stream direct upload flow: API gets one-time `uploadURL` via `direct_upload` endpoint → browser POSTs file directly to Cloudflare → no serverless function size limits.
+- Cloudflare Stream video format: iframe src should include `?autoplay=true&muted=true&loop=true&controls=true` for proper playback.
+- Source filter DB values: CJ products have `supplier = 'cj'`, AliExpress have `supplier = 'aliexpress'` (lowercase, exact match). Digital products identified by `warehouse = 'DIGITAL'`. Manual products: `supplier = 'manual' AND warehouse != 'DIGITAL'`.
+- The `ui-ux-pro-max` skill at `.claude/skills/ui-ux-pro-max/src/ui-ux-pro-max/SKILL.md` should be read before any frontend/component work per CLAUDE.md instructions.
+- Native HTML5 Drag and Drop API is simpler and more reliable than library solutions (`@hello-pangea/dnd`) for basic reordering — avoids React version conflicts and dependency bloat.
