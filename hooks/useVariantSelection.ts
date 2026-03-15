@@ -80,9 +80,11 @@ export function useVariantSelection(variants: Variant[]): UseVariantSelectionRet
     return map;
   }, [variants]);
 
-  // Initialize with first valid combo
+  // Initialize with first valid combo that has stock
   const initialState = useMemo(() => {
-    const firstVariant = variants.find(v => v.is_active !== false);
+    const firstVariant = variants.find(
+      v => v.is_active !== false && (v.stock_count == null || v.stock_count > 0)
+    ) || variants.find(v => v.is_active !== false);
     return {
       color: firstVariant?.color || null,
       size: firstVariant?.size || null,

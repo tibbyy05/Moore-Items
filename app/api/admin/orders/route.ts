@@ -102,6 +102,8 @@ export async function GET(request: NextRequest) {
         .length,
       delivered: realOrders.filter((o) => o.fulfillment_status === 'delivered')
         .length,
+      failed: realOrders.filter((o) => o.fulfillment_status === 'failed')
+        .length,
       customers: new Set(realOrders.map((o) => o.email).filter(Boolean)).size,
       abandoned: summarySource.filter((o) => o.payment_status === 'pending')
         .length,

@@ -15,6 +15,7 @@ export interface AdminOrderNotificationData {
     postal_code?: string | null;
     country?: string | null;
   } | null;
+  estimatedDelivery?: string;
 }
 
 function formatCurrency(amount: number): string {
@@ -33,7 +34,7 @@ function renderItemRow(item: { name: string; quantity: number; price: number; va
 }
 
 export function newOrderAdminTemplate(data: AdminOrderNotificationData): string {
-  const { orderNumber, customerName, customerEmail, items, total, timestamp, orderId, shippingAddress } = data;
+  const { orderNumber, customerName, customerEmail, items, total, timestamp, orderId, shippingAddress, estimatedDelivery } = data;
 
   const formattedTime = new Date(timestamp).toLocaleString('en-US', {
     dateStyle: 'medium',
@@ -137,6 +138,16 @@ export function newOrderAdminTemplate(data: AdminOrderNotificationData): string 
                   ${shippingAddress.city || ''}${shippingAddress.state ? `, ${shippingAddress.state}` : ''} ${shippingAddress.postal_code || ''}<br />
                   ${shippingAddress.country || 'US'}
                 </p>
+              </td></tr>
+            </table>
+            ` : ''}
+
+            ${estimatedDelivery ? `
+            <div style="height: 16px;"></div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td bgcolor="#f7f6f3" style="background: #f7f6f3; border-radius: 12px; padding: 24px 32px;">
+                <p style="margin: 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Estimated Delivery</p>
+                <p style="margin: 12px 0 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 18px; color: #0a0e1a; font-weight: 500;">${estimatedDelivery}</p>
               </td></tr>
             </table>
             ` : ''}

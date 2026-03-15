@@ -259,10 +259,24 @@ export async function POST(request: NextRequest) {
               console.log(`[Webhook] Order ${orderId}: ${result.message}`);
             } else if (!result.success) {
               console.error('CJ fulfillment failed', result.message);
+              await supabase
+                .from('mi_orders')
+                .update({
+                  fulfillment_status: 'failed',
+                  notes: `[fulfillment] ${new Date().toISOString()} ${result.message || 'CJ order creation failed'}`,
+                })
+                .eq('id', orderId);
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('CJ fulfillment error', error);
+          await supabase
+            .from('mi_orders')
+            .update({
+              fulfillment_status: 'failed',
+              notes: `[fulfillment] ${new Date().toISOString()} ${error?.message || 'Unexpected fulfillment error'}`,
+            })
+            .eq('id', orderId);
         }
       }
 

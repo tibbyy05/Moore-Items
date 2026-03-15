@@ -35,7 +35,7 @@ interface Order {
   email: string | null;
   shipping_address: any;
   payment_status: 'pending' | 'paid' | 'expired';
-  fulfillment_status: 'unfulfilled' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  fulfillment_status: 'unfulfilled' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'failed';
   subtotal: number;
   shipping_cost: number;
   discount_amount: number;
@@ -67,6 +67,7 @@ interface OrdersResponse {
     shipped: number;
     delivered: number;
     abandoned: number;
+    failed: number;
   };
 }
 
@@ -115,6 +116,7 @@ const FulfillmentBadge = ({ status }: { status: string }) => {
     shipped: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     cancelled: 'bg-red-50 text-red-700 border-red-200',
+    failed: 'bg-red-50 text-red-700 border-red-300',
   };
   return (
     <span
@@ -138,6 +140,7 @@ export default function AdminOrdersPage() {
     shipped: 0,
     delivered: 0,
     abandoned: 0,
+    failed: 0,
   });
   const [abandonedOrders, setAbandonedOrders] = useState<Order[]>([]);
   const [abandonedExpanded, setAbandonedExpanded] = useState(false);
@@ -148,6 +151,7 @@ export default function AdminOrdersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [fulfillLoading, setFulfillLoading] = useState<Record<string, boolean>>({});
+  const [retryFulfillLoading, setRetryFulfillLoading] = useState<Record<string, boolean>>({});
   const [trackingLoading, setTrackingLoading] = useState<Record<string, boolean>>({});
   const [editStatus, setEditStatus] = useState<Record<string, string>>({});
   const [editTracking, setEditTracking] = useState<Record<string, string>>({});
@@ -167,7 +171,7 @@ export default function AdminOrdersPage() {
       if (['paid', 'expired'].includes(activeFilter)) {
         params.set('status', activeFilter);
       }
-      if (['unfulfilled', 'processing', 'shipped', 'delivered'].includes(activeFilter)) {
+      if (['unfulfilled', 'processing', 'shipped', 'delivered', 'failed'].includes(activeFilter)) {
         params.set('fulfillment', activeFilter);
       }
       if (searchQuery) {
@@ -188,6 +192,7 @@ export default function AdminOrdersPage() {
           shipped: 0,
           delivered: 0,
           abandoned: 0,
+          failed: 0,
         }
       );
     } catch (error) {
@@ -212,6 +217,7 @@ export default function AdminOrdersPage() {
 
   const filterTabs = [
     { key: 'paid', label: 'Paid', count: summary.paid },
+    { key: 'failed', label: 'Failed', count: summary.failed, urgent: true },
     { key: 'processing', label: 'Processing', count: summary.processing },
     { key: 'shipped', label: 'Shipped', count: summary.shipped },
     { key: 'delivered', label: 'Delivered', count: summary.delivered },
@@ -246,6 +252,27 @@ export default function AdminOrdersPage() {
       toast.error(error?.message || 'Unable to retry fulfillment');
     } finally {
       setFulfillLoading((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
+
+  const handleRetryFulfillment = async (orderId: string) => {
+    setRetryFulfillLoading((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await fetch('/api/admin/retry-fulfillment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.error || data?.message || 'Retry fulfillment failed');
+      }
+      toast.success(data?.message || 'Fulfillment retried successfully');
+      await fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to retry fulfillment');
+    } finally {
+      setRetryFulfillLoading((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 
@@ -476,16 +503,22 @@ export default function AdminOrdersPage() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     activeFilter === tab.key
-                      ? 'bg-[#c8a45e]/10 text-[#c8a45e] border border-[#c8a45e]/30'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent'
+                      ? tab.urgent
+                        ? 'bg-red-50 text-red-700 border border-red-300'
+                        : 'bg-[#c8a45e]/10 text-[#c8a45e] border border-[#c8a45e]/30'
+                      : tab.urgent && tab.count > 0
+                        ? 'text-red-600 hover:text-red-700 hover:bg-red-50 border border-transparent'
+                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent'
                   }`}
                 >
                   {tab.label}
-                  {tab.count > 0 && (
-                    <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                      {tab.count}
-                    </span>
-                  )}
+                  <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full ${
+                    tab.urgent
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {tab.count}
+                  </span>
                 </button>
               ))}
             </div>
@@ -605,6 +638,11 @@ export default function AdminOrdersPage() {
                           <span className="text-xs font-mono text-gray-600">
                             {order.order_number}
                           </span>
+                          {order.fulfillment_status === 'failed' && order.notes && (
+                            <p className="mt-1 text-[11px] text-red-600 leading-tight max-w-[260px] truncate" title={order.notes}>
+                              {order.notes}
+                            </p>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -862,6 +900,7 @@ export default function AdminOrdersPage() {
                                         <option value="shipped">Shipped</option>
                                         <option value="delivered">Delivered</option>
                                         <option value="cancelled">Cancelled</option>
+                                        <option value="failed">Failed</option>
                                       </select>
                                     </div>
                                     <div>
@@ -919,6 +958,23 @@ export default function AdminOrdersPage() {
                                         <Package className="w-3.5 h-3.5" />
                                         Manual Fulfillment Required
                                       </span>
+                                    )}
+                                  {order.fulfillment_status === 'failed' && (
+                                      <button
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          handleRetryFulfillment(order.id);
+                                        }}
+                                        disabled={Boolean(retryFulfillLoading[order.id])}
+                                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        <RefreshCw
+                                          className={`w-3.5 h-3.5 ${
+                                            retryFulfillLoading[order.id] ? 'animate-spin' : ''
+                                          }`}
+                                        />
+                                        Retry Fulfillment
+                                      </button>
                                     )}
                                   {order.fulfillment_status === 'processing' &&
                                     !order.cj_order_id && (

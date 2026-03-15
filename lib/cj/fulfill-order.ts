@@ -49,13 +49,22 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
     return { success: false, message: 'Order not found' };
   }
 
-  const { data: items, error: itemsError } = await supabase
-    .from('mi_order_items')
-    .select('id, product_id, variant_id, quantity')
-    .eq('order_id', orderId);
+  // Retry loop — checkout route may still be inserting items
+  let items: { id: string; product_id: string; variant_id: string | null; quantity: number }[] = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error: itemsError } = await supabase
+      .from('mi_order_items')
+      .select('id, product_id, variant_id, quantity')
+      .eq('order_id', orderId);
+    if (itemsError) {
+      return { success: false, message: 'Order items query failed' };
+    }
+    if (data && data.length > 0) { items = data; break; }
+    if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+  }
 
-  if (itemsError || !items || items.length === 0) {
-    return { success: false, message: 'Order items not found' };
+  if (items.length === 0) {
+    return { success: false, message: 'Order items not found after 3 attempts' };
   }
 
   const variantIds = Array.from(new Set(items.map((item) => item.variant_id).filter(Boolean)));

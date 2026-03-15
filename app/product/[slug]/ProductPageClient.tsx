@@ -241,6 +241,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
   const [galleryIndex, setGalleryIndex] = useState<number>(0);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [addedState, setAddedState] = useState(false);
+  const [variantError, setVariantError] = useState<string | null>(null);
   const [viewingCount, setViewingCount] = useState<number | null>(null);
 
   const {
@@ -540,6 +541,24 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
     new Set(product.variants.map((v) => v.price)).size > 1;
 
   const handleAddToCart = () => {
+    // Require variant selection when product has variants
+    const hasVariants = product.variants && product.variants.length > 0;
+    if (hasVariants && !selectedVariant) {
+      const needsColor = matrix.hasColors && !selectedColor;
+      const needsSize = matrix.hasSizes && !selectedSize;
+      if (needsColor && needsSize) {
+        setVariantError('Please select a color and size');
+      } else if (needsColor) {
+        setVariantError('Please select a color');
+      } else if (needsSize) {
+        setVariantError('Please select a size');
+      } else {
+        setVariantError('Please select a valid variant');
+      }
+      return;
+    }
+    setVariantError(null);
+
     addItem({
       productId: product.id,
       slug: product.slug,
@@ -709,8 +728,8 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     matrix={matrix}
                     selectedColor={selectedColor}
                     selectedSize={selectedSize}
-                    onColorChange={handleColorChange}
-                    onSizeChange={handleSizeChange}
+                    onColorChange={(color, autoSize) => { setVariantError(null); handleColorChange(color, autoSize); }}
+                    onSizeChange={(size, autoColor) => { setVariantError(null); handleSizeChange(size, autoColor); }}
                   />
                 </div>
               )}
@@ -749,6 +768,10 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     </>
                   )}
                 </CustomButton>
+
+                {variantError && (
+                  <p className="text-sm text-red-600 font-medium">{variantError}</p>
+                )}
 
                 <CustomButton
                   variant="secondary"

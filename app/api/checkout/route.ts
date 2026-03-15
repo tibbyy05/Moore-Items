@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
       product_id: string;
       retail_price: number | null;
       stock_count: number | null;
+      is_active: boolean | null;
       name: string | null;
       cj_vid: string | null;
     }> = [];
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     if (variantIds.length > 0) {
       const { data: variantData, error: variantError } = await supabase
         .from('mi_product_variants')
-        .select('id, product_id, retail_price, stock_count, name, cj_vid')
+        .select('id, product_id, retail_price, stock_count, is_active, name, cj_vid')
         .in('id', variantIds);
 
       if (variantError) {
@@ -116,12 +117,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if ((product.stock_count ?? 0) <= 0) {
-        return NextResponse.json(
-          { error: `${product.name} is out of stock` },
-          { status: 400 }
-        );
-      }
+      // Note: product.stock_count is not checked here — it can be stale.
+      // Variant-level stock_count (maintained by stock sync + webhooks) is the source of truth.
 
       let unitPrice = Number(product.retail_price || 0);
       let variantName: string | null = null;
@@ -135,6 +132,12 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+        if (variant.is_active === false) {
+          return NextResponse.json(
+            { error: `${product.name} is currently unavailable` },
+            { status: 400 }
+          );
+        }
         if ((variant.stock_count ?? 0) <= 0) {
           return NextResponse.json(
             { error: `${product.name} variant is out of stock` },
@@ -145,8 +148,22 @@ export async function POST(request: NextRequest) {
         variantName = variant.name || null;
         cjVid = variant.cj_vid || null;
       } else {
-        // No variant selected — try to get cj_vid from the product's first variant
-        // (some products have a single default variant)
+        // No variant selected — check if this product actually has variants
+        const { count: variantCount } = await supabase
+          .from('mi_product_variants')
+          .select('id', { count: 'exact', head: true })
+          .eq('product_id', product.id)
+          .eq('is_active', true);
+
+        if (variantCount && variantCount > 1) {
+          // Product has multiple active variants but none was selected — reject
+          return NextResponse.json(
+            { error: `Please select a variant for ${product.name}` },
+            { status: 400 }
+          );
+        }
+
+        // Single or no variants — try to get cj_vid from the product's first variant
         if (!cjVid) {
           const { data: defaultVariant } = await supabase
             .from('mi_product_variants')
@@ -189,27 +206,54 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── CJ Stock Validation ──────────────────────────────────────
-    // Check if CJ products are still available before creating Stripe session
+    // Cross-check CJ product status with DB stock. DB is source of truth
+    // when CJ API and CJ website disagree — only block if both agree it's dead.
     const cjItems = validatedItems
       .map((item) => {
         const product = productMap.get(item.productId);
-        return product?.cj_pid ? { id: item.productId, name: item.name, cjPid: product.cj_pid as string } : null;
+        return product?.cj_pid ? { id: item.productId, name: item.name, cjPid: product.cj_pid as string, variantId: item.variantId } : null;
       })
-      .filter((item): item is { id: string; name: string; cjPid: string } => item !== null);
+      .filter((item): item is { id: string; name: string; cjPid: string; variantId: string | null } => item !== null);
 
     if (cjItems.length > 0) {
       const unavailableProducts: { id: string; name: string }[] = [];
 
       for (const cjItem of cjItems) {
+        // Look up DB state for this item
+        const product = productMap.get(cjItem.id);
+        const variant = cjItem.variantId ? variantMap.get(cjItem.variantId) : null;
+        const dbStockPositive = variant ? (variant.stock_count ?? 0) > 0 : true;
+        const dbProductActive = product?.status === 'active';
+
         try {
-          await cjClient.getProduct(cjItem.cjPid);
+          const cjProductData = await cjClient.getProduct(cjItem.cjPid);
+
+          // Check if CJ reports the product as disabled/delisted
+          const cjStatus = (cjProductData as any)?.productStatus ?? (cjProductData as any)?.status;
+          const isDisabled = cjStatus === 0 || cjStatus === '0' || cjStatus === 'DISABLE';
+
+          if (isDisabled) {
+            if (dbStockPositive && dbProductActive) {
+              // CJ says disabled but DB has stock — trust DB, log warning
+              console.warn(`[checkout] CJ reports disabled but DB has stock, proceeding: ${cjItem.name} (pid=${cjItem.cjPid}, dbStock=${variant?.stock_count ?? 'N/A'})`);
+            } else {
+              // Both CJ and DB agree it's dead
+              console.warn(`[checkout] CJ disabled + DB confirms unavailable: ${cjItem.name} (pid=${cjItem.cjPid})`);
+              unavailableProducts.push({ id: cjItem.id, name: cjItem.name });
+            }
+          }
         } catch (error: any) {
           const msg = error?.message || '';
-          // If CJ says product is removed/not found, mark it unavailable
-          // But if the CJ API itself is down/timing out, let checkout proceed
           if (msg.includes('CJ API error')) {
-            console.warn(`[checkout] CJ product unavailable: ${cjItem.name} (pid=${cjItem.cjPid}): ${msg}`);
-            unavailableProducts.push({ id: cjItem.id, name: cjItem.name });
+            // CJ explicitly rejected the product — cross-check with DB
+            if (dbStockPositive && dbProductActive) {
+              // DB says it's fine — trust DB, log warning for investigation
+              console.warn(`[checkout] CJ API error but DB has stock, proceeding: ${cjItem.name} (pid=${cjItem.cjPid}): ${msg}`);
+            } else {
+              // DB also shows no stock or inactive — block
+              console.warn(`[checkout] CJ API error + DB confirms unavailable: ${cjItem.name} (pid=${cjItem.cjPid}): ${msg}`);
+              unavailableProducts.push({ id: cjItem.id, name: cjItem.name });
+            }
           } else {
             // Network error, timeout, auth failure — don't block the sale
             console.warn(`[checkout] CJ API unreachable for ${cjItem.name} (pid=${cjItem.cjPid}), skipping check: ${msg}`);
