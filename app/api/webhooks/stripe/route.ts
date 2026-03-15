@@ -100,11 +100,36 @@ export async function POST(request: NextRequest) {
             .eq('id', orderId)
             .single();
 
-          // Get order items
-          const { data: orderItems } = await supabase
-            .from('mi_order_items')
-            .select('id, name, quantity, unit_price, image_url, variant_info, product_id')
-            .eq('order_id', orderId);
+          // Get order items (retry — checkout route may still be inserting)
+          let orderItems: typeof rawItems = [];
+          let rawItems: { id: string; name: string; quantity: number; unit_price: number; image_url: string | null; variant_info: string | null; product_id: string; warehouse: string | null }[] = [];
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const { data } = await supabase
+              .from('mi_order_items')
+              .select('id, name, quantity, unit_price, image_url, variant_info, product_id, warehouse')
+              .eq('order_id', orderId);
+            if (data && data.length > 0) { orderItems = data; break; }
+            if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+          }
+          const itemsFetched = orderItems.length > 0;
+
+          // Derive estimated delivery from warehouse data
+          let estimatedDelivery: string;
+          if (isAllDigital) {
+            estimatedDelivery = 'Instant Download';
+          } else if (!itemsFetched) {
+            estimatedDelivery = '2\u20135 business days';
+          } else {
+            const hasCN = orderItems.some(i => i.warehouse === 'CN');
+            const hasUS = orderItems.some(i => i.warehouse === 'US' || !i.warehouse);
+            if (hasCN && hasUS) {
+              estimatedDelivery = 'US items: 2\u20135 days \u00b7 International items: 7\u201320 days';
+            } else if (hasCN) {
+              estimatedDelivery = 'Delivered in 7\u201320 business days';
+            } else {
+              estimatedDelivery = 'Delivered in 2\u20135 business days';
+            }
+          }
 
           if (order) {
             const toEmail = session.customer_details?.email
@@ -136,14 +161,16 @@ export async function POST(request: NextRequest) {
                 customerEmail: toEmail,
                 customerName,
                 orderNumber: order.order_number,
-                items: (orderItems || []).map(item => ({
-                  name: item.name,
-                  quantity: item.quantity,
-                  price: item.unit_price,
-                  image_url: item.image_url || undefined,
-                  variant_info: item.variant_info || undefined,
-                  is_digital: digitalProductIds.includes(item.product_id),
-                })),
+                items: itemsFetched
+                  ? orderItems.map(item => ({
+                      name: item.name,
+                      quantity: item.quantity,
+                      price: item.unit_price,
+                      image_url: item.image_url || undefined,
+                      variant_info: item.variant_info || undefined,
+                      is_digital: digitalProductIds.includes(item.product_id),
+                    }))
+                  : [{ name: 'Order details will be emailed separately', quantity: 1, price: order.total || (session.amount_total || 0) / 100 }],
                 subtotal: order.subtotal || (session.amount_subtotal || 0) / 100,
                 shippingCost: order.shipping_cost || 0,
                 discount: order.discount_amount || 0,
@@ -159,7 +186,7 @@ export async function POST(request: NextRequest) {
                       postal_code: shippingAddress?.postal_code || '',
                       country: shippingAddress?.country || 'US',
                     },
-                estimatedDelivery: isAllDigital ? 'Instant Download' : '2-5 business days',
+                estimatedDelivery,
                 downloadLinks: downloadLinks.length > 0 ? downloadLinks : undefined,
                 isAllDigital,
               });
@@ -179,16 +206,19 @@ export async function POST(request: NextRequest) {
                 orderNumber: order.order_number,
                 customerName,
                 customerEmail: toEmail || '',
-                items: (orderItems || []).map(item => ({
-                  name: item.name,
-                  quantity: item.quantity,
-                  price: item.unit_price,
-                  variant_info: item.variant_info || undefined,
-                })),
+                items: itemsFetched
+                  ? orderItems.map(item => ({
+                      name: item.name,
+                      quantity: item.quantity,
+                      price: item.unit_price,
+                      variant_info: item.variant_info || undefined,
+                    }))
+                  : [{ name: 'Order details pending — items not yet available', quantity: 1, price: order.total || (session.amount_total || 0) / 100 }],
                 total: order.total || (session.amount_total || 0) / 100,
                 timestamp: new Date().toISOString(),
                 orderId: orderId,
                 shippingAddress: shippingAddress || undefined,
+                estimatedDelivery,
               }).catch(err => console.error('[Webhook] Admin order notification failed:', err));
             } catch (adminEmailError) {
               console.error('[Webhook] Admin order notification failed:', adminEmailError);
