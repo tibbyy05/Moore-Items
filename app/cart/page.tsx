@@ -350,8 +350,8 @@ export default function CartPage() {
 
                 {(() => {
                   const hasDigital = items.some((i) => i.warehouse_status === 'DIGITAL' || i.isDigital);
-                  const hasUSItems = items.some((i) => i.warehouse_status === 'US' && !i.isDigital);
-                  const hasCNItems = items.some((i) => i.warehouse_status !== 'US' && i.warehouse_status !== 'DIGITAL' && !i.isDigital);
+                  const hasUSItems = items.some((i) => (i.warehouse === 'US' || i.warehouse_status === 'US') && !i.isDigital);
+                  const hasCNItems = items.some((i) => i.warehouse !== 'US' && i.warehouse_status !== 'DIGITAL' && !i.isDigital);
 
                   if (!hasUSItems && !hasCNItems && hasDigital) {
                     return (
