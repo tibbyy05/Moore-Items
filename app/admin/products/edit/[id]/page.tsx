@@ -100,6 +100,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const [dragOverVariant, setDragOverVariant] = useState<string | null>(null);
   const variantFileRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  // What's Included
+  const [whatsIncluded, setWhatsIncluded] = useState<string[]>([]);
+
   // CJ Sourcing state
   const [cjPidEdit, setCjPidEdit] = useState('');
   const [cjPidEditing, setCjPidEditing] = useState(false);
@@ -146,6 +149,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               product.mi_categories?.slug === 'digital-downloads'
           );
           setExistingFilePath(product.digital_file_path || null);
+          setWhatsIncluded(Array.isArray(product.whats_included) ? product.whats_included : []);
           // Build unified media items: videos first (sorted), then images
           const sortedVideos = (product.videos || [])
             .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -610,6 +614,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         margin_percent: marginPercent,
         shipping_days: form.shipping_days.trim() || null,
         processing_time: form.processing_time.trim() || null,
+        whats_included: whatsIncluded.filter((s) => s.trim() !== ''),
         status: form.status,
       };
 
@@ -712,6 +717,45 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40 resize-y"
               />
             </div>
+
+            {/* What's Included */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">What&apos;s Included</label>
+              <p className="text-xs text-gray-400 mb-2">Each item appears as a checkmark bullet on the product page</p>
+              <div className="space-y-2">
+                {whatsIncluded.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => {
+                        const updated = [...whatsIncluded];
+                        updated[idx] = e.target.value;
+                        setWhatsIncluded(updated);
+                      }}
+                      placeholder="e.g. 1x Blender Cup"
+                      className="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setWhatsIncluded(whatsIncluded.filter((_, i) => i !== idx))}
+                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                      aria-label="Remove item"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setWhatsIncluded([...whatsIncluded, ''])}
+                className="mt-2 text-sm font-medium text-[#c8a45e] hover:text-[#b8944e] transition-colors"
+              >
+                + Add Item
+              </button>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
