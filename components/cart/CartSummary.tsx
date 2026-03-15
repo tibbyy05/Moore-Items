@@ -43,15 +43,24 @@ export function CartSummary({
           </div>
         )}
 
-        <div className="flex justify-between text-warm-700">
-          <span>Shipping</span>
-          <span className="font-semibold">
-            {shipping === 'calculated'
-              ? 'Calculated at checkout'
-              : shipping === 0
-              ? 'FREE'
-              : `$${shipping.toFixed(2)}`}
-          </span>
+        <div>
+          <div className="flex justify-between text-warm-700">
+            <span>Shipping</span>
+            <span className="font-semibold">
+              {shipping === 'calculated'
+                ? subtotal >= 50
+                  ? <span className="text-green-600">FREE</span>
+                  : 'Calculated at checkout'
+                : shipping === 0
+                ? 'FREE'
+                : `$${shipping.toFixed(2)}`}
+            </span>
+          </div>
+          {shipping === 'calculated' && subtotal > 0 && subtotal < 50 && (
+            <p className="text-xs text-warm-400 text-right mt-1">
+              Add ${(50 - subtotal).toFixed(2)} more for free shipping
+            </p>
+          )}
         </div>
       </div>
 
