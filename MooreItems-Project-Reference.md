@@ -4,7 +4,7 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 14, 2026 (Session 41)
+**Last Updated:** March 14, 2026 (Session 42)
 **Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch Meta ads**. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.**
 
 ---
@@ -176,7 +176,7 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Product names cleaned** — 3,397 original + 496 additional + 131 AI-cleaned (Session 11) + 1,643 bulk polished (Session 12) + 6 promotional text stripped (Session 16) + 80 AI-cleaned during hidden product rescue (Session 19)
 - ✅ **~380 junk/risky products hidden** — 113 original + 46 additional + 17 AI-detected (Session 11) + 2 more (Session 15) + 14 supplements + 13 duplicate sofas + 5 small-image + 2 misc (Session 16) + ~167 junk/duplicates (Session 19 AI audit)
 - ✅ Full enrichment: image galleries (5-37 per product), HTML descriptions, size/color variants
-- ✅ **All product descriptions AI-polished** — 1,643 products rewritten via bulk Claude Haiku script (Session 12) + 20 more generated (Session 15)
+- ✅ **All product descriptions AI-polished** — 1,643 products rewritten via bulk Claude Haiku script (Session 12) + 20 more generated (Session 15). AI Improve feature added to admin edit page (Session 42) — per-product enrichment via Claude Haiku with accept/reject drawer UI
 - ✅ **All products have reviews** — zero products with review_count = 0
 - ✅ **Variant color/size data enriched** — 8,269 variants parsed from names (Session 11), ~28,104 total variants, **95.1% have color or size** (Session 17 — up from ~50%)
 - ✅ **444 broken multi-variant products fixed** — 3-phase repair: backfill script, SQL pattern batches, automated prefix stripping (Session 17)
@@ -3976,3 +3976,31 @@ Rewrote `app/api/admin/products/upload-video/route.ts`:
 - Source filter DB values: CJ products have `supplier = 'cj'`, AliExpress have `supplier = 'aliexpress'` (lowercase, exact match). Digital products identified by `warehouse = 'DIGITAL'`. Manual products: `supplier = 'manual' AND warehouse != 'DIGITAL'`.
 - The `ui-ux-pro-max` skill at `.claude/skills/ui-ux-pro-max/src/ui-ux-pro-max/SKILL.md` should be read before any frontend/component work per CLAUDE.md instructions.
 - Native HTML5 Drag and Drop API is simpler and more reliable than library solutions (`@hello-pangea/dnd`) for basic reordering — avoids React version conflicts and dependency bloat.
+
+---
+
+#### Session 42 — AI Product Enrichment System (March 14, 2026)
+
+**Recently Completed:**
+
+- ✅ AI Improve feature built on admin product edit page — `app/api/admin/ai-enrich-product/route.ts` fetches product from Supabase + CJ API data, calls Claude Haiku (4000 max_tokens), returns enriched fields
+- ✅ Enrichment touches: title, description (rich HTML), whats_included, meta_title, meta_description, alt_texts only — never pricing, images, variants, stock, shipping
+- ✅ Side drawer UI on edit page with per-field accept/reject toggles, Apply Accepted button, field count
+- ✅ RichTextEditor component (`components/admin/RichTextEditor.tsx`) — Tiptap with Bold, Italic, Underline, Bullet List, H2, H3, Link; navy toolbar, gold active state; `immediatelyRender: false` for SSR
+- ✅ SEO section added to product edit page — meta_title (60 char) and meta_description (155 char) with live character counters; both save to existing `mi_products` columns
+- ✅ `@tailwindcss/typography` installed and added to `tailwind.config.ts` — was missing, causing all rich HTML descriptions to render as unstyled plain text
+- ✅ `extractSpecs()` in `ProductPageClient.tsx` updated to only match "Label: Value" or "Label — Value" formatted lines (max 80 chars) — prevents AI prose from triggering false spec section
+- ✅ AI enrichment system prompt includes: Moore Items brand voice, source-of-truth priority (current product data overrides CJ), keyword-first title/meta rules, natural connector-word titles, "Perfect For Making" use case section with 4–6 bullets per product
+
+**Known Pending Items:**
+
+- Bulk AI enrichment job — run all products through ai-enrich pipeline overnight in batches (Background Function); ~3,000+ products need enrichment
+- alt_texts from AI enrichment not yet persisted to DB — future task once image alt text field exists
+
+**Key Learnings This Session**
+
+- `cleanDescriptionHtml` was already preserving formatting tags — the issue was missing `@tailwindcss/typography` plugin, not the sanitizer
+- CJ product data uses `cj_pid` column (not `cj_product_id`) and `name` column (not `title`) in `mi_products`
+- Next.js 404s on API routes can indicate a silent compile/runtime error inside the route file — check dev server terminal, not just the browser console
+- Tiptap SSR error fixed with `immediatelyRender: false` in `useEditor` config
+- AI enrichment prompt should teach Claude how to reason about keywords, never hardcode product-specific terms

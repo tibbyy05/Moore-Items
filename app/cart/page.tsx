@@ -363,10 +363,10 @@ export default function CartPage() {
                   }
 
                   const shippingMessage = hasUSItems && hasCNItems
-                    ? 'Estimated delivery in 7-15 business days. US warehouse items may arrive sooner.'
+                    ? 'Estimated delivery in 7–15 business days for some items'
                     : hasCNItems
-                      ? 'Ships from international warehouse — estimated delivery in 7-15 business days'
-                      : 'Ships from US warehouse — estimated delivery in 2-5 business days';
+                      ? 'Estimated delivery in 7–15 business days'
+                      : 'Ships from US warehouse — estimated delivery in 2–5 business days';
 
                   const isCNOnly = hasCNItems && !hasUSItems;
                   return (
