@@ -21,6 +21,8 @@ interface OrderItem {
   warehouse?: 'US' | 'CN';
   is_digital?: boolean;
   download_token?: string;
+  variant_info?: string | null;
+  shipping_days?: string | null;
 }
 
 interface OrderDetails {
@@ -88,11 +90,20 @@ export default function OrderConfirmationPage() {
   const hasCN = items.some((item) => item.warehouse === 'CN');
   const allDigital = items.length > 0 && items.every((item) => item.is_digital);
   const hasDigital = items.some((item) => item.is_digital);
-  const deliveryEstimate = allDigital
-    ? 'Instant Download'
-    : hasCN
-      ? '10-18 business days'
-      : '2-5 business days';
+
+  const deliveryEstimate = (() => {
+    if (allDigital) return 'Instant Download';
+    // Use shipping_days if any product has it set
+    const shippingDaysValues = items
+      .map((item) => item.shipping_days)
+      .filter((v): v is string => !!v);
+    if (shippingDaysValues.length > 0) {
+      return `Delivered in ${shippingDaysValues.sort().reverse()[0]}`;
+    }
+    // Fallback to warehouse-based estimate
+    if (hasCN) return 'Delivered in 7\u201320 business days';
+    return 'Delivered in 2\u20135 business days';
+  })();
   const sessionAddress = session?.shipping_details?.address || session?.customer_details?.address;
   const sessionName = session?.shipping_details?.name || session?.customer_details?.name;
   const orderShippingAddress =
@@ -175,6 +186,9 @@ export default function OrderConfirmationPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-warm-900">{item.name}</p>
+                          {item.variant_info && (
+                            <p className="text-sm text-warm-500">{item.variant_info}</p>
+                          )}
                           <p className="text-sm text-warm-500">Qty {item.quantity}</p>
                           {item.is_digital && (
                             <span className="inline-block text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded mt-1">

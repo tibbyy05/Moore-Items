@@ -76,12 +76,14 @@ export async function POST(request: NextRequest) {
       is_active: boolean | null;
       name: string | null;
       cj_vid: string | null;
+      color: string | null;
+      size: string | null;
     }> = [];
 
     if (variantIds.length > 0) {
       const { data: variantData, error: variantError } = await supabase
         .from('mi_product_variants')
-        .select('id, product_id, retail_price, stock_count, is_active, name, cj_vid')
+        .select('id, product_id, retail_price, stock_count, is_active, name, cj_vid, color, size')
         .in('id', variantIds);
 
       if (variantError) {
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
       quantity: number;
       warehouse: 'US' | 'CN';
       variantName: string | null;
+      variantInfo: string | null;
       isDigital: boolean;
       cjVid: string | null;
       productWeightGrams: number | null;
@@ -122,6 +125,7 @@ export async function POST(request: NextRequest) {
 
       let unitPrice = Number(product.retail_price || 0);
       let variantName: string | null = null;
+      let variantInfo: string | null = null;
       let cjVid: string | null = null;
 
       if (item.variantId) {
@@ -147,6 +151,12 @@ export async function POST(request: NextRequest) {
         unitPrice = Number(variant.retail_price ?? unitPrice);
         variantName = variant.name || null;
         cjVid = variant.cj_vid || null;
+
+        // Build variant_info from color/size
+        const infoParts: string[] = [];
+        if (variant.color) infoParts.push(variant.color);
+        if (variant.size) infoParts.push(variant.size);
+        variantInfo = infoParts.length > 0 ? infoParts.join(' \u00b7 ') : null;
       } else {
         // No variant selected — check if this product actually has variants
         const { count: variantCount } = await supabase
@@ -199,6 +209,7 @@ export async function POST(request: NextRequest) {
         quantity,
         warehouse: (product.warehouse || 'US') as 'US' | 'CN',
         variantName,
+        variantInfo,
         isDigital: !!product.digital_file_path,
         cjVid,
         productWeightGrams,
@@ -391,6 +402,7 @@ export async function POST(request: NextRequest) {
       unit_price: item.unitPrice,
       total: item.unitPrice * item.quantity,
       warehouse: item.warehouse,
+      variant_info: item.variantInfo,
     }));
 
     const { error: orderItemsError } = await supabase

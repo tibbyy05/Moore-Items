@@ -84,22 +84,21 @@ export async function GET(
     const productIds = (items || []).map((item) => item.product_id);
     const { data: products } = await supabase
       .from('mi_products')
-      .select('id, warehouse, digital_file_path')
+      .select('id, warehouse, digital_file_path, shipping_days')
       .in('id', productIds);
 
-    const warehouseMap = new Map(
-      (products || []).map((product) => [product.id, product.warehouse || 'CN'])
-    );
-    const digitalMap = new Map(
-      (products || []).map((product) => [product.id, !!product.digital_file_path])
+    const productLookup = new Map(
+      (products || []).map((product) => [product.id, product])
     );
 
     const enrichedItems = (items || []).map((item) => {
-      const isDigital = digitalMap.get(item.product_id) || false;
+      const prod = productLookup.get(item.product_id);
+      const isDigital = prod ? !!prod.digital_file_path : false;
       return {
         ...item,
-        warehouse: warehouseMap.get(item.product_id) || 'CN',
+        warehouse: item.warehouse || prod?.warehouse || 'CN',
         is_digital: isDigital,
+        shipping_days: prod?.shipping_days || null,
         download_token: isDigital ? generateDownloadToken(order.id, item.id) : undefined,
       };
     });

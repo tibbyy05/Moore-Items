@@ -101,33 +101,76 @@ export async function POST(request: NextRequest) {
             .single();
 
           // Get order items (retry — checkout route may still be inserting)
-          let orderItems: typeof rawItems = [];
-          let rawItems: { id: string; name: string; quantity: number; unit_price: number; image_url: string | null; variant_info: string | null; product_id: string; warehouse: string | null }[] = [];
+          type OrderItemRow = {
+            id: string;
+            name: string;
+            quantity: number;
+            unit_price: number;
+            image_url: string | null;
+            variant_info: string | null;
+            product_id: string;
+            warehouse: string | null;
+          };
+          let orderItems: OrderItemRow[] = [];
+          let itemsFetched = false;
           for (let attempt = 0; attempt < 3; attempt++) {
             const { data } = await supabase
               .from('mi_order_items')
               .select('id, name, quantity, unit_price, image_url, variant_info, product_id, warehouse')
               .eq('order_id', orderId);
-            if (data && data.length > 0) { orderItems = data; break; }
+            if (data && data.length > 0) {
+              orderItems = data as OrderItemRow[];
+              itemsFetched = true;
+              break;
+            }
             if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
           }
-          const itemsFetched = orderItems.length > 0;
 
-          // Derive estimated delivery from warehouse data
+          // Fetch product shipping_days + warehouse for delivery estimate
+          let productShippingMap = new Map<string, { shipping_days: string | null; warehouse: string | null }>();
+          if (itemsFetched) {
+            const pIds = Array.from(new Set(orderItems.map(i => i.product_id).filter(Boolean)));
+            if (pIds.length > 0) {
+              const { data: productData } = await supabase
+                .from('mi_products')
+                .select('id, shipping_days, warehouse')
+                .in('id', pIds);
+              productShippingMap = new Map((productData || []).map(p => [p.id, { shipping_days: p.shipping_days, warehouse: p.warehouse }]));
+            }
+          }
+
+          // Derive estimated delivery from shipping_days (priority) then warehouse
           let estimatedDelivery: string;
           if (isAllDigital) {
             estimatedDelivery = 'Instant Download';
           } else if (!itemsFetched) {
             estimatedDelivery = '2\u20135 business days';
           } else {
-            const hasCN = orderItems.some(i => i.warehouse === 'CN');
-            const hasUS = orderItems.some(i => i.warehouse === 'US' || !i.warehouse);
-            if (hasCN && hasUS) {
-              estimatedDelivery = 'US items: 2\u20135 days \u00b7 International items: 7\u201320 days';
-            } else if (hasCN) {
-              estimatedDelivery = 'Delivered in 7\u201320 business days';
+            // Check if any product has shipping_days set
+            const shippingDaysValues = orderItems
+              .map(i => productShippingMap.get(i.product_id)?.shipping_days)
+              .filter((v): v is string => !!v);
+
+            if (shippingDaysValues.length > 0) {
+              // Use the longest shipping_days value (CN items tend to have longer)
+              estimatedDelivery = `Delivered in ${shippingDaysValues.sort().reverse()[0]}`;
             } else {
-              estimatedDelivery = 'Delivered in 2\u20135 business days';
+              // Fallback to warehouse-based estimate
+              const hasCN = orderItems.some(i => {
+                const pw = productShippingMap.get(i.product_id)?.warehouse;
+                return (pw || i.warehouse) === 'CN';
+              });
+              const hasUS = orderItems.some(i => {
+                const pw = productShippingMap.get(i.product_id)?.warehouse;
+                return (pw || i.warehouse) !== 'CN';
+              });
+              if (hasCN && hasUS) {
+                estimatedDelivery = 'US items: 2\u20135 days \u00b7 International items: 7\u201320 days';
+              } else if (hasCN) {
+                estimatedDelivery = 'Delivered in 7\u201320 business days';
+              } else {
+                estimatedDelivery = 'Delivered in 2\u20135 business days';
+              }
             }
           }
 
