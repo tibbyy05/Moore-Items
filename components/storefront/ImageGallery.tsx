@@ -139,7 +139,7 @@ export function ImageGallery({ images, productName, activeImageIndex, videoUrl, 
   const totalThumbnails = readyVideos.length + processingVideos.length + galleryImages.length;
 
   return (
-    <div>
+    <div className="w-full min-w-0 overflow-x-hidden">
       {/* Main display area — constrained on mobile so product info is visible above fold */}
       <div className="relative w-full h-[40vh] md:h-auto md:aspect-square md:max-h-none rounded-2xl overflow-hidden border border-warm-100 bg-black">
         {activeVideoUrl ? (

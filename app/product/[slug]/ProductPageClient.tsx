@@ -593,7 +593,7 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
       <CartDrawer />
 
       <main className="bg-white overflow-x-hidden pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
           <nav className="flex items-center gap-1.5 text-sm mb-8">
             <Link href="/" className="text-warm-500 hover:text-gold-600 transition-colors">
               Home

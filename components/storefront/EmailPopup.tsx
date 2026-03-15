@@ -114,16 +114,16 @@ export function EmailPopup() {
       aria-labelledby="email-popup-title"
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={dismiss} />
-      <div className="relative w-full max-w-xl rounded-3xl bg-[#0f1629] text-white shadow-2xl border border-white/10 overflow-hidden">
+      <div className="relative mx-4 w-full max-w-md sm:max-w-xl rounded-3xl bg-[#0f1629] text-white shadow-2xl border border-white/10 overflow-hidden">
         <button
           onClick={dismiss}
           aria-label="Close"
-          className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+          className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
 
-        <div className="p-8 sm:p-10">
+        <div className="p-6 sm:p-10">
           <p className="text-sm uppercase tracking-[0.25em] text-gold-400">
             MooreItems Exclusive
           </p>
