@@ -324,24 +324,30 @@ export async function POST(request: NextRequest) {
 
     if (!allDigital) {
       // Sum shipping_cost from each physical product (multiplied by quantity)
-      const totalShipping = physicalItems.reduce((sum, item) => {
+      let totalShipping = physicalItems.reduce((sum, item) => {
         const product = productMap.get(item.productId);
         const productShippingCost = Number(product?.shipping_cost ?? 0);
         return sum + productShippingCost * item.quantity;
       }, 0);
+
+      // Free shipping on orders $50+
+      if (subtotal >= 50) {
+        totalShipping = 0;
+      }
+
       const totalShippingCents = Math.round(totalShipping * 100);
 
       // Determine if any product ships from China
       const isInternational = physicalItems.some(item => item.warehouse === 'CN');
 
-      console.log(`[checkout] Shipping calc: totalShipping=$${totalShipping.toFixed(2)}, isInternational=${isInternational}`);
+      console.log(`[checkout] Shipping calc: totalShipping=$${totalShipping.toFixed(2)}, isInternational=${isInternational}, subtotal=$${subtotal.toFixed(2)}`);
 
       if (totalShippingCents === 0) {
         shippingOptions.push({
           shipping_rate_data: {
             type: 'fixed_amount',
             fixed_amount: { amount: 0, currency: 'usd' },
-            display_name: 'Free Shipping',
+            display_name: isInternational ? 'Free International Shipping' : 'Free Shipping',
             delivery_estimate: {
               minimum: { unit: 'business_day' as const, value: isInternational ? 7 : 2 },
               maximum: { unit: 'business_day' as const, value: isInternational ? 15 : 5 },
