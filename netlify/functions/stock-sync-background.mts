@@ -424,13 +424,58 @@ export default async (req: Request) => {
       }
     }
 
-    // ─── Update price drift flags ───
+    // ─── Update price drift flags (auto-reprice < 25%, flag >= 25%) ───
+    let autoRepriced = 0;
     if (productDriftUpdates.length > 0) {
       for (const upd of productDriftUpdates.filter((p) => p.flagged)) {
-        await supabase
-          .from('mi_products')
-          .update({ price_drift_flagged: true, price_drift_details: upd.details })
-          .eq('id', upd.id);
+        const absDrift = Math.abs(upd.details?.maxDriftPct ?? 0);
+
+        if (absDrift < 25) {
+          // Auto-reprice: use the current CJ price from the first drifted variant
+          const variant = upd.details?.variants?.[0];
+          if (variant?.currentPrice != null) {
+            // Fetch product's shipping_cost for the formula
+            const { data: prod } = await supabase
+              .from('mi_products')
+              .select('shipping_cost')
+              .eq('id', upd.id)
+              .single();
+            const shipping = parseFloat(prod?.shipping_cost) || 3.00;
+            const newRetail = Math.ceil((variant.currentPrice + shipping) * 2.0) - 0.01;
+
+            await supabase
+              .from('mi_products')
+              .update({
+                cj_price: variant.currentPrice,
+                retail_price: newRetail,
+                price_drift_flagged: false,
+                price_drift_details: null,
+              })
+              .eq('id', upd.id);
+            autoRepriced++;
+          }
+        } else {
+          // Flag for manual review, include recommended price
+          const variant = upd.details?.variants?.[0];
+          let recommendedPrice: number | null = null;
+          if (variant?.currentPrice != null) {
+            const { data: prod } = await supabase
+              .from('mi_products')
+              .select('shipping_cost')
+              .eq('id', upd.id)
+              .single();
+            const shipping = parseFloat(prod?.shipping_cost) || 3.00;
+            recommendedPrice = Math.ceil((variant.currentPrice + shipping) * 2.0) - 0.01;
+          }
+
+          await supabase
+            .from('mi_products')
+            .update({
+              price_drift_flagged: true,
+              price_drift_details: { ...upd.details, recommendedPrice },
+            })
+            .eq('id', upd.id);
+        }
       }
       const clearedIds = productDriftUpdates.filter((p) => !p.flagged).map((p) => p.id);
       if (clearedIds.length > 0) {
@@ -439,6 +484,9 @@ export default async (req: Request) => {
           .update({ price_drift_flagged: false, price_drift_details: null })
           .in('id', clearedIds);
       }
+    }
+    if (autoRepriced > 0) {
+      console.log(`[stock-sync-bg] Auto-repriced ${autoRepriced} products (drift < 25%)`);
     }
 
     const duration = Math.round((Date.now() - startTime) / 1000);
