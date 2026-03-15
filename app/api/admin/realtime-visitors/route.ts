@@ -34,7 +34,9 @@ export async function GET() {
       .select('value')
       .eq('key', 'ga4_service_account_key')
       .single();
-    const credentials = JSON.parse(setting!.value);
+    const credentials = typeof setting!.value === 'string'
+      ? JSON.parse(setting!.value)
+      : setting!.value;
 
     const auth = new GoogleAuth({
       credentials,
@@ -58,11 +60,19 @@ export async function GET() {
       }
     );
 
+    if (!res.ok) {
+      const responseText = await res.text();
+      console.error(`[realtime-visitors] GA4 API error ${res.status}:`, responseText);
+      return NextResponse.json({ activeUsers: 0, debug: `GA4 API ${res.status}: ${responseText}` });
+    }
+
     const data = await res.json();
     const activeUsers = Number(data.rows?.[0]?.metricValues?.[0]?.value ?? 0);
 
     return NextResponse.json({ activeUsers });
-  } catch {
-    return NextResponse.json({ activeUsers: 0 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[realtime-visitors] Error:', message);
+    return NextResponse.json({ activeUsers: 0, debug: message });
   }
 }

@@ -53,6 +53,9 @@ function useLiveVisitors() {
     try {
       const res = await fetch('/api/admin/realtime-visitors');
       const data = await res.json();
+      if (data.debug) {
+        console.error('[realtime-visitors]', data.debug);
+      }
       setCount(data.activeUsers ?? 0);
     } catch {
       // keep last known count
