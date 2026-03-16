@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
   }
 
   const [
-    { data: periodOrdersData },
+    ordersResult,
     { count: activeProductsCount },
     { count: needsPolishCount },
     { data: recentOrdersData },
@@ -233,6 +233,12 @@ export async function GET(request: NextRequest) {
       .eq('key', 'last_health_check_result')
       .single(),
   ]);
+
+  if (ordersResult.error) {
+    console.error('[Dashboard] Orders query error:', ordersResult.error);
+  }
+  const periodOrdersData = ordersResult.data;
+  console.log(`[Dashboard] period=${safePeriod}, dateFrom=${range.dateFrom?.toISOString() ?? 'none'}, rows=${periodOrdersData?.length ?? 0}`);
 
   const revenue =
     periodOrdersData?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
