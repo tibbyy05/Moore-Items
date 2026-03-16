@@ -89,11 +89,7 @@ export async function GET() {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          dateRanges: [
-            { startDate: 'today', endDate: 'today' },
-            { startDate: '7daysAgo', endDate: 'today' },
-            { startDate: '30daysAgo', endDate: 'today' },
-          ],
+          dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
           metrics: [{ name: 'activeUsers' }],
           dimensions: [{ name: 'date' }],
         }),
@@ -122,22 +118,25 @@ export async function GET() {
       const rows = historicalData.rows || [];
       const todayStr = getTodayYYYYMMDD();
 
-      // Each row has dimensionValues[0].value = date (YYYYMMDD),
-      // and metricValues array with one entry per dateRange
+      // Calculate 7 days ago as YYYYMMDD
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const sevenDaysAgoStr = `${sevenDaysAgo.getFullYear()}${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
+
       for (const row of rows) {
         const date = row.dimensionValues?.[0]?.value;
         if (!date) continue;
 
-        const todayVal = Number(row.metricValues?.[0]?.value ?? 0);
-        const weekVal = Number(row.metricValues?.[1]?.value ?? 0);
-        const monthVal = Number(row.metricValues?.[2]?.value ?? 0);
+        const visitors = Number(row.metricValues?.[0]?.value ?? 0);
 
-        if (date === todayStr) todayCount += todayVal;
-        weekCount += weekVal;
-        monthCount += monthVal;
+        if (date === todayStr) todayCount += visitors;
+        if (date >= sevenDaysAgoStr) weekCount += visitors;
+        monthCount += visitors;
 
-        // Accumulate daily data for chart (use the week range value)
-        dailyMap.set(date, (dailyMap.get(date) || 0) + weekVal);
+        // Only include last 7 days in chart data
+        if (date >= sevenDaysAgoStr) {
+          dailyMap.set(date, (dailyMap.get(date) || 0) + visitors);
+        }
       }
     } else {
       console.error('[visitors] Historical API error:', historicalRes.status);
