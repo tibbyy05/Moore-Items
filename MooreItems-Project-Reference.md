@@ -4,8 +4,8 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 15, 2026 (Session 44)
-**Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch Meta ads**. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.** **Session 44 — Mobile UX overhaul (2 critical + 12 medium + 6 low fixes), shipping times fixed everywhere (dynamic warehouse-aware), availability pipeline hardened (checkout + stock sync + webhooks), order pipeline fixed (variant required, variant_info saved, race condition retries, failed fulfillment surfaced), Featured Product homepage section + admin picker, hero rotation slowed to 12s, CJPacket Ordinary confirmed for CN→US shipping.**
+**Last Updated:** March 15, 2026 (Session 44 final)
+**Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch first Meta ad**. Full order pipeline validated end-to-end. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.** **Session 44 — Mobile UX overhaul (2 critical + 12 medium + 6 low fixes), shipping times fixed everywhere (dynamic warehouse-aware), availability pipeline hardened (checkout + stock sync + webhooks), order pipeline fixed (variant required, variant_info saved, race condition retries, failed fulfillment surfaced), Featured Product homepage section + admin picker, hero rotation slowed to 12s, CJPacket Ordinary confirmed for CN→US shipping. Free shipping $50+ threshold enforced in checkout. Visitor stats dashboard live (GA4 historical: today/week/month counts + 7-day bar chart). GA4 realtime visitors fixed (force-dynamic + jsonb parse). Blender variant cleanup completed.**
 
 ---
 
@@ -67,7 +67,7 @@ The core competitive advantage: zero platform fees, full automation from product
 
 **Core Infrastructure:**
 - ✅ Full storefront UI — redesigned homepage with hero, 12-category showcase (4×3 grid), best sellers, deals, value props
-- ✅ Admin dashboard (9 pages — light/fresh theme, grouped sidebar, Pricing Controls, Catalog Health, Live Visitor counter, Pending Fulfillment + Price Drift stat cards)
+- ✅ Admin dashboard (9 pages — light/fresh theme, grouped sidebar, Pricing Controls, Catalog Health, Visitor Stats dashboard with GA4 historical data + realtime, Pending Fulfillment + Price Drift stat cards)
 - ✅ Supabase database with 14+ tables (all prefixed `mi_`)
 - ✅ CJ Dropshipping API integration (auth with globalThis token caching, product sync, pricing engine)
 - ✅ Stripe checkout integration (hosted Checkout Sessions, webhooks) — **LIVE MODE**
@@ -194,7 +194,7 @@ The core competitive advantage: zero platform fees, full automation from product
 
 **Admin Dashboard (Cleaned Up — Feb 24, Fixed — Feb 28):**
 - ✅ **Sidebar reorganized** — grouped into STORE (Dashboard, Products, Import Products, Hero Images, Featured Product), OPERATIONS (Orders, Customers, Promo Codes, Landing Pages), TOOLS (Catalog Health), SETTINGS (Pricing, Shipping), COMING SOON (Analytics Beta, Ad Campaigns greyed out with badges)
-- ✅ **Dashboard** — real data only, fake change percentages removed, "Needs Polish" stat card (violet), Quick Actions row (Add Product, Reprice All with confirmation, View Store)
+- ✅ **Dashboard** — real data only, fake change percentages removed, "Needs Polish" stat card (violet), Quick Actions row (Add Product, Reprice All with confirmation, View Store). **Visitor Stats section (Session 44):** 4 stat cards (Live Now with green pulse, Today, This Week, This Month) + gold recharts bar chart showing last 7 days of visitors. Powered by `/api/admin/visitors` route with parallel GA4 Realtime + Historical API calls, polls every 60s.
 - ✅ **Dashboard RLS fix** — uses admin service role client via `/api/admin/dashboard` to bypass RLS and show all orders/customers (Session 14)
 - ✅ **Dashboard time filter** — dropdown: Today, This Week, Last Week, This Month, Last Month, This Quarter, All Time (Session 14)
 - ✅ **Products page** — working pagination (Previous/Next, page numbers, "Showing X-Y of Z"), dead "Import CSV" button removed
@@ -333,6 +333,8 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Cart reassurance banner** — green banner for physical products, violet for digital
 - ✅ **Cart trust badges** — compact horizontal layout (Free Shipping $50+, Secure Checkout, Easy Returns, Safe Payment)
 - ✅ **Homepage value props** updated with "Fast US Shipping" messaging
+- ✅ **Free shipping $50+ threshold enforced in checkout** — applies to all orders including CN warehouse; cart summary shows "FREE" in green when met, "Add $X.XX more" hint when under (Session 44)
+- ✅ **"Free International Shipping"** label shown at Stripe checkout for CN orders when $50+ threshold met (Session 44)
 
 **Navigation & Discovery:**
 - ✅ Visual mega menu — full-width, 12 categories (no product counts), 3 product previews on right
@@ -486,9 +488,9 @@ The core competitive advantage: zero platform fees, full automation from product
 - ❌ Blog/content section (Phase 4 SEO — long-term content play)
 - ❌ Unified import pipeline (spec written in Session 15 — replaces 9-script sequence with single command, **use AI categorization not keywords**)
 - ⏳ **Raise blender retail price** — currently priced too low relative to cost
-- ⏳ **Fix White Pink variant** — variant has incorrect data or display issue
+- ~~⏳ **Fix White Pink variant**~~ ✅ RESOLVED (Session 44 — White Pink bundle, 2pcs White, 2pcs Pink, Pink/White Simple Packaging, Blue 380ml, Blue 420ml variants deactivated; only White, Pink, Black single-unit variants remain active)
 - ⏳ **Health check summary email** — daily catalog health script should email results instead of just logging
-- ⏳ **Free shipping threshold** — implement free shipping over a certain order value to boost AOV
+- ~~⏳ **Free shipping threshold**~~ ✅ RESOLVED (Session 44 — $50+ subtotal threshold enforced in checkout route for all orders including CN; cart summary shows "FREE" in green when met, "Add $X.XX more" hint when under)
 - ⏳ **More product videos** — expand Cloudflare Stream video coverage across catalog
 
 ---
@@ -4113,9 +4115,54 @@ Rewrote `app/api/admin/products/upload-video/route.ts`:
 
 - ✅ Category image added: `public/images/categories/digital-downloads.jpg`
 
+**Featured Product Fixes (continued):**
+
+- ✅ Search param bug fixed: component was sending `?search=` but `/api/products` uses `?q=` — aligned to `?q=`
+- ✅ RLS policy added to mi_settings for admin writes (`CREATE POLICY "Admin can manage settings"`)
+- ✅ `variant_info` column was missing from live `mi_order_items` table — fixed with `ALTER TABLE mi_order_items ADD COLUMN variant_info text NULL`. This was root cause of "Unable to create order items" checkout error
+
+**Free Shipping Threshold ($50+):**
+
+- ✅ Checkout route (`app/api/checkout/route.ts`): `if (subtotal >= 50) totalShipping = 0` applied after per-product shipping_cost sum — works for ALL orders including CN warehouse
+- ✅ CN free shipping label: shows "Free International Shipping" (with 7-15 day estimate) when threshold met
+- ✅ Cart summary (`components/cart/CartSummary.tsx`): shows "FREE" in green when subtotal >= $50, shows "Add $X.XX more for free shipping" muted hint when under $50
+
+**Blender Variant Cleanup:**
+
+- ✅ White Pink (bundle), 2pcs White, 2pcs Pink, Pink/White Simple Packaging, Blue 380ml, Blue 420ml variants deactivated via admin
+- ✅ Only White, Pink, Black single-unit variants remain active
+
+**GA4 Live Visitors Fixed:**
+
+- ✅ Root cause: missing `export const dynamic = 'force-dynamic'` on realtime-visitors route — Next.js tried static rendering, silently failing before GA4 call
+- ✅ Added response body logging (`console.log('[GA4] status:', res.status)` + first 500 chars of body) for debugging
+- ✅ Fixed JSON.parse issue: Supabase jsonb returns objects not strings — added `typeof setting!.value === 'string'` guard
+- ✅ Catch block now logs actual error message to Netlify function logs (was swallowing silently)
+- ✅ Returns `debug` field alongside `activeUsers: 0` on error so client can distinguish real zero from broken
+
+**Visitor Stats Dashboard (NEW):**
+
+- ✅ New API route: `app/api/admin/visitors/route.ts` — parallel calls to GA4 Realtime (activeNow) + GA4 runReport (30-day history with date dimension)
+- ✅ Single date range approach (30daysAgo → today) — multiple dateRanges caused GA4 to add dateRange dimension, breaking count logic
+- ✅ Returns: `activeNow`, `todayCount`, `weekCount`, `monthCount`, `dailyData` (last 7 days for chart)
+- ✅ Admin dashboard updated: 4 visitor stat cards in grid-cols-4 (Live Now with green pulse, Today, This Week, This Month)
+- ✅ Gold bar chart (recharts, #c8a45e, 120px height) showing last 7 days of visitor data
+- ✅ Polls every 60 seconds (same pattern as previous live counter)
+- ✅ Confirmed working: 1 live, 29 this week, 98 this month, chart showing Mar 10-15 upward trend
+- ✅ Main stat cards moved to 6-column grid below visitors section
+
+**CJ Shipping Configuration:**
+
+- ✅ CJ default shipping rule configured in CJ dashboard: Cost Priority, CJPacket Ordinary for US-bound CN orders — future orders auto-assign without manual selection
+
 **Key Learnings This Session:**
 
 - CJPacket Ordinary is the correct CN→US shipping method (not plain CJPacket) — configured as CJ dashboard default rule
 - DB is the source of truth for stock, not CJ API — CJ returns 200 for live products even during desync
 - Order emails need retry loops because Supabase writes from Stripe webhook may not be immediately consistent
 - `warehouse_status` and `warehouse` are different fields — cart/shipping logic should use `warehouse` (the actual product field), not `warehouse_status` (a derived display field)
+- `variant_info` (and any new DB columns added in code) must be manually added to live Supabase with `ALTER TABLE` before deploying — code and DB schema can get out of sync silently causing insert failures
+- GA4 API routes must have `export const dynamic = 'force-dynamic'` or Next.js static rendering will silently fail them
+- GA4 `runReport` with multiple `dateRanges` adds a `dateRange` dimension to each row — use single date range and compute counts from date strings instead
+- `mi_settings` RLS blocks writes by default — admin policies must be explicitly created for new write operations (e.g., featured_product_id upsert)
+- Free shipping threshold must be enforced in checkout route, not just in UI — per-product `shipping_cost` DB values are the actual source used by Stripe, not the `lib/shipping.ts` config
