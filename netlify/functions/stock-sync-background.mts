@@ -85,6 +85,20 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function syncProductStockCount(supabase: SupabaseAdmin, productId: string): Promise<void> {
+  const { data: variants } = await supabase
+    .from('mi_product_variants')
+    .select('stock_count')
+    .eq('product_id', productId)
+    .eq('is_active', true);
+
+  const totalStock = (variants || []).reduce((sum: number, v: any) => sum + (v.stock_count ?? 0), 0);
+  await supabase
+    .from('mi_products')
+    .update({ stock_count: totalStock })
+    .eq('id', productId);
+}
+
 async function buildRiskProductIds(supabase: SupabaseAdmin): Promise<Set<string>> {
   const riskIds = new Set<string>();
 
@@ -227,7 +241,7 @@ export default async (req: Request) => {
         if (!hasAnyStock && product.status === 'active') {
           const { error: updateError } = await supabase
             .from('mi_products')
-            .update({ status: 'out_of_stock' })
+            .update({ status: 'out_of_stock', stock_count: 0 })
             .eq('id', product.id);
 
           if (!updateError) {
@@ -248,10 +262,13 @@ export default async (req: Request) => {
             // Fetch ALL variants (active + inactive) so we can reactivate stocked ones
             const { data: variants } = await supabase
               .from('mi_product_variants')
-              .select('id, cj_vid')
+              .select('id, cj_vid, stock_count, is_active')
               .eq('product_id', product.id);
 
             for (const v of variants || []) {
+              // Skip manually hidden variants (had stock but was deactivated by admin)
+              if (!v.is_active && (v.stock_count ?? 0) > 0) continue;
+
               const cjStock = variantStockMap.get(v.cj_vid);
               const variantStock = preferUS ? (cjStock?.us ?? 0) : (cjStock?.cn ?? 0);
               await supabase
@@ -259,6 +276,9 @@ export default async (req: Request) => {
                 .update({ stock_count: variantStock, is_active: variantStock > 0 })
                 .eq('id', v.id);
             }
+
+            // Sync product-level stock_count from variant totals
+            await syncProductStockCount(supabase, product.id);
 
             if (product.status === 'out_of_stock') {
               reactivated++;
@@ -304,6 +324,9 @@ export default async (req: Request) => {
           }
 
           if (variantsUpdated > 0) {
+            // Sync product-level stock_count from variant totals
+            await syncProductStockCount(supabase, product.id);
+
             stockUpdated++;
             changes.push({
               name: product.name,
@@ -378,7 +401,7 @@ export default async (req: Request) => {
           action: 'error',
           error: err?.message || 'Unknown error',
         });
-        console.error(`[stock-sync-bg] Error for ${product.name} (${product.cj_pid}):`, err?.message);
+        console.error(`[stock-sync-bg] CJ stock check FAILED — product="${product.name}" cj_pid=${product.cj_pid} status=${product.status} error="${err?.message || 'Unknown'}"`);
       }
 
       // Delay between CJ API calls (skip after last product)
