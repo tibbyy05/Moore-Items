@@ -23,6 +23,18 @@ export default function MetaPixel() {
     return () => window.removeEventListener('mi:cookie-consent-accepted', onAccept);
   }, []);
 
+  // Load fbevents.js SDK when consent is given
+  useEffect(() => {
+    if (!consentGiven || !META_PIXEL_ID) return;
+    if (document.getElementById('meta-pixel-sdk')) return;
+
+    const script = document.createElement('script');
+    script.id = 'meta-pixel-sdk';
+    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    script.async = true;
+    document.head.appendChild(script);
+  }, [consentGiven]);
+
   if (!META_PIXEL_ID) return null;
 
   return (
@@ -40,15 +52,6 @@ export default function MetaPixel() {
           fbq('track', 'PageView');
         `}
       </Script>
-
-      {/* Actual fbevents.js — only loaded after consent */}
-      {consentGiven && (
-        <Script
-          id="meta-pixel-sdk"
-          src="https://connect.facebook.net/en_US/fbevents.js"
-          strategy="afterInteractive"
-        />
-      )}
 
       {consentGiven && (
         <noscript>
