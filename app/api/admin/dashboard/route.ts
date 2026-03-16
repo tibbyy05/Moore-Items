@@ -28,41 +28,33 @@ interface DateRange {
 
 function getDateRange(period: Period): DateRange {
   const now = new Date();
-  const todayStart = new Date(now.toISOString().split('T')[0] + 'T00:00:00Z');
 
   switch (period) {
     case 'today': {
-      return { dateFrom: todayStart, dateTo: undefined, groupBy: 'hour' as const };
+      const dateFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo: undefined, groupBy: 'hour' as const };
     }
     case 'this_week': {
-      const weekStart = new Date(todayStart);
-      weekStart.setDate(weekStart.getDate() - 6);
-      return { dateFrom: weekStart, dateTo: undefined, groupBy: 'day' as const };
+      const dateFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo: undefined, groupBy: 'day' as const };
     }
     case 'last_week': {
-      const dayOfWeek = todayStart.getDay();
-      const thisWeekStart = new Date(todayStart);
-      thisWeekStart.setDate(todayStart.getDate() - dayOfWeek);
-      const lastWeekStart = new Date(thisWeekStart);
-      lastWeekStart.setDate(thisWeekStart.getDate() - 7);
-      const lastWeekEnd = new Date(thisWeekStart);
-      lastWeekEnd.setMilliseconds(-1);
-      return { dateFrom: lastWeekStart, dateTo: lastWeekEnd, groupBy: 'day' as const };
+      const dateFrom = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const dateTo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo, groupBy: 'day' as const };
     }
     case 'this_month': {
-      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      return { dateFrom: monthStart, dateTo: undefined, groupBy: 'day' as const };
+      const dateFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo: undefined, groupBy: 'day' as const };
     }
     case 'last_month': {
-      const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
-      const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-      lastMonthEnd.setMilliseconds(-1);
-      return { dateFrom: lastMonthStart, dateTo: lastMonthEnd, groupBy: 'day' as const };
+      const dateFrom = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+      const dateTo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo, groupBy: 'day' as const };
     }
     case 'this_quarter': {
-      const quarterMonth = Math.floor(now.getUTCMonth() / 3) * 3;
-      const quarterStart = new Date(Date.UTC(now.getUTCFullYear(), quarterMonth, 1));
-      return { dateFrom: quarterStart, dateTo: undefined, groupBy: 'week' as const };
+      const dateFrom = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      return { dateFrom, dateTo: undefined, groupBy: 'week' as const };
     }
     case 'all_time': {
       return { dateFrom: undefined, dateTo: undefined, groupBy: 'week' as const };
