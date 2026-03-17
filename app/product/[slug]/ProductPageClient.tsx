@@ -273,10 +273,21 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
       ? matrix.allSizes.find((s) => parseVariantQty(s) > 1) ?? null
       : null;
     if (!selectedColor) {
-      // Set both color and size in one call
-      handleColorChange(matrix.allColors[0], multiSize);
+      const firstColor = matrix.allColors[0];
+      // Check if the first color itself is a multi-pc variant (e.g. "White Pink")
+      const colorIsMultiPc = product.variants.some(
+        (v) => v.color?.toLowerCase() === firstColor.toLowerCase() && isMultiPcVariant(v) && !v.size
+      );
+      // If color is itself multi-pc, no size needed; otherwise use multiSize
+      handleColorChange(firstColor, colorIsMultiPc ? null : multiSize);
     } else if (multiSize && selectedSize !== multiSize) {
-      handleSizeChange(multiSize);
+      // Check if current color is a multi-pc variant (no size selection needed)
+      const colorIsMultiPc = product.variants.some(
+        (v) => v.color?.toLowerCase() === selectedColor.toLowerCase() && isMultiPcVariant(v) && !v.size
+      );
+      if (!colorIsMultiPc) {
+        handleSizeChange(multiSize);
+      }
     }
     bundleInitRef.current = true;
   }, [product, matrix, selectedColor, selectedSize, handleColorChange, handleSizeChange]);
@@ -563,8 +574,6 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
 
   // Per-unit pricing for multi-piece variants
   const isBundleLayout = product.layout_type === 'bundle';
-  const qty = parseVariantQty(selectedVariant?.name ?? '');
-  const unitPrice = qty > 1 ? effectivePrice / qty : effectivePrice;
 
   // Helper: detect if a variant is a known multi-piece combo
   const isMultiPcVariant = (v: { name: string; size?: string | null }) => {
@@ -580,6 +589,12 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
     if (lower.includes('white pink') || lower.includes('pink white')) return 2;
     return 1;
   };
+
+  const selectedV = selectedVariant ?? { name: '', size: undefined as string | undefined };
+  const qty = isMultiPcVariant(selectedV)
+    ? getMultiPcQty(selectedV)
+    : parseVariantQty(selectedVariant?.size ?? selectedVariant?.name ?? '');
+  const unitPrice = qty > 1 ? effectivePrice / qty : effectivePrice;
 
   // For bundle picker: find 1pc and multi-pc variants for current color (or first color as fallback)
   const bundleColor = selectedColor?.toLowerCase()
@@ -599,9 +614,21 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
     : null;
   const bundleMultiQty = bundleMulti ? getMultiPcQty(bundleMulti) : 2;
   const bundleMultiUnit = bundleMulti ? bundleMulti.price / bundleMultiQty : 0;
-  const bundleSavings = bundleSingle && bundleMulti
-    ? bundleSingle.price * bundleMultiQty - bundleMulti.price
-    : 0;
+  const bundleSavings = (() => {
+    if (qty <= 1) return 0;
+    // Try same-color single variant first
+    if (bundleSingle) {
+      return bundleSingle.price * qty - effectivePrice;
+    }
+    // Fallback: use any single-unit variant on the product
+    const anyOnePc = product.variants.find(
+      (v) => v.inStock && !isMultiPcVariant(v) && parseVariantQty(v.size ?? v.name) === 1
+    );
+    if (anyOnePc) {
+      return anyOnePc.price * qty - effectivePrice;
+    }
+    return 0;
+  })();
 
   const handleAddToCart = () => {
     // Require variant selection when product has variants
@@ -719,35 +746,33 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
               ) : null}
 
               <div className="mb-6">
-                {qty > 1 ? (
-                  <div>
-                    <div className="text-3xl font-semibold text-[#0f1629]">
-                      ${unitPrice.toFixed(2)}
-                    </div>
-                    <div className="text-sm text-warm-500 mt-1">
-                      per unit · {qty} pieces
-                    </div>
-                    <div className="text-sm text-warm-500 mt-0.5">
-                      Total: ${effectivePrice.toFixed(2)}
-                    </div>
-                    {bundleSavings > 0 && (
-                      <div className="inline-block mt-2 text-xs font-medium bg-green-50 text-green-800 px-2 py-1 rounded-full">
-                        Save ${bundleSavings.toFixed(2)} vs buying separately
-                      </div>
-                    )}
-                  </div>
-                ) : (
+                <div>
                   <div className="flex items-baseline gap-2">
                     {hasVariantPriceRange && !selectedVariant && (
                       <span className="text-sm text-warm-500">From</span>
                     )}
-                    <PriceDisplay
-                      price={effectivePrice}
-                      compareAtPrice={effectiveCompareAtPrice}
-                      size="lg"
-                    />
+                    {qty > 1 ? (
+                      <div className="text-3xl font-semibold text-[#0f1629]">
+                        ${unitPrice.toFixed(2)}
+                      </div>
+                    ) : (
+                      <PriceDisplay
+                        price={effectivePrice}
+                        compareAtPrice={effectiveCompareAtPrice}
+                        size="lg"
+                      />
+                    )}
                   </div>
-                )}
+                  <div className="text-sm text-warm-500 mt-1">
+                    {qty > 1 ? `per unit · ${qty} pieces` : 'per unit'}
+                  </div>
+                  <div className={qty > 1 ? 'text-sm text-gray-500 mt-0.5' : 'text-sm mt-0.5 invisible'}>
+                    Total: ${effectivePrice.toFixed(2)}
+                  </div>
+                  <div className={bundleSavings > 0 && qty > 1 ? 'inline-block mt-2 text-xs font-medium bg-green-50 text-green-800 px-2 py-1 rounded-full' : 'inline-block mt-2 text-xs px-2 py-1 invisible'}>
+                    Save ${bundleSavings > 0 ? bundleSavings.toFixed(2) : '0.00'} vs buying separately
+                  </div>
+                </div>
               </div>
               {!product.isDigital && viewingCount ? (
                 <div className="flex items-center gap-2 text-xs text-warm-500 mb-6">
@@ -819,52 +844,73 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
                   {isBundleLayout && (
                     <div className="mt-4">
                       <p className="text-sm font-medium text-gray-700 mb-2">Quantity</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {/* 1-piece option */}
-                        {bundleSingle && (
-                          <button
-                            onClick={() => { setVariantError(null); handleSizeChange(null); }}
-                            className={cn(
-                              'relative rounded-xl p-4 text-left transition-all',
-                              !selectedSize || !isMultiPcVariant(selectedVariant ?? { name: '' })
-                                ? 'bg-[#f7f6f3] border-2 border-[#c8a45e]'
-                                : 'bg-white border border-gray-200 hover:border-gray-300'
-                            )}
-                          >
-                            <span className="block text-sm font-medium text-gray-900">1 piece</span>
-                            <span className="block text-[13px] text-gray-500 mt-0.5">
-                              ${bundleSingle.price.toFixed(2)} each
-                            </span>
-                          </button>
-                        )}
-                        {/* Multi-piece option */}
-                        {bundleMulti && (
-                          <button
-                            onClick={() => { setVariantError(null); handleSizeChange(bundleMulti.size || null); }}
-                            className={cn(
-                              'relative rounded-xl p-4 text-left transition-all',
-                              selectedSize && isMultiPcVariant(selectedVariant ?? { name: '' })
-                                ? 'bg-[#f7f6f3] border-2 border-[#c8a45e]'
-                                : 'bg-white border border-gray-200 hover:border-gray-300'
-                            )}
-                          >
-                            {selectedSize && isMultiPcVariant(selectedVariant ?? { name: '' }) && (
-                              <span className="absolute -top-2 right-3 bg-[#c8a45e] text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-                                Best value
+                      {(() => {
+                        const isMultiActive = (selectedSize && isMultiPcVariant(selectedVariant ?? { name: '' }))
+                          || (selectedVariant && !selectedVariant.size && isMultiPcVariant(selectedVariant));
+                        return (
+                        <div className="grid grid-cols-2 gap-3 items-stretch">
+                          {/* 1-piece option */}
+                          {bundleSingle ? (
+                            <button
+                              onClick={() => { setVariantError(null); handleSizeChange(null); }}
+                              className={cn(
+                                'relative rounded-xl p-4 text-left transition-all min-h-[100px]',
+                                !isMultiActive
+                                  ? 'bg-[#fffdf7] border-2 border-[#c8a45e]'
+                                  : 'bg-white border border-gray-200 hover:border-gray-300'
+                              )}
+                            >
+                              <span className="block text-sm font-semibold text-[#0f1629]">1 Piece</span>
+                              <span className="block text-xs text-gray-400 mt-1">
+                                ${bundleSingle.price.toFixed(2)} each
                               </span>
-                            )}
-                            <span className="block text-sm font-medium text-[#0f1629]">{bundleMultiQty} pieces</span>
-                            <span className="block text-[13px] text-gray-500 mt-0.5">
-                              ${bundleMultiUnit.toFixed(2)} each
-                            </span>
-                            {bundleSavings > 0 && (
-                              <span className="block text-xs text-green-600 font-medium mt-1">
-                                Save ${bundleSavings.toFixed(2)} vs buying separately
+                              <span className="block text-xs mt-1 invisible">&nbsp;</span>
+                            </button>
+                          ) : (
+                            <div className="rounded-xl p-4 text-left bg-white border border-gray-100 opacity-40 cursor-not-allowed pointer-events-none min-h-[100px]">
+                              <span className="block text-sm font-semibold text-[#0f1629]">1 Piece</span>
+                              <span className="block text-sm text-gray-400 mt-1">
+                                Not available separately
                               </span>
-                            )}
-                          </button>
-                        )}
-                      </div>
+                              <span className="block text-xs mt-1 invisible">&nbsp;</span>
+                            </div>
+                          )}
+                          {/* Multi-piece option */}
+                          {bundleMulti ? (
+                            <button
+                              onClick={() => { setVariantError(null); handleSizeChange(bundleMulti.size || null); }}
+                              className={cn(
+                                'relative rounded-xl p-4 text-left transition-all min-h-[100px]',
+                                isMultiActive
+                                  ? 'bg-[#fffdf7] border-2 border-[#c8a45e]'
+                                  : 'bg-white border border-gray-200 hover:border-gray-300'
+                              )}
+                            >
+                              {isMultiActive && (
+                                <span className="absolute top-2 right-2 bg-[#c8a45e] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                  Best value
+                                </span>
+                              )}
+                              <span className="block text-sm font-semibold text-[#0f1629]">{bundleMultiQty} Pieces</span>
+                              <span className="block text-xs text-gray-500 mt-1">
+                                ${bundleMultiUnit.toFixed(2)} each
+                              </span>
+                              <span className={bundleSavings > 0 ? 'block text-xs text-green-600 font-medium mt-1' : 'block text-xs mt-1 invisible'}>
+                                {bundleSavings > 0 ? `Save $${bundleSavings.toFixed(2)} vs buying separately` : '\u00A0'}
+                              </span>
+                            </button>
+                          ) : (
+                            <div className="rounded-xl p-4 text-left bg-white border border-gray-100 opacity-40 cursor-not-allowed pointer-events-none min-h-[100px]">
+                              <span className="block text-sm font-semibold text-[#0f1629]">2 Pieces</span>
+                              <span className="block text-sm text-gray-400 mt-1">
+                                Not available in this color
+                              </span>
+                              <span className="block text-xs mt-1 invisible">&nbsp;</span>
+                            </div>
+                          )}
+                        </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
