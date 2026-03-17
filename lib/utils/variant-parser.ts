@@ -276,3 +276,16 @@ function isSizeStr(str: string): boolean {
 function titleCase(str: string): string {
   return str.trim().replace(/\b\w/g, c => c.toUpperCase());
 }
+
+// ============================================================
+// Parse quantity from variant name
+// ============================================================
+/**
+ * Extract the number of units from a variant name string.
+ * Matches patterns like "2pcs", "2pc", "2 pcs", "2 pieces", "2piece" (case-insensitive).
+ * Returns 1 if no quantity pattern is found.
+ */
+export function parseVariantQty(variantName: string): number {
+  const match = variantName.match(/(\d+)\s*(?:pcs?|pieces?)(?!\w)/i);
+  return match ? parseInt(match[1], 10) : 1;
+}

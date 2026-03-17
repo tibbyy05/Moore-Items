@@ -21,6 +21,7 @@ import { ProductCard } from '@/components/storefront/ProductCard';
 import { Product } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useVariantSelection } from '@/hooks/useVariantSelection';
+import { parseVariantQty } from '@/lib/utils/variant-parser';
 
 function timeAgo(dateString: string): string {
   const now = new Date();
@@ -540,6 +541,40 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
     product.variants.length > 1 &&
     new Set(product.variants.map((v) => v.price)).size > 1;
 
+  // Per-unit pricing for multi-piece variants
+  const qty = parseVariantQty(selectedVariant?.name ?? '');
+  const unitPrice = qty > 1 ? effectivePrice / qty : effectivePrice;
+
+  // Detect quantity-based sizes (e.g. "2pcs" instead of S/M/L)
+  const isQtyBasedSizes = matrix.hasSizes && matrix.allSizes.some(
+    (s) => parseVariantQty(s) > 1
+  );
+
+  // For qty picker: find 1pc and multi-pc variants for current color
+  const qtyPickerSingle = isQtyBasedSizes
+    ? product.variants.find(
+        (v) => v.inStock && !v.size && v.color?.toLowerCase() === selectedColor?.toLowerCase()
+      ) ?? product.variants.find((v) => v.inStock && parseVariantQty(v.name) === 1 && v.color?.toLowerCase() === selectedColor?.toLowerCase())
+    : null;
+  const qtyPickerMulti = isQtyBasedSizes
+    ? product.variants.find(
+        (v) => v.inStock && v.size && parseVariantQty(v.size) > 1 && v.color?.toLowerCase() === selectedColor?.toLowerCase()
+      )
+    : null;
+  const qtyPickerMultiQty = qtyPickerMulti ? parseVariantQty(qtyPickerMulti.size || '') : 2;
+  const qtyPickerMultiUnit = qtyPickerMulti ? qtyPickerMulti.price / qtyPickerMultiQty : 0;
+  const qtyPickerSavings = qtyPickerSingle && qtyPickerMulti
+    ? qtyPickerSingle.price * qtyPickerMultiQty - qtyPickerMulti.price
+    : 0;
+
+  // Find a single-piece variant for savings comparison (price display)
+  const singlePieceVariant = qty > 1
+    ? qtyPickerSingle ?? product.variants.find((v) => parseVariantQty(v.name) === 1 && v.inStock)
+    : null;
+  const bundleSavings = singlePieceVariant
+    ? singlePieceVariant.price * qty - effectivePrice
+    : 0;
+
   const handleAddToCart = () => {
     // Require variant selection when product has variants
     const hasVariants = product.variants && product.variants.length > 0;
@@ -655,15 +690,36 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 </div>
               ) : null}
 
-              <div className="mb-6 flex items-baseline gap-2">
-                {hasVariantPriceRange && !selectedVariant && (
-                  <span className="text-sm text-warm-500">From</span>
+              <div className="mb-6">
+                {qty > 1 ? (
+                  <div>
+                    <div className="text-3xl font-semibold text-[#0f1629]">
+                      ${unitPrice.toFixed(2)}
+                    </div>
+                    <div className="text-sm text-warm-500 mt-1">
+                      per unit · {qty} pieces
+                    </div>
+                    <div className="text-sm text-warm-500 mt-0.5">
+                      Total: ${effectivePrice.toFixed(2)}
+                    </div>
+                    {bundleSavings > 0 && (
+                      <div className="inline-block mt-2 text-xs font-medium bg-green-50 text-green-800 px-2 py-1 rounded-full">
+                        Save ${bundleSavings.toFixed(2)} vs buying separately
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-baseline gap-2">
+                    {hasVariantPriceRange && !selectedVariant && (
+                      <span className="text-sm text-warm-500">From</span>
+                    )}
+                    <PriceDisplay
+                      price={effectivePrice}
+                      compareAtPrice={effectiveCompareAtPrice}
+                      size="lg"
+                    />
+                  </div>
                 )}
-                <PriceDisplay
-                  price={effectivePrice}
-                  compareAtPrice={effectiveCompareAtPrice}
-                  size="lg"
-                />
               </div>
               {!product.isDigital && viewingCount ? (
                 <div className="flex items-center gap-2 text-xs text-warm-500 mb-6">
@@ -730,7 +786,54 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     selectedSize={selectedSize}
                     onColorChange={(color, autoSize) => { setVariantError(null); handleColorChange(color, autoSize); }}
                     onSizeChange={(size, autoColor) => { setVariantError(null); handleSizeChange(size, autoColor); }}
+                    hideSizes={isQtyBasedSizes}
                   />
+                  {isQtyBasedSizes && (
+                    <div className="mt-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Quantity</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* 1-piece option */}
+                        {qtyPickerSingle && (
+                          <button
+                            onClick={() => { setVariantError(null); handleSizeChange(null); }}
+                            className={cn(
+                              'rounded-lg border-2 p-3 text-left transition-all',
+                              !selectedSize
+                                ? 'border-[#c8a45e] bg-[#c8a45e]/5'
+                                : 'border-gray-200 hover:border-[#c8a45e]/50'
+                            )}
+                          >
+                            <span className="block text-sm font-medium text-warm-900">1 piece</span>
+                            <span className="block text-xs text-warm-500 mt-0.5">
+                              ${qtyPickerSingle.price.toFixed(2)} each
+                            </span>
+                          </button>
+                        )}
+                        {/* Multi-piece option */}
+                        {qtyPickerMulti && (
+                          <button
+                            onClick={() => { setVariantError(null); handleSizeChange(qtyPickerMulti.size || null); }}
+                            className={cn(
+                              'rounded-lg border-2 p-3 text-left transition-all',
+                              selectedSize && parseVariantQty(selectedSize) > 1
+                                ? 'border-[#c8a45e] bg-[#c8a45e]/5'
+                                : 'border-gray-200 hover:border-[#c8a45e]/50'
+                            )}
+                          >
+                            <span className="block text-sm font-medium text-warm-900">{qtyPickerMultiQty} pieces</span>
+                            <span className="block text-xs text-warm-500 mt-0.5">
+                              ${qtyPickerMultiUnit.toFixed(2)} each
+                            </span>
+                            {qtyPickerSavings > 0 && (
+                              <span className="block text-xs text-green-600 font-medium mt-0.5">
+                                Save ${qtyPickerSavings.toFixed(2)} vs {qtyPickerMultiQty} singles
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

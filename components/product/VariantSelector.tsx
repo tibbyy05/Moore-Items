@@ -123,6 +123,7 @@ interface VariantSelectorProps {
   selectedSize: string | null;
   onColorChange: (color: string | null, autoSize?: string | null) => void;
   onSizeChange: (size: string | null, autoColor?: string | null) => void;
+  hideSizes?: boolean;
 }
 
 // ============================================================
@@ -134,6 +135,7 @@ export default function VariantSelector({
   selectedSize,
   onColorChange,
   onSizeChange,
+  hideSizes,
 }: VariantSelectorProps) {
   // Compute which options are available based on current selection
   const availableColors = useMemo(
@@ -265,7 +267,7 @@ export default function VariantSelector({
       )}
 
       {/* SIZE SELECTOR */}
-      {matrix.hasSizes && (
+      {matrix.hasSizes && !hideSizes && (
         <div>
           <p className="text-sm font-medium text-gray-700 mb-2">
             Size: <span className="text-gray-900">{selectedSize || 'Select'}</span>

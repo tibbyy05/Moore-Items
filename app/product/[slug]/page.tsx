@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: { slug: string };
 }): Promise<Metadata> {
   const product = await fetchProductBySlug(params.slug);
-  if (!product) notFound();
+  if (!product || product.status !== 'active') notFound();
 
   const stripped = stripHtml(product.description);
   const plainDescription = stripped
