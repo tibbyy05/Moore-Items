@@ -263,19 +263,23 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
   const { toggleWishlist, isWishlisted } = useWishlist();
   const addToCartRef = useRef<HTMLButtonElement>(null);
 
-  // Auto-select bundle size on mount for bundle layout products
+  // Auto-select color + bundle size on mount for bundle layout products
   const bundleInitRef = useRef(false);
   useEffect(() => {
     if (bundleInitRef.current) return;
     if (!product || product.layout_type !== 'bundle') return;
-    if (!matrix.hasSizes || !selectedColor) return;
-    // Find the multi-pc size for the current color and pre-select it
-    const multiSize = matrix.allSizes.find((s) => parseVariantQty(s) > 1);
-    if (multiSize && selectedSize !== multiSize) {
+    if (!matrix.hasColors || matrix.allColors.length === 0) return;
+    const multiSize = matrix.hasSizes
+      ? matrix.allSizes.find((s) => parseVariantQty(s) > 1) ?? null
+      : null;
+    if (!selectedColor) {
+      // Set both color and size in one call
+      handleColorChange(matrix.allColors[0], multiSize);
+    } else if (multiSize && selectedSize !== multiSize) {
       handleSizeChange(multiSize);
     }
     bundleInitRef.current = true;
-  }, [product, matrix, selectedColor, selectedSize, handleSizeChange]);
+  }, [product, matrix, selectedColor, selectedSize, handleColorChange, handleSizeChange]);
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -577,19 +581,20 @@ export function ProductPageClient({ params, initialData, layoutType = 'standard'
     return 1;
   };
 
-  // For bundle picker: find 1pc and multi-pc variants for current color
-  const colorLower = selectedColor?.toLowerCase() ?? '';
+  // For bundle picker: find 1pc and multi-pc variants for current color (or first color as fallback)
+  const bundleColor = selectedColor?.toLowerCase()
+    || (isBundleLayout && matrix.allColors.length > 0 ? matrix.allColors[0].toLowerCase() : '');
   const bundleSingle = isBundleLayout
     ? product.variants.find(
-        (v) => v.inStock && !isMultiPcVariant(v) && v.color?.toLowerCase() === colorLower
+        (v) => v.inStock && !isMultiPcVariant(v) && v.color?.toLowerCase() === bundleColor
       )
     : null;
   const bundleMulti = isBundleLayout
     ? product.variants.find(
-        (v) => v.inStock && isMultiPcVariant(v) && v.color?.toLowerCase() === colorLower
+        (v) => v.inStock && isMultiPcVariant(v) && v.color?.toLowerCase() === bundleColor
       ) ?? product.variants.find(
         (v) => v.inStock && isMultiPcVariant(v) && (v.name.toLowerCase().includes('white pink') || v.name.toLowerCase().includes('pink white'))
-          && colorLower === 'white pink'
+          && bundleColor === 'white pink'
       )
     : null;
   const bundleMultiQty = bundleMulti ? getMultiPcQty(bundleMulti) : 2;
