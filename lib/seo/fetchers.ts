@@ -28,6 +28,7 @@ export interface ProductPageData {
     thumbnail: string;
     sort_order: number;
   }> | null;
+  layout_type?: string;
   mi_categories: { name: string; slug: string } | null;
   mi_product_variants: Array<{
     id: string;

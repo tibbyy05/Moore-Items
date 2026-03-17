@@ -40,6 +40,7 @@ export interface Product {
   isDigital?: boolean;
   inStock: boolean;
   stockCount: number;
+  layout_type?: 'standard' | 'bundle';
   videoUrl?: string | null;
   videos?: Array<{
     cloudflare_id: string;

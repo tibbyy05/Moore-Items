@@ -103,7 +103,7 @@ export default async function ProductPage({
           />
         </>
       )}
-      <ProductPageClient params={params} initialData={product} />
+      <ProductPageClient params={params} initialData={product} layoutType={product.layout_type || 'standard'} />
     </>
   );
 }

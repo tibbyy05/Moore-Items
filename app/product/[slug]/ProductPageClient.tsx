@@ -216,9 +216,10 @@ function DescriptionFormatter({
 interface ProductPageClientProps {
   params: { slug: string };
   initialData?: any;
+  layoutType?: string;
 }
 
-export function ProductPageClient({ params, initialData }: ProductPageClientProps) {
+export function ProductPageClient({ params, initialData, layoutType = 'standard' }: ProductPageClientProps) {
   const [product, setProduct] = useState<Product | null>(null);
   const [productReviews, setProductReviews] = useState<Array<any>>([]);
   const [reviewTotal, setReviewTotal] = useState(0);
@@ -261,6 +262,20 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
   const { addItem } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const addToCartRef = useRef<HTMLButtonElement>(null);
+
+  // Auto-select bundle size on mount for bundle layout products
+  const bundleInitRef = useRef(false);
+  useEffect(() => {
+    if (bundleInitRef.current) return;
+    if (!product || product.layout_type !== 'bundle') return;
+    if (!matrix.hasSizes || !selectedColor) return;
+    // Find the multi-pc size for the current color and pre-select it
+    const multiSize = matrix.allSizes.find((s) => parseVariantQty(s) > 1);
+    if (multiSize && selectedSize !== multiSize) {
+      handleSizeChange(multiSize);
+    }
+    bundleInitRef.current = true;
+  }, [product, matrix, selectedColor, selectedSize, handleSizeChange]);
 
   useEffect(() => {
     if (!hasInitialized) return;
@@ -370,9 +385,10 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
           ? rawProduct.status === 'active'
           : rawProduct.stock_count > 0,
         stockCount: rawProduct.stock_count || 0,
+        layout_type: rawProduct.layout_type || layoutType || 'standard',
         videoUrl: rawProduct.video_url || null,
         videos: rawProduct.videos || null,
-      };
+      } as Product;
 
       setProduct(mappedProduct);
       setGalleryIndex(0);
@@ -542,37 +558,44 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
     new Set(product.variants.map((v) => v.price)).size > 1;
 
   // Per-unit pricing for multi-piece variants
+  const isBundleLayout = product.layout_type === 'bundle';
   const qty = parseVariantQty(selectedVariant?.name ?? '');
   const unitPrice = qty > 1 ? effectivePrice / qty : effectivePrice;
 
-  // Detect quantity-based sizes (e.g. "2pcs" instead of S/M/L)
-  const isQtyBasedSizes = matrix.hasSizes && matrix.allSizes.some(
-    (s) => parseVariantQty(s) > 1
-  );
+  // Helper: detect if a variant is a known multi-piece combo
+  const isMultiPcVariant = (v: { name: string; size?: string | null }) => {
+    if (v.size && parseVariantQty(v.size) > 1) return true;
+    const lower = v.name.toLowerCase();
+    return lower.includes('white pink') || lower.includes('pink white');
+  };
 
-  // For qty picker: find 1pc and multi-pc variants for current color
-  const qtyPickerSingle = isQtyBasedSizes
+  // Helper: get the piece count for a multi-pc variant
+  const getMultiPcQty = (v: { name: string; size?: string | null }) => {
+    if (v.size && parseVariantQty(v.size) > 1) return parseVariantQty(v.size);
+    const lower = v.name.toLowerCase();
+    if (lower.includes('white pink') || lower.includes('pink white')) return 2;
+    return 1;
+  };
+
+  // For bundle picker: find 1pc and multi-pc variants for current color
+  const colorLower = selectedColor?.toLowerCase() ?? '';
+  const bundleSingle = isBundleLayout
     ? product.variants.find(
-        (v) => v.inStock && !v.size && v.color?.toLowerCase() === selectedColor?.toLowerCase()
-      ) ?? product.variants.find((v) => v.inStock && parseVariantQty(v.name) === 1 && v.color?.toLowerCase() === selectedColor?.toLowerCase())
-    : null;
-  const qtyPickerMulti = isQtyBasedSizes
-    ? product.variants.find(
-        (v) => v.inStock && v.size && parseVariantQty(v.size) > 1 && v.color?.toLowerCase() === selectedColor?.toLowerCase()
+        (v) => v.inStock && !isMultiPcVariant(v) && v.color?.toLowerCase() === colorLower
       )
     : null;
-  const qtyPickerMultiQty = qtyPickerMulti ? parseVariantQty(qtyPickerMulti.size || '') : 2;
-  const qtyPickerMultiUnit = qtyPickerMulti ? qtyPickerMulti.price / qtyPickerMultiQty : 0;
-  const qtyPickerSavings = qtyPickerSingle && qtyPickerMulti
-    ? qtyPickerSingle.price * qtyPickerMultiQty - qtyPickerMulti.price
-    : 0;
-
-  // Find a single-piece variant for savings comparison (price display)
-  const singlePieceVariant = qty > 1
-    ? qtyPickerSingle ?? product.variants.find((v) => parseVariantQty(v.name) === 1 && v.inStock)
+  const bundleMulti = isBundleLayout
+    ? product.variants.find(
+        (v) => v.inStock && isMultiPcVariant(v) && v.color?.toLowerCase() === colorLower
+      ) ?? product.variants.find(
+        (v) => v.inStock && isMultiPcVariant(v) && (v.name.toLowerCase().includes('white pink') || v.name.toLowerCase().includes('pink white'))
+          && colorLower === 'white pink'
+      )
     : null;
-  const bundleSavings = singlePieceVariant
-    ? singlePieceVariant.price * qty - effectivePrice
+  const bundleMultiQty = bundleMulti ? getMultiPcQty(bundleMulti) : 2;
+  const bundleMultiUnit = bundleMulti ? bundleMulti.price / bundleMultiQty : 0;
+  const bundleSavings = bundleSingle && bundleMulti
+    ? bundleSingle.price * bundleMultiQty - bundleMulti.price
     : 0;
 
   const handleAddToCart = () => {
@@ -786,47 +809,52 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                     selectedSize={selectedSize}
                     onColorChange={(color, autoSize) => { setVariantError(null); handleColorChange(color, autoSize); }}
                     onSizeChange={(size, autoColor) => { setVariantError(null); handleSizeChange(size, autoColor); }}
-                    hideSizes={isQtyBasedSizes}
+                    hideSizes={isBundleLayout}
                   />
-                  {isQtyBasedSizes && (
+                  {isBundleLayout && (
                     <div className="mt-4">
                       <p className="text-sm font-medium text-gray-700 mb-2">Quantity</p>
                       <div className="grid grid-cols-2 gap-3">
                         {/* 1-piece option */}
-                        {qtyPickerSingle && (
+                        {bundleSingle && (
                           <button
                             onClick={() => { setVariantError(null); handleSizeChange(null); }}
                             className={cn(
-                              'rounded-lg border-2 p-3 text-left transition-all',
-                              !selectedSize
-                                ? 'border-[#c8a45e] bg-[#c8a45e]/5'
-                                : 'border-gray-200 hover:border-[#c8a45e]/50'
+                              'relative rounded-xl p-4 text-left transition-all',
+                              !selectedSize || !isMultiPcVariant(selectedVariant ?? { name: '' })
+                                ? 'bg-[#f7f6f3] border-2 border-[#c8a45e]'
+                                : 'bg-white border border-gray-200 hover:border-gray-300'
                             )}
                           >
-                            <span className="block text-sm font-medium text-warm-900">1 piece</span>
-                            <span className="block text-xs text-warm-500 mt-0.5">
-                              ${qtyPickerSingle.price.toFixed(2)} each
+                            <span className="block text-sm font-medium text-gray-900">1 piece</span>
+                            <span className="block text-[13px] text-gray-500 mt-0.5">
+                              ${bundleSingle.price.toFixed(2)} each
                             </span>
                           </button>
                         )}
                         {/* Multi-piece option */}
-                        {qtyPickerMulti && (
+                        {bundleMulti && (
                           <button
-                            onClick={() => { setVariantError(null); handleSizeChange(qtyPickerMulti.size || null); }}
+                            onClick={() => { setVariantError(null); handleSizeChange(bundleMulti.size || null); }}
                             className={cn(
-                              'rounded-lg border-2 p-3 text-left transition-all',
-                              selectedSize && parseVariantQty(selectedSize) > 1
-                                ? 'border-[#c8a45e] bg-[#c8a45e]/5'
-                                : 'border-gray-200 hover:border-[#c8a45e]/50'
+                              'relative rounded-xl p-4 text-left transition-all',
+                              selectedSize && isMultiPcVariant(selectedVariant ?? { name: '' })
+                                ? 'bg-[#f7f6f3] border-2 border-[#c8a45e]'
+                                : 'bg-white border border-gray-200 hover:border-gray-300'
                             )}
                           >
-                            <span className="block text-sm font-medium text-warm-900">{qtyPickerMultiQty} pieces</span>
-                            <span className="block text-xs text-warm-500 mt-0.5">
-                              ${qtyPickerMultiUnit.toFixed(2)} each
+                            {selectedSize && isMultiPcVariant(selectedVariant ?? { name: '' }) && (
+                              <span className="absolute -top-2 right-3 bg-[#c8a45e] text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                                Best value
+                              </span>
+                            )}
+                            <span className="block text-sm font-medium text-[#0f1629]">{bundleMultiQty} pieces</span>
+                            <span className="block text-[13px] text-gray-500 mt-0.5">
+                              ${bundleMultiUnit.toFixed(2)} each
                             </span>
-                            {qtyPickerSavings > 0 && (
-                              <span className="block text-xs text-green-600 font-medium mt-0.5">
-                                Save ${qtyPickerSavings.toFixed(2)} vs {qtyPickerMultiQty} singles
+                            {bundleSavings > 0 && (
+                              <span className="block text-xs text-green-600 font-medium mt-1">
+                                Save ${bundleSavings.toFixed(2)} vs buying separately
                               </span>
                             )}
                           </button>
@@ -837,12 +865,14 @@ export function ProductPageClient({ params, initialData }: ProductPageClientProp
                 </div>
               )}
 
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-warm-900 mb-3">
-                  Quantity
-                </label>
-                <QuantityStepper value={quantity} onChange={setQuantity} max={product.stockCount} />
-              </div>
+              {!isBundleLayout && (
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-warm-900 mb-3">
+                    Quantity
+                  </label>
+                  <QuantityStepper value={quantity} onChange={setQuantity} max={product.stockCount} />
+                </div>
+              )}
 
               <div className="space-y-3 mb-6">
                 {displayStock ? (
