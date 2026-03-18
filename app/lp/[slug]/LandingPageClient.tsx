@@ -205,6 +205,8 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     : '/cart';
 
   const heroImg = page.hero_image_url || product.images?.[0] || '';
+  const heroVideoId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id || null;
+  const heroLegacyUrl = sections?.hero_video_url || product.video_url || null;
   const featureImg1 = sections.feature1_image || product.images?.[1] || product.images?.[0] || '';
   const featureImg2 = sections.feature2_image || product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
 
@@ -262,41 +264,35 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                 &#10003; Free Shipping on $50+ &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
               </p>
             </div>
-            {(() => {
-              const cfId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id;
-              const legacyUrl = sections.hero_video_url || product.video_url;
-              return (
-                <div className="flex justify-center">
-                  {cfId ? (
-                    <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                      <iframe
-                        src={`https://iframe.cloudflarestream.com/${cfId}?autoplay=true&muted=true&loop=true&controls=true`}
-                        className="absolute inset-0 w-full h-full"
-                        allow="autoplay; fullscreen"
-                        allowFullScreen
-                      />
-                    </div>
-                  ) : legacyUrl ? (
-                    <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                      <video
-                        src={legacyUrl}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : heroImg ? (
-                    <img
-                      src={heroImg}
-                      alt={product.name}
-                      className="rounded-xl max-h-96 object-contain"
-                    />
-                  ) : null}
+            <div className="flex justify-center">
+              {heroVideoId ? (
+                <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  <iframe
+                    src={`https://iframe.cloudflarestream.com/${heroVideoId}?autoplay=true&muted=true&loop=true&controls=true`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
                 </div>
-              );
-            })()}
+              ) : heroLegacyUrl ? (
+                <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  <video
+                    src={heroLegacyUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              ) : heroImg ? (
+                <img
+                  src={heroImg}
+                  alt={product.name}
+                  className="rounded-xl max-h-96 object-contain"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
