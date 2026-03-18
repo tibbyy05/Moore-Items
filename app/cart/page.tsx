@@ -41,46 +41,65 @@ export default function CartPage() {
   // Deep-link support: ?add=productId&qty=n&promo=CODE
   useEffect(() => {
     if (deepLinkProcessed.current) return;
-    const addId = searchParams.get('add');
-    if (!addId) return;
     deepLinkProcessed.current = true;
 
-    const qty = parseInt(searchParams.get('qty') || '1', 10) || 1;
+    const addId = searchParams.get('add');
     const promo = searchParams.get('promo');
 
-    (async () => {
-      try {
-        const res = await fetch(`/api/products/${addId}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const p = data.product;
-        if (!p) return;
-
-        addItem({
-          productId: p.id,
-          variantId: '',
-          slug: p.slug,
-          name: p.name,
-          price: p.retail_price,
-          quantity: qty,
-          image: p.images?.[0] || '/placeholder.webp',
-          warehouse: p.warehouse || 'CN',
-          warehouse_status: p.warehouse_status || null,
-          shippingDays: p.shipping_days || null,
-        });
-
-        if (promo) {
-          setDiscountCode(promo);
+    // Auto-apply promo code from URL (works with or without ?add=)
+    if (promo) {
+      setDiscountCode(promo);
+      (async () => {
+        try {
+          const res = await fetch('/api/discount/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: promo.trim(), subtotal }),
+          });
+          const data = await res.json();
+          if (res.ok && data.valid) {
+            setDiscount({ code: promo.trim(), amount: data.discount_amount, description: data.description });
+          }
+        } catch {
+          // silently fail — user can still apply manually
         }
+      })();
+    }
 
-        toast.success('Item added from your link!');
-      } catch {
-        // silently fail
-      }
-    })();
+    if (addId) {
+      const qty = parseInt(searchParams.get('qty') || '1', 10) || 1;
+      (async () => {
+        try {
+          const res = await fetch(`/api/products/${addId}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const p = data.product;
+          if (!p) return;
 
-    router.replace('/cart', { scroll: false });
-  }, [searchParams, router, addItem]);
+          addItem({
+            productId: p.id,
+            variantId: '',
+            slug: p.slug,
+            name: p.name,
+            price: p.retail_price,
+            quantity: qty,
+            image: p.images?.[0] || '/placeholder.webp',
+            warehouse: p.warehouse || 'CN',
+            warehouse_status: p.warehouse_status || null,
+            shippingDays: p.shipping_days || null,
+          });
+
+          toast.success('Item added from your link!');
+        } catch {
+          // silently fail
+        }
+      })();
+    }
+
+    if (addId || promo) {
+      router.replace('/cart', { scroll: false });
+    }
+  }, [searchParams, router, addItem, subtotal]);
 
   useEffect(() => {
     if (!discount) return;
