@@ -262,26 +262,41 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                 &#10003; Free Shipping on $50+ &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
               </p>
             </div>
-            <div className="flex justify-center">
-              {(sections.hero_video_url || product.video_url || product.videos?.[0]?.url) ? (
-                <div className="relative w-full max-h-96 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                  <video
-                    src={sections.hero_video_url || product.video_url || product.videos?.[0]?.url || ''}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+            {(() => {
+              const cfId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id;
+              const legacyUrl = sections.hero_video_url || product.video_url;
+              return (
+                <div className="flex justify-center">
+                  {cfId ? (
+                    <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                      <iframe
+                        src={`https://iframe.cloudflarestream.com/${cfId}?autoplay=true&muted=true&loop=true&controls=true`}
+                        className="absolute inset-0 w-full h-full"
+                        allow="autoplay; fullscreen"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : legacyUrl ? (
+                    <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                      <video
+                        src={legacyUrl}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : heroImg ? (
+                    <img
+                      src={heroImg}
+                      alt={product.name}
+                      className="rounded-xl max-h-96 object-contain"
+                    />
+                  ) : null}
                 </div>
-              ) : heroImg ? (
-                <img
-                  src={heroImg}
-                  alt={product.name}
-                  className="rounded-xl max-h-96 object-contain"
-                />
-              ) : null}
-            </div>
+              );
+            })()}
           </div>
         </div>
       </section>
