@@ -263,10 +263,10 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               </p>
             </div>
             <div className="flex justify-center">
-              {sections.hero_video_url ? (
+              {(sections.hero_video_url || product.video_url || product.videos?.[0]?.url) ? (
                 <div className="relative w-full max-h-96 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
                   <video
-                    src={sections.hero_video_url}
+                    src={sections.hero_video_url || product.video_url || product.videos?.[0]?.url || ''}
                     autoPlay
                     muted
                     loop
