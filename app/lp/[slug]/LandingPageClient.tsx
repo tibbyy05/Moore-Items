@@ -131,6 +131,8 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     ? sections.gallery_images
     : product.images || [];
   const [galleryBase, setGalleryBase] = useState(galleryImgs[0] || '');
+  const heroVideoId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id || null;
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [galleryNext, setGalleryNext] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(false);
   const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,8 +207,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     : '/cart';
 
   const heroImg = page.hero_image_url || product.images?.[0] || '';
-  const heroVideoId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id || null;
-  const heroLegacyUrl = sections?.hero_video_url || product.video_url || null;
+
   const featureImg1 = sections.feature1_image || product.images?.[1] || product.images?.[0] || '';
   const featureImg2 = sections.feature2_image || product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
 
@@ -265,27 +266,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               </p>
             </div>
             <div className="flex justify-center">
-              {heroVideoId ? (
-                <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                  <iframe
-                    src={`https://iframe.cloudflarestream.com/${heroVideoId}?autoplay=true&muted=true&loop=true&controls=true`}
-                    className="absolute inset-0 w-full h-full"
-                    allow="autoplay; fullscreen"
-                    allowFullScreen
-                  />
-                </div>
-              ) : heroLegacyUrl ? (
-                <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                  <video
-                    src={heroLegacyUrl}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                </div>
-              ) : heroImg ? (
+              {heroImg ? (
                 <img
                   src={heroImg}
                   alt={product.name}
@@ -303,21 +284,32 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
 
           {/* Left column — fixed-height image gallery with crossfade */}
           <div className="relative h-[500px] md:h-screen overflow-hidden bg-[#f7f6f3]">
-            {/* Base image layer */}
-            <img
-              src={galleryBase || heroImg}
-              alt={product.name}
-              className="absolute inset-0 w-full h-full object-contain"
-              style={{ transition: 'opacity 0.4s ease', opacity: galleryNext ? 0 : 1 }}
-            />
-            {/* Overlay image layer (crossfade) */}
-            {galleryNext && (
-              <img
-                src={galleryNext}
-                alt={product.name}
-                className="absolute inset-0 w-full h-full object-contain"
-                style={{ transition: 'opacity 0.4s ease', opacity: fadeIn ? 1 : 0 }}
+            {activeVideoId ? (
+              <iframe
+                src={`https://iframe.cloudflarestream.com/${activeVideoId}?autoplay=true&muted=true&loop=true&controls=true`}
+                className="absolute inset-0 w-full h-full"
+                allow="autoplay; fullscreen"
+                allowFullScreen
               />
+            ) : (
+              <>
+                {/* Base image layer */}
+                <img
+                  src={galleryBase || heroImg}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-contain"
+                  style={{ transition: 'opacity 0.4s ease', opacity: galleryNext ? 0 : 1 }}
+                />
+                {/* Overlay image layer (crossfade) */}
+                {galleryNext && (
+                  <img
+                    src={galleryNext}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full object-contain"
+                    style={{ transition: 'opacity 0.4s ease', opacity: fadeIn ? 1 : 0 }}
+                  />
+                )}
+              </>
             )}
             {/* Thumbnail strip — pinned to bottom */}
             {galleryImgs.length > 1 && (
@@ -325,11 +317,32 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                 className="absolute bottom-0 left-0 right-0 flex gap-2 px-3 py-3 overflow-x-auto"
                 style={{ background: 'rgba(15, 22, 41, 0.7)' }}
               >
+                {heroVideoId && (
+                  <button
+                    type="button"
+                    onClick={() => { setActiveVideoId(heroVideoId); }}
+                    className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-opacity relative"
+                    style={{
+                      outline: activeVideoId === heroVideoId ? `2px solid ${GOLD}` : '2px solid transparent',
+                      outlineOffset: 2,
+                      opacity: activeVideoId === heroVideoId ? 1 : 0.6,
+                    }}
+                  >
+                    <img
+                      src={`https://videodelivery.net/${heroVideoId}/thumbnails/thumbnail.jpg`}
+                      alt="Video"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                  </button>
+                )}
                 {galleryImgs.map((img, i) => (
                   <button
                     key={i}
                     type="button"
-                    onClick={(e) => handleGallerySelect(img, e)}
+                    onClick={(e) => { handleGallerySelect(img, e); setActiveVideoId(null); }}
                     className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden transition-opacity"
                     style={{
                       outline: activeGalleryImg === img ? `2px solid ${GOLD}` : '2px solid transparent',
