@@ -440,7 +440,7 @@ export async function POST(request: NextRequest) {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: item.name,
+            name: [item.name, item.variantInfo].filter(Boolean).join(' — '),
             images: item.image ? [item.image] : [],
           },
           unit_amount: Math.round(item.unitPrice * 100),
