@@ -986,6 +986,21 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
             <p className="text-[11px] text-gray-400 mt-2">
               {selected.length} of {allImgs.length} images selected
             </p>
+            {selectedProduct.videos?.some(v => v.status === 'ready') && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                  <img
+                    src={`https://videodelivery.net/${selectedProduct.videos.find(v => v.status === 'ready')?.cloudflare_id}/thumbnails/thumbnail.jpg`}
+                    alt="Video"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                </div>
+                <span>1 product video — automatically included in gallery</span>
+              </div>
+            )}
           </div>
         );
       })()}
