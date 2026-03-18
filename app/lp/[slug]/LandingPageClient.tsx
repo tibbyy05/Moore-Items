@@ -127,11 +127,15 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   const promoCode = page.promo_codes?.[promoCodeKey] || null;
 
   // Crossfade gallery state
-  const galleryImgs: string[] = Array.isArray(sections.gallery_images) && sections.gallery_images.length > 0
+  const rawGalleryItems: string[] = Array.isArray(sections.gallery_images) && sections.gallery_images.length > 0
     ? sections.gallery_images
     : product.images || [];
+  const galleryImgs = rawGalleryItems.filter(item => !item.startsWith('video::'));
+  const galleryVideoId = rawGalleryItems.find(item => item.startsWith('video::'))?.replace('video::', '')
+    || product.videos?.find(v => v.status === 'ready')?.cloudflare_id
+    || null;
   const [galleryBase, setGalleryBase] = useState(galleryImgs[0] || '');
-  const heroVideoId = product.videos?.find(v => v.status === 'ready')?.cloudflare_id || null;
+  const heroVideoId = galleryVideoId;
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [galleryNext, setGalleryNext] = useState<string | null>(null);
   const [fadeIn, setFadeIn] = useState(false);
@@ -266,7 +270,16 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               </p>
             </div>
             <div className="flex justify-center">
-              {heroImg ? (
+              {heroImg?.startsWith('video::') ? (
+                <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  <iframe
+                    src={`https://iframe.cloudflarestream.com/${heroImg.replace('video::', '')}?autoplay=true&muted=true&loop=true&controls=true`}
+                    className="absolute inset-0 w-full h-full"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
+                </div>
+              ) : heroImg ? (
                 <img
                   src={heroImg}
                   alt={product.name}
@@ -778,9 +791,18 @@ function FeatureBlock({
             <p className="text-gray-600 leading-relaxed mt-4 whitespace-pre-line">{body}</p>
           </div>
           <div className={!imgRight ? 'md:[direction:ltr]' : ''}>
-            {image && (
+            {image?.startsWith('video::') ? (
+              <div className="relative w-full rounded-2xl overflow-hidden shadow-lg" style={{ aspectRatio: '16/9' }}>
+                <iframe
+                  src={`https://iframe.cloudflarestream.com/${image.replace('video::', '')}?autoplay=true&muted=true&loop=true&controls=true`}
+                  className="absolute inset-0 w-full h-full"
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                />
+              </div>
+            ) : image ? (
               <img src={image} alt="" className="rounded-2xl shadow-lg w-full object-cover" />
-            )}
+            ) : null}
           </div>
         </div>
       </div>

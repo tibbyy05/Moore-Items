@@ -159,6 +159,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
   const [pasteUrls, setPasteUrls] = useState<{ hero: string; feature1: string; feature2: string }>({ hero: '', feature1: '', feature2: '' });
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({ hero: null, feature1: null, feature2: null });
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const readyVideo = selectedProduct?.videos?.find(v => v.status === 'ready') || null;
 
   // Inline price editing on pricing reference bar
   const [editingSellPrice, setEditingSellPrice] = useState(false);
@@ -954,17 +955,17 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
       {/* ── Hero Gallery Images ─────────────────────────────────── */}
       {selectedProduct && selectedProduct.images.length > 1 && (() => {
+        const videoSentinel = readyVideo ? `video::${readyVideo.cloudflare_id}` : null;
         const allImgs = [...selectedProduct.images.filter((img) => !removedProductImages.has(img)), ...extraImages];
+        const allItems = videoSentinel ? [videoSentinel, ...allImgs] : allImgs;
         const selected = galleryImages
-          ? galleryImages.filter((img) => allImgs.includes(img))
-          : allImgs;
+          ? galleryImages.filter((item) => allItems.includes(item))
+          : allItems;
 
         const toggleImage = (img: string) => {
           if (galleryImages === null) {
-            // First toggle — start from "all selected" and remove this one
-            setGalleryImages(allImgs.filter((u) => u !== img));
+            setGalleryImages(allItems.filter((u) => u !== img));
           } else if (galleryImages.includes(img)) {
-            // Don't allow deselecting the last image
             if (galleryImages.length <= 1) return;
             setGalleryImages(galleryImages.filter((u) => u !== img));
           } else {
@@ -974,13 +975,37 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
 
         return (
           <div className={CARD}>
-            <h2 className={TITLE}>Hero Gallery Images</h2>
-            <p className="text-xs text-gray-400 -mt-2 mb-4">
-              Choose which images appear in the crossfade gallery. Deselect any you don&apos;t want shown.
-            </p>
+            <h2 className={TITLE}>Media Gallery</h2>
+            <p className="text-sm text-gray-500 mb-3">Choose which images and videos appear in the crossfade gallery. Deselect any you don't want shown.</p>
             <div className="flex flex-wrap gap-2">
+              {videoSentinel && (() => {
+                const isSelected = !galleryImages || galleryImages.includes(videoSentinel);
+                return (
+                  <button
+                    type="button"
+                    onClick={() => toggleImage(videoSentinel)}
+                    className={`relative w-[80px] h-[80px] rounded-lg overflow-hidden border-2 transition-all ${
+                      isSelected ? 'border-gold-500' : 'border-gray-200 opacity-40'
+                    }`}
+                  >
+                    <img
+                      src={`https://videodelivery.net/${readyVideo!.cloudflare_id}/thumbnails/thumbnail.jpg`}
+                      alt="Video"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-1 right-1 w-5 h-5 bg-gold-500 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })()}
               {allImgs.map((img, i) => {
-                const isSelected = selected.includes(img);
+                const isSelected = !galleryImages || galleryImages.includes(img);
                 return (
                   <button
                     key={i}
@@ -1000,24 +1025,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                 );
               })}
             </div>
-            <p className="text-[11px] text-gray-400 mt-2">
-              {selected.length} of {allImgs.length} images selected
-            </p>
-            {selectedProduct.videos?.some(v => v.status === 'ready') && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                  <img
-                    src={`https://videodelivery.net/${selectedProduct.videos.find(v => v.status === 'ready')?.cloudflare_id}/thumbnails/thumbnail.jpg`}
-                    alt="Video"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
-                </div>
-                <span>1 product video — automatically included in gallery</span>
-              </div>
-            )}
+            <p className="text-sm text-gray-400 mt-2">{selected.length} of {allItems.length} selected</p>
           </div>
         );
       })()}
@@ -1040,7 +1048,18 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                 <label className={LABEL}>{label}</label>
                 <div className="flex items-start gap-4">
                   {/* Current selection preview */}
-                  {imageSelections[key] ? (
+                  {imageSelections[key]?.startsWith('video::') ? (
+                    <div className="relative w-[120px] h-[120px] rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                      <img
+                        src={`https://videodelivery.net/${imageSelections[key].replace('video::', '')}/thumbnails/thumbnail.jpg`}
+                        alt="Video"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                      </div>
+                    </div>
+                  ) : imageSelections[key] ? (
                     <div className="relative flex-shrink-0 group/preview cursor-pointer" onClick={() => setLightboxUrl(imageSelections[key])}>
                       <img
                         src={imageSelections[key]}
@@ -1059,6 +1078,28 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
                   {/* Scrollable image picker */}
                   <div className="flex-1 overflow-x-auto">
                     <div className="flex gap-2 pb-1">
+                      {readyVideo && (() => {
+                        const sentinel = `video::${readyVideo.cloudflare_id}`;
+                        const isSelected = imageSelections[key] === sentinel;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setImageSelections(prev => ({ ...prev, [key]: sentinel }))}
+                            className={`relative flex-shrink-0 w-[72px] h-[72px] rounded-lg overflow-hidden border-2 transition-all ${
+                              isSelected ? 'border-gold-500' : 'border-gray-200'
+                            }`}
+                          >
+                            <img
+                              src={`https://videodelivery.net/${readyVideo.cloudflare_id}/thumbnails/thumbnail.jpg`}
+                              alt="Video"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                          </button>
+                        );
+                      })()}
                       {selectedProduct.images.filter((img) => !removedProductImages.has(img)).map((img, i) => {
                         const isActive = imageSelections[key] === img;
                         return (
