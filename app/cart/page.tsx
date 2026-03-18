@@ -46,19 +46,22 @@ export default function CartPage() {
     const addId = searchParams.get('add');
     const promo = searchParams.get('promo');
 
-    // Auto-apply promo code from URL (works with or without ?add=)
-    if (promo) {
-      setDiscountCode(promo);
+    // Auto-apply promo code from URL or localStorage fallback
+    const promoToApply = promo || localStorage.getItem('pending_promo_code');
+    if (promoToApply) {
+      if (!promo) localStorage.removeItem('pending_promo_code');
+      setDiscountCode(promoToApply);
       (async () => {
         try {
           const res = await fetch('/api/discount/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: promo.trim(), subtotal }),
+            body: JSON.stringify({ code: promoToApply.trim(), subtotal }),
           });
           const data = await res.json();
           if (res.ok && data.valid) {
-            setDiscount({ code: promo.trim(), amount: data.discount_amount, description: data.description });
+            setDiscount({ code: promoToApply.trim(), amount: data.discount_amount, description: data.description });
+            if (promo) localStorage.removeItem('pending_promo_code');
           }
         } catch {
           // silently fail — user can still apply manually

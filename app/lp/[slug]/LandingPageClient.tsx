@@ -193,6 +193,9 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
         shippingDays: product.shipping_days || null,
       });
     }
+    if (promoCode) {
+      localStorage.setItem('pending_promo_code', promoCode);
+    }
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 3000);
   };
