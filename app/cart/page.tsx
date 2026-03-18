@@ -37,6 +37,7 @@ export default function CartPage() {
   const [unavailableProducts, setUnavailableProducts] = useState<{ id: string; name: string }[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const deepLinkProcessed = useRef(false);
+  const silentPromoCode = useRef<string | null>(null);
 
   // Deep-link support: ?add=productId&qty=n&promo=CODE
   useEffect(() => {
@@ -46,27 +47,11 @@ export default function CartPage() {
     const addId = searchParams.get('add');
     const promo = searchParams.get('promo');
 
-    // Auto-apply promo code from URL or localStorage fallback
+    // Silently store LP promo code for checkout — don't show in UI
     const promoToApply = promo || localStorage.getItem('pending_promo_code');
     if (promoToApply) {
-      if (!promo) localStorage.removeItem('pending_promo_code');
-      setDiscountCode(promoToApply);
-      (async () => {
-        try {
-          const res = await fetch('/api/discount/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: promoToApply.trim(), subtotal }),
-          });
-          const data = await res.json();
-          if (res.ok && data.valid) {
-            setDiscount({ code: promoToApply.trim(), amount: data.discount_amount, description: data.description });
-            if (promo) localStorage.removeItem('pending_promo_code');
-          }
-        } catch {
-          // silently fail — user can still apply manually
-        }
-      })();
+      silentPromoCode.current = promoToApply.trim();
+      localStorage.removeItem('pending_promo_code');
     }
 
     if (addId) {
@@ -205,7 +190,7 @@ export default function CartPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items,
-          discountCode: discount?.code || undefined,
+          discountCode: discount?.code || silentPromoCode.current || undefined,
           email: user?.email || undefined,
         }),
       });
@@ -240,6 +225,7 @@ export default function CartPage() {
       setDiscount(null);
       setDiscountCode('');
       setDiscountError('');
+      silentPromoCode.current = null;
     }
   }, [items.length]);
 
