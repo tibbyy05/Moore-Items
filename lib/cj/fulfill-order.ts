@@ -36,6 +36,117 @@ function extractCjOrderFields(payload: any) {
   return { cjOrderId, cjOrderNumber };
 }
 
+/* ─── Bundle optimizer: substitute 2pcs SKUs for blender 1pc pairs ──── */
+
+const BLENDER_1PC = {
+  WHITE: '48351620-4f42-47ed-8c26-937b7150169e',
+  PINK: '819499d5-5329-4c05-a26e-89db7bfacbb4',
+} as const;
+
+const BLENDER_2PC = {
+  WHITE_PINK: '8ea0cb27-d358-486c-9437-516c57577c3b',
+  WHITE: '20aa1125-9861-4cf1-8104-7356afb2c333',
+  PINK: '04ec7b72-5cae-49f2-8fca-1acd96a144f1',
+} as const;
+
+type CjItem = { variant_id: string; cj_vid: string; quantity: number; product_id: string; [key: string]: any };
+
+async function optimizeBundleItems(items: CjItem[], supabase: ReturnType<typeof createAdminClient>): Promise<CjItem[]> {
+  try {
+    const blender1pcIds = new Set<string>([BLENDER_1PC.WHITE, BLENDER_1PC.PINK]);
+
+    // Separate blender 1pc items from everything else
+    const blenderItems: CjItem[] = [];
+    const otherItems: CjItem[] = [];
+    for (const item of items) {
+      if (blender1pcIds.has(item.variant_id)) {
+        blenderItems.push(item);
+      } else {
+        otherItems.push(item);
+      }
+    }
+
+    if (blenderItems.length === 0) return items;
+
+    // Sum quantities per color
+    let whiteQty = 0;
+    let pinkQty = 0;
+    let productId = blenderItems[0].product_id;
+    for (const item of blenderItems) {
+      if (item.variant_id === BLENDER_1PC.WHITE) whiteQty += item.quantity;
+      if (item.variant_id === BLENDER_1PC.PINK) pinkQty += item.quantity;
+    }
+
+    const origWhite = whiteQty;
+    const origPink = pinkQty;
+
+    // Look up cj_vids and stock for all 2pc variants in one query
+    const twopcIds = [BLENDER_2PC.WHITE_PINK, BLENDER_2PC.WHITE, BLENDER_2PC.PINK];
+    const { data: twopcVariants } = await supabase
+      .from('mi_product_variants')
+      .select('id, cj_vid, stock_count')
+      .in('id', twopcIds);
+
+    const twopcMap = new Map((twopcVariants || []).map((v) => [v.id, { cj_vid: v.cj_vid, stock: v.stock_count }]));
+
+    // Build substitutions
+    const substituted: CjItem[] = [];
+
+    // Rule 1: White + Pink → White Pink 2pcs
+    const wpInfo = twopcMap.get(BLENDER_2PC.WHITE_PINK);
+    if (wpInfo?.cj_vid && wpInfo.stock > 0) {
+      while (whiteQty >= 1 && pinkQty >= 1) {
+        substituted.push({ variant_id: BLENDER_2PC.WHITE_PINK, cj_vid: wpInfo.cj_vid, quantity: 1, product_id: productId });
+        whiteQty -= 1;
+        pinkQty -= 1;
+      }
+    }
+
+    // Rule 2: 2× White → White 2pcs
+    const w2Info = twopcMap.get(BLENDER_2PC.WHITE);
+    if (w2Info?.cj_vid && w2Info.stock > 0) {
+      while (whiteQty >= 2) {
+        substituted.push({ variant_id: BLENDER_2PC.WHITE, cj_vid: w2Info.cj_vid, quantity: 1, product_id: productId });
+        whiteQty -= 2;
+      }
+    }
+
+    // Rule 3: 2× Pink → Pink 2pcs
+    const p2Info = twopcMap.get(BLENDER_2PC.PINK);
+    if (p2Info?.cj_vid && p2Info.stock > 0) {
+      while (pinkQty >= 2) {
+        substituted.push({ variant_id: BLENDER_2PC.PINK, cj_vid: p2Info.cj_vid, quantity: 1, product_id: productId });
+        pinkQty -= 2;
+      }
+    }
+
+    // Remainder: leftover 1pc items
+    const remainder: CjItem[] = [];
+    if (whiteQty > 0) {
+      const whiteCjVid = items.find((i) => i.variant_id === BLENDER_1PC.WHITE)?.cj_vid;
+      if (whiteCjVid) remainder.push({ variant_id: BLENDER_1PC.WHITE, cj_vid: whiteCjVid, quantity: whiteQty, product_id: productId });
+    }
+    if (pinkQty > 0) {
+      const pinkCjVid = items.find((i) => i.variant_id === BLENDER_1PC.PINK)?.cj_vid;
+      if (pinkCjVid) remainder.push({ variant_id: BLENDER_1PC.PINK, cj_vid: pinkCjVid, quantity: pinkQty, product_id: productId });
+    }
+
+    if (substituted.length > 0) {
+      const subSummary = substituted.map((s) => {
+        if (s.variant_id === BLENDER_2PC.WHITE_PINK) return 'White+Pink 2pcs';
+        if (s.variant_id === BLENDER_2PC.WHITE) return 'White 2pcs';
+        return 'Pink 2pcs';
+      }).join(', ');
+      console.log(`[Bundle optimizer] substituted ${origWhite}x White + ${origPink}x Pink → ${subSummary}${remainder.length > 0 ? ` + ${remainder.map((r) => `${r.quantity}x ${r.variant_id === BLENDER_1PC.WHITE ? 'White' : 'Pink'} 1pc`).join(', ')}` : ''}`);
+    }
+
+    return [...otherItems, ...substituted, ...remainder];
+  } catch (error) {
+    console.warn('[Bundle optimizer] failed, using original items:', error);
+    return items;
+  }
+}
+
 export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
   const supabase = createAdminClient();
 
@@ -84,7 +195,14 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
   const warehouseMap = new Map((productData || []).map((p: any) => [p.id, p.warehouse || 'US']));
 
   // Separate items into CJ-fulfillable and non-CJ
-  const cjItems = items.filter((item) => variantMap.get(item.variant_id || ''));
+  const cjItemsRaw = items
+    .filter((item) => variantMap.get(item.variant_id || ''))
+    .map((item) => ({
+      ...item,
+      variant_id: item.variant_id || '',
+      cj_vid: variantMap.get(item.variant_id || '') as string,
+    }));
+  const cjItems = await optimizeBundleItems(cjItemsRaw, supabase);
   const nonCjItems = items.filter((item) => !variantMap.get(item.variant_id || ''));
 
   // If no items have CJ variant IDs, this is a fully non-CJ order — skip fulfillment
@@ -105,7 +223,7 @@ export async function fulfillCJOrder(orderId: string): Promise<FulfillResult> {
   }
 
   const productsPayload = cjItems.map((item) => ({
-    vid: variantMap.get(item.variant_id || '') as string,
+    vid: item.cj_vid || variantMap.get(item.variant_id || '') as string,
     quantity: item.quantity,
   }));
 

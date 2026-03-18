@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, startTransition } from 'react';
 import Link from 'next/link';
-import { ShoppingCart, Check, ChevronDown, Play, X } from 'lucide-react';
+import { ShoppingCart, Check, ChevronDown } from 'lucide-react';
 import { useCart } from '@/components/providers/CartProvider';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 
@@ -88,17 +88,43 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   const allVariants = product.mi_product_variants || [];
   // Defensive filter: only show active variants even if API didn't filter
   const variants = allVariants.filter((v) => v.is_active !== false);
+  // On landing pages, exclude multi-unit variants (e.g. "2pcs") — those are sold via bundle qty tiers instead
+  const lpVariants = variants.filter((v) => (!v.size || v.size === '1pc') && v.color !== 'White Pink');
 
-  // State
-  const [selectedTierIdx, setSelectedTierIdx] = useState(() => {
-    const popIdx = tiers.findIndex((t) => t.badge);
-    return popIdx >= 0 ? popIdx : 0;
+  // Available color options from lpVariants
+  const colorOptions = Array.from(new Set(lpVariants.filter((v) => v.color).map((v) => v.color!))).map((c) => {
+    const variant = lpVariants.find((v) => v.color === c)!;
+    return { color: c, variant, basePrice: variant.retail_price };
   });
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    variants.length > 0 ? variants[0].id : null
-  );
+  const defaultColor = colorOptions[0]?.color || 'White';
+
+  // Qty-first state
+  const [selectedQty, setSelectedQty] = useState(1);
+  const [unitColors, setUnitColors] = useState<string[]>([defaultColor]);
   const [addedToCart, setAddedToCart] = useState(false);
-  const [heroVideoPlaying, setHeroVideoPlaying] = useState(false);
+
+  const selectTier = (qty: number) => {
+    setSelectedQty(qty);
+    setUnitColors(Array(qty).fill(defaultColor));
+  };
+
+  const setUnitColor = (index: number, color: string) => {
+    setUnitColors((prev) => prev.map((c, i) => i === index ? color : c));
+  };
+
+  // Active discount tier
+  const activeTier = tiers.find((t) => t.qty === selectedQty) || null;
+  const discountPct = activeTier?.discount_pct || 0;
+  const discountedPrice = (base: number) => Math.round(base * (1 - discountPct / 100) * 100) / 100;
+
+  // Order total: sum of discounted price per unit
+  const orderTotal = Math.round(unitColors.reduce((sum, c) => {
+    const opt = colorOptions.find((o) => o.color === c);
+    return sum + discountedPrice(opt?.basePrice || 0);
+  }, 0) * 100) / 100;
+
+  const promoCodeKey = `qty_${selectedQty}`;
+  const promoCode = page.promo_codes?.[promoCodeKey] || null;
 
   // Crossfade gallery state
   const galleryImgs: string[] = Array.isArray(sections.gallery_images) && sections.gallery_images.length > 0
@@ -118,13 +144,11 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
       setGalleryNext(img);
       setFadeIn(false);
     });
-    // Trigger fade-in on next frame
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setFadeIn(true);
       });
     });
-    // After transition, swap base and clear overlay
     fadeTimer.current = setTimeout(() => {
       setGalleryBase(img);
       setGalleryNext(null);
@@ -133,29 +157,6 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   };
 
   const activeGalleryImg = galleryNext || galleryBase;
-
-  // Sync hero image when variant selection changes
-  useEffect(() => {
-    if (!selectedVariant?.image_url) return;
-    const img = selectedVariant.image_url;
-    if (img === galleryBase && !galleryNext) return;
-    if (fadeTimer.current) clearTimeout(fadeTimer.current);
-    startTransition(() => {
-      setGalleryNext(img);
-      setFadeIn(false);
-    });
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setFadeIn(true);
-      });
-    });
-    fadeTimer.current = setTimeout(() => {
-      setGalleryBase(img);
-      setGalleryNext(null);
-      setFadeIn(false);
-    }, 150);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVariantId]);
 
   // Track view on mount (fire-and-forget)
   useEffect(() => {
@@ -166,44 +167,37 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
     }).catch(() => {});
   }, [page.slug]);
 
-  const selectedTier = tiers[selectedTierIdx] || { qty: 1, label: '1 Item', discount_pct: 0, badge: '' };
-  const selectedVariant = variants.find((v) => v.id === selectedVariantId) || null;
-  // Use selected variant's retail_price when available, fall back to product-level price
-  const basePrice = selectedVariant?.retail_price || product.retail_price;
-  const unitPrice = Math.round(basePrice * (1 - selectedTier.discount_pct / 100) * 100) / 100;
-  const totalPrice = Math.round(unitPrice * selectedTier.qty * 100) / 100;
-  const savings = Math.round((basePrice * selectedTier.qty - totalPrice) * 100) / 100;
-
-  // Unique variant values
-  const colors = Array.from(new Set(variants.filter((v) => v.color).map((v) => v.color!)));
-  const sizes = Array.from(new Set(variants.filter((v) => v.size).map((v) => v.size!)));
-
-  const promoCodeKey = `qty_${selectedTier.qty}`;
-  const promoCode = page.promo_codes?.[promoCodeKey] || null;
-
   const handleAddToCart = () => {
-    addItem({
-      productId: product.id,
-      slug: product.slug,
-      variantId: selectedVariantId,
-      name: product.name,
-      variantName: selectedVariant?.name || undefined,
-      price: unitPrice,
-      originalPrice: product.retail_price,
-      bundleDiscount: selectedTier.discount_pct > 0
-        ? { qty: selectedTier.qty, pct: selectedTier.discount_pct }
-        : null,
-      quantity: selectedTier.qty,
-      image: product.images?.[0] || '',
-      warehouse: (product.warehouse || 'US') as 'US' | 'CN' | 'CA',
-      warehouse_status: (product.warehouse_status as 'US' | 'CN' | 'DIGITAL') || null,
-      shippingDays: product.shipping_days || null,
-    });
+    const bundleDiscount = discountPct > 0 && activeTier
+      ? { qty: activeTier.qty, pct: activeTier.discount_pct }
+      : null;
+    // Group unitColors by color → count
+    const colorCounts: Record<string, number> = {};
+    for (const c of unitColors) colorCounts[c] = (colorCounts[c] || 0) + 1;
+    for (const [color, qty] of Object.entries(colorCounts)) {
+      const opt = colorOptions.find((o) => o.color === color);
+      if (!opt) continue;
+      addItem({
+        productId: product.id,
+        slug: product.slug,
+        variantId: opt.variant.id,
+        name: product.name,
+        variantName: opt.variant.name || undefined,
+        price: discountedPrice(opt.basePrice),
+        originalPrice: opt.basePrice,
+        bundleDiscount,
+        quantity: qty,
+        image: opt.variant.image_url || product.images?.[0] || '',
+        warehouse: (product.warehouse || 'US') as 'US' | 'CN' | 'CA',
+        warehouse_status: (product.warehouse_status as 'US' | 'CN' | 'DIGITAL') || null,
+        shippingDays: product.shipping_days || null,
+      });
+    }
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 3000);
   };
 
-  const cartUrl = promoCode && selectedTier.discount_pct > 0
+  const cartUrl = promoCode && discountPct > 0
     ? `/cart?promo=${encodeURIComponent(promoCode)}`
     : '/cart';
 
@@ -211,16 +205,6 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
   const featureImg1 = sections.feature1_image || product.images?.[1] || product.images?.[0] || '';
   const featureImg2 = sections.feature2_image || product.images?.[2] || product.images?.[1] || product.images?.[0] || '';
 
-  // First ready video from videos array, falling back to legacy video_url
-  const heroVideoUrl = (() => {
-    if (product.videos && product.videos.length > 0) {
-      const readyVideo = [...product.videos]
-        .sort((a, b) => a.sort_order - b.sort_order)
-        .find((v) => v.status === 'ready');
-      if (readyVideo) return readyVideo.url;
-    }
-    return product.video_url || null;
-  })();
 
   return (
     <>
@@ -275,42 +259,26 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                 &#10003; Free Shipping on $50+ &nbsp; &#10003; 30-Day Returns &nbsp; &#10003; Secure Checkout
               </p>
             </div>
-            {heroImg && (
-              <div className="flex justify-center">
-                {heroVideoPlaying && heroVideoUrl ? (
-                  <div className="relative w-full max-h-96 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
-                    <iframe
-                      src={`${heroVideoUrl}?autoplay=true&muted=true`}
-                      className="absolute inset-0 w-full h-full"
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setHeroVideoPlaying(false)}
-                      className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
-                    >
-                      <X className="w-4 h-4 text-white" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="relative cursor-pointer" onClick={() => heroVideoUrl && setHeroVideoPlaying(true)}>
-                    <img
-                      src={heroImg}
-                      alt={product.name}
-                      className="rounded-xl max-h-96 object-contain"
-                    />
-                    {heroVideoUrl && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center transition-colors">
-                          <Play className="w-7 h-7 text-white fill-white ml-1" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="flex justify-center">
+              {sections.hero_video_url ? (
+                <div className="relative w-full max-h-96 rounded-xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  <video
+                    src={sections.hero_video_url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </div>
+              ) : heroImg ? (
+                <img
+                  src={heroImg}
+                  alt={product.name}
+                  className="rounded-xl max-h-96 object-contain"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       </section>
@@ -391,40 +359,32 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               <div className="flex-1 h-px" style={{ backgroundColor: `${GOLD}40` }} />
             </div>
 
-            {/* Tier rows */}
-            <div className="space-y-3">
-              {tiers.map((tier, i) => {
-                const tierUnit = Math.round(basePrice * (1 - tier.discount_pct / 100) * 100) / 100;
-                const tierTotal = Math.round(tierUnit * tier.qty * 100) / 100;
-                const tierOriginal = Math.round(basePrice * tier.qty * 100) / 100;
-                const tierSaved = Math.round((tierOriginal - tierTotal) * 100) / 100;
-                const isSelected = selectedTierIdx === i;
-
+            {/* Qty tier rows (clickable radio) */}
+            <div className="space-y-2 mb-6">
+              {tiers.map((tier) => {
+                const isActive = selectedQty === tier.qty;
                 return (
                   <button
                     key={tier.qty}
                     type="button"
-                    onClick={() => setSelectedTierIdx(i)}
+                    onClick={() => selectTier(tier.qty)}
                     className={`w-full rounded-xl px-4 py-3.5 text-left transition-all border-2 ${
-                      isSelected ? 'shadow-md bg-white' : 'bg-white/60 border-gray-200 hover:border-gray-300'
+                      isActive ? 'shadow-md bg-white' : 'bg-white/60 border-gray-200 hover:border-gray-300'
                     }`}
-                    style={isSelected ? { borderColor: GOLD } : undefined}
+                    style={isActive ? { borderColor: GOLD } : undefined}
                   >
                     <div className="flex items-center gap-3">
-                      {/* Radio circle */}
                       <span
                         className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0"
-                        style={{ borderColor: isSelected ? GOLD : '#d1d5db' }}
+                        style={{ borderColor: isActive ? GOLD : '#d1d5db' }}
                       >
-                        {isSelected && (
+                        {isActive && (
                           <span
                             className="w-2.5 h-2.5 rounded-full"
                             style={{ backgroundColor: GOLD }}
                           />
                         )}
                       </span>
-
-                      {/* Label + badge */}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className="text-sm font-bold" style={{ color: NAVY }}>
                           {tier.label}
@@ -438,80 +398,57 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                           </span>
                         )}
                       </div>
-
-                      {/* Price */}
-                      <div className="text-right flex-shrink-0">
-                        <span className="text-lg font-bold" style={{ color: NAVY }}>
-                          ${tierUnit.toFixed(2)}
+                      {tier.discount_pct > 0 && (
+                        <span className="text-xs font-semibold text-green-600">
+                          Save {tier.discount_pct}%
                         </span>
-                        <span className="text-xs text-gray-500 ml-0.5">each</span>
-                        {tier.discount_pct > 0 && (
-                          <span className="text-xs text-gray-400 line-through ml-2">
-                            ${basePrice.toFixed(2)}
-                          </span>
-                        )}
-                        {tier.qty > 1 && (
-                          <p className="text-[11px] text-gray-400 mt-0.5">
-                            Total ${tierTotal.toFixed(2)}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
-
-                    {/* Savings line */}
-                    {tier.discount_pct > 0 && (
-                      <p className="text-xs font-semibold text-green-600 mt-1 ml-8">
-                        You save ${tierSaved.toFixed(2)}
-                      </p>
-                    )}
                   </button>
                 );
               })}
             </div>
 
-            {/* Variant selector */}
-            {variants.length > 0 && (colors.length > 0 || sizes.length > 0) && (
-              <div className="mt-5 flex flex-wrap gap-4">
-                {colors.length > 0 && (
-                  <div className="flex-1 min-w-[140px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+            {/* Per-unit color selectors */}
+            <div className="space-y-3">
+              {unitColors.map((color, idx) => {
+                const opt = colorOptions.find((o) => o.color === color);
+                const base = opt?.basePrice || 0;
+                const discounted = discountedPrice(base);
+                return (
+                  <div key={idx} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-gray-200">
+                    <span className="text-xs font-semibold text-gray-400 w-12 flex-shrink-0">
+                      Unit {idx + 1}
+                    </span>
                     <select
-                      value={selectedVariant?.color || ''}
-                      onChange={(e) => {
-                        const match = variants.find(
-                          (v) => v.color === e.target.value && (selectedVariant?.size ? v.size === selectedVariant.size : true)
-                        );
-                        if (match) setSelectedVariantId(match.id);
-                      }}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
+                      value={color}
+                      onChange={(e) => setUnitColor(idx, e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
+                      style={{ color: NAVY }}
                     >
-                      {colors.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+                      {colorOptions.map((o) => (
+                        <option key={o.color} value={o.color}>
+                          {o.color}
+                        </option>
                       ))}
                     </select>
+                    <div className="flex items-center gap-1.5 flex-shrink-0 justify-end">
+                      <span
+                        className="text-sm font-bold"
+                        style={{ color: discountPct > 0 ? GOLD : NAVY }}
+                      >
+                        ${discounted.toFixed(2)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                {sizes.length > 0 && (
-                  <div className="flex-1 min-w-[140px]">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
-                    <select
-                      value={selectedVariant?.size || ''}
-                      onChange={(e) => {
-                        const match = variants.find(
-                          (v) => v.size === e.target.value && (selectedVariant?.color ? v.color === selectedVariant.color : true)
-                        );
-                        if (match) setSelectedVariantId(match.id);
-                      }}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500/40"
-                    >
-                      {sizes.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
+                );
+              })}
+            </div>
+
+            {/* Order summary */}
+            <p className="text-sm font-semibold text-center mt-4" style={{ color: NAVY }}>
+              {selectedQty} item{selectedQty !== 1 ? 's' : ''} &mdash; Total: ${orderTotal.toFixed(2)}
+            </p>
 
             {/* Add to Cart button */}
             <button
@@ -523,7 +460,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               {addedToCart ? (
                 <><Check className="w-5 h-5" /> Added to cart!</>
               ) : (
-                <>Add {selectedTier.label} to Cart &mdash; ${totalPrice.toFixed(2)}</>
+                <>Add {selectedQty} Item{selectedQty !== 1 ? 's' : ''} to Cart &mdash; ${orderTotal.toFixed(2)}</>
               )}
             </button>
 
@@ -545,7 +482,7 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
               {product.warehouse_status === 'DIGITAL' ? (
                 <span>⚡ Instant Download</span>
               ) : (
-                <span>🚚 Free Shipping</span>
+                <span>🚚 Free Shipping on $50+</span>
               )}
               <span>↩️ 30-Day Returns</span>
             </div>
@@ -570,6 +507,46 @@ export function LandingPageClient({ page, product }: LandingPageProps) {
                   <p className="text-3xl">{b.icon}</p>
                   <p className="font-semibold mt-2" style={{ color: GOLD }}>{b.title}</p>
                   <p className="text-sm mt-1" style={{ color: `${CREAM}cc` }}>{b.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── USE CASES ────────────────────────────────────────────── */}
+      {sections.use_cases && Array.isArray(sections.use_cases) && sections.use_cases.some((uc: any) => uc.title) && (
+        <section style={{ backgroundColor: CREAM }} className="py-16">
+          <div className="max-w-5xl mx-auto px-4">
+            <h2
+              className="font-playfair text-3xl font-bold text-center mb-10"
+              style={{ color: NAVY }}
+            >
+              {sections.use_cases_heading || 'One Blender. Endless Possibilities.'}
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {(sections.use_cases as Array<{ title: string; description: string; image_url: string }>).filter((uc) => uc.title).map((uc, i) => (
+                <div key={i} className="text-center">
+                  {uc.image_url ? (
+                    <img
+                      src={uc.image_url}
+                      alt={uc.title}
+                      className="aspect-square object-cover rounded-xl w-full"
+                    />
+                  ) : (
+                    <div
+                      className="aspect-square rounded-xl w-full flex items-center justify-center"
+                      style={{ backgroundColor: NAVY }}
+                    >
+                      <span className="text-3xl font-bold" style={{ color: CREAM }}>
+                        {uc.title.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <p className="font-semibold mt-3 text-center" style={{ color: NAVY }}>{uc.title}</p>
+                  {uc.description && (
+                    <p className="text-sm text-gray-600 text-center mt-1">{uc.description}</p>
+                  )}
                 </div>
               ))}
             </div>

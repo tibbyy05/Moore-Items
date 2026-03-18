@@ -16,9 +16,11 @@ import {
   Upload,
   Loader2,
   ZoomIn,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { createBrowserClient } from '@supabase/ssr';
 
 /* ─── Types ──────────────────────────────────────────────────── */
 
@@ -75,6 +77,11 @@ interface LandingPageData {
 interface LandingPageBuilderProps {
   initialData?: LandingPageData;
 }
+
+const supabaseStorage = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 /* ─── Style constants ────────────────────────────────────────── */
 
@@ -154,6 +161,21 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
   // What's Included
   const [whatsIncludedEnabled, setWhatsIncludedEnabled] = useState(false);
   const [whatsIncludedText, setWhatsIncludedText] = useState('');
+
+  // Use Cases
+  const DEFAULT_USE_CASES = [
+    { title: 'Smoothie', description: 'Fresh fruit blends in 30 seconds', image_url: '' },
+    { title: 'Milkshake', description: 'Thick and creamy shakes on demand', image_url: '' },
+    { title: 'Frozen Coffee', description: 'Caf\u00e9-style frozen drinks anywhere', image_url: '' },
+    { title: 'Detox Drink', description: 'Cold-press style greens and herbs', image_url: '' },
+  ];
+  const [useCases, setUseCases] = useState(DEFAULT_USE_CASES);
+  const [useCasesHeading, setUseCasesHeading] = useState('One Blender. Endless Possibilities.');
+  const [useCasesOpen, setUseCasesOpen] = useState(false);
+  const [ucUploading, setUcUploading] = useState<number | null>(null);
+  const [ucUploadError, setUcUploadError] = useState<string | null>(null);
+  const [ucGalleryOpen, setUcGalleryOpen] = useState<number | null>(null);
+  const ucFileRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
 
   // Save
   const [saving, setSaving] = useState(false);
@@ -270,6 +292,14 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       }
       if (initialData.sections.whats_included_text) {
         setWhatsIncludedText(initialData.sections.whats_included_text);
+      }
+
+      // Use Cases hydration
+      if (Array.isArray(initialData.sections.use_cases)) {
+        setUseCases(initialData.sections.use_cases);
+      }
+      if (initialData.sections.use_cases_heading) {
+        setUseCasesHeading(initialData.sections.use_cases_heading);
       }
     }
 
@@ -395,6 +425,34 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
     });
     // Also remove from gallery selection
     setGalleryImages((prev) => prev ? prev.filter((u) => u !== url) : prev);
+  };
+
+  /* ─── Use-case image upload ──────────────────────────────── */
+
+  const handleUcImageUpload = async (cardIndex: number, file: File) => {
+    setUcUploading(cardIndex);
+    setUcUploadError(null);
+    try {
+      const path = `landing-pages/use-cases/${crypto.randomUUID()}-${file.name}`;
+      const { error: uploadError } = await supabaseStorage.storage
+        .from('landing-page-images')
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
+      const { data: urlData } = supabaseStorage.storage
+        .from('landing-page-images')
+        .getPublicUrl(path);
+      setUseCases((prev) => prev.map((item, j) => j === cardIndex ? { ...item, image_url: urlData.publicUrl } : item));
+    } catch (err: any) {
+      setUcUploadError(err?.message || 'Upload failed');
+    } finally {
+      setUcUploading(null);
+    }
+  };
+
+  const handleUcDrop = (cardIndex: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) handleUcImageUpload(cardIndex, file);
   };
 
   /* ─── CJ Import ────────────────────────────────────────────── */
@@ -567,6 +625,8 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
           gallery_images: cleanGalleryImages,
           whats_included_enabled: whatsIncludedEnabled,
           whats_included_text: whatsIncludedText,
+          use_cases: useCases,
+          use_cases_heading: useCasesHeading,
         },
         quantity_discounts: discountTiers,
         promo_codes: generatedPromoCodes,
@@ -1085,8 +1145,172 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
               </div>
             ))}
           </div>
+
+          {/* Hero Video URL */}
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <label className={LABEL}>Hero Video URL (optional)</label>
+            <input
+              type="text"
+              value={sections?.hero_video_url || ''}
+              onChange={(e) => setSections((prev: any) => ({ ...prev, hero_video_url: e.target.value }))}
+              placeholder="Paste video URL (mp4)..."
+              className={INPUT}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              When set, video plays in the hero instead of the static image
+            </p>
+          </div>
         </div>
       )}
+
+      {/* ── Use Cases (What You Can Make) ────────────────────────── */}
+      <div className={CARD}>
+        <button
+          type="button"
+          onClick={() => setUseCasesOpen((o) => !o)}
+          className="w-full flex items-center justify-between"
+        >
+          <h2 className={`${TITLE} mb-0`}>Use Cases (What You Can Make)</h2>
+          <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${useCasesOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {useCasesOpen && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className={LABEL}>Section Heading</label>
+              <input
+                type="text"
+                value={useCasesHeading}
+                onChange={(e) => setUseCasesHeading(e.target.value)}
+                placeholder="One Blender. Endless Possibilities."
+                className={INPUT}
+              />
+            </div>
+
+            {useCases.map((uc, i) => {
+              const productImgs = selectedProduct?.images?.filter((img) => !removedProductImages.has(img)) || [];
+              const allGalleryImgs = [...productImgs, ...extraImages];
+              return (
+                <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Card {i + 1}</p>
+
+                  {/* Image preview */}
+                  <div>
+                    <label className={LABEL}>Image</label>
+                    {uc.image_url && (
+                      <div className="relative inline-block mb-2">
+                        <img src={uc.image_url} alt="" className="w-16 h-16 rounded-lg object-cover border border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => setUseCases((prev) => prev.map((item, j) => j === i ? { ...item, image_url: '' } : item))}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Drop zone */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      ref={(el) => { ucFileRefs.current[i] = el; }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUcImageUpload(i, file);
+                        e.target.value = '';
+                      }}
+                    />
+                    <div
+                      onClick={() => ucFileRefs.current[i]?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleUcDrop(i, e)}
+                      className="border-2 border-dashed border-gold-500/40 rounded-lg p-4 text-center text-sm text-gray-500 cursor-pointer hover:border-gold-500/70 transition-colors"
+                    >
+                      {ucUploading === i ? (
+                        <span className="flex items-center justify-center gap-2 text-gold-600">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Uploading...
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <Upload className="w-4 h-4" /> Drop image or click to upload
+                        </span>
+                      )}
+                    </div>
+                    {ucUploadError && ucUploading === null && (
+                      <p className="text-xs text-red-500 mt-1">{ucUploadError}</p>
+                    )}
+
+                    {/* Gallery picker */}
+                    {allGalleryImgs.length > 0 && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setUcGalleryOpen((prev) => prev === i ? null : i)}
+                          className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                        >
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${ucGalleryOpen === i ? 'rotate-180' : ''}`} />
+                          Or pick from gallery
+                        </button>
+                        {ucGalleryOpen === i && (
+                          <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
+                            {allGalleryImgs.map((img, gi) => (
+                              <button
+                                key={gi}
+                                type="button"
+                                onClick={() => {
+                                  setUseCases((prev) => prev.map((item, j) => j === i ? { ...item, image_url: img } : item));
+                                  setUcGalleryOpen(null);
+                                }}
+                                className={`flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 transition-colors ${
+                                  uc.image_url === img ? 'border-gold-500' : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <img src={img} alt="" className="w-full h-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Paste URL fallback */}
+                    <input
+                      type="text"
+                      value={uc.image_url}
+                      onChange={(e) => setUseCases((prev) => prev.map((item, j) => j === i ? { ...item, image_url: e.target.value } : item))}
+                      placeholder="or paste URL"
+                      className="mt-2 w-full px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={LABEL}>Title</label>
+                    <input
+                      type="text"
+                      value={uc.title}
+                      onChange={(e) => setUseCases((prev) => prev.map((item, j) => j === i ? { ...item, title: e.target.value } : item))}
+                      placeholder="e.g. Smoothie"
+                      className={INPUT}
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Description</label>
+                    <input
+                      type="text"
+                      value={uc.description}
+                      onChange={(e) => setUseCases((prev) => prev.map((item, j) => j === i ? { ...item, description: e.target.value } : item))}
+                      placeholder="Short tagline..."
+                      className={INPUT}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── CARD 4: Quantity Discount Tiers ────────────────────── */}
       <div className={CARD}>
