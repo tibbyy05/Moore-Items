@@ -34,6 +34,13 @@ interface SelectedProduct {
   category: string;
   slug: string;
   warehouse?: string | null;
+  videos?: Array<{
+    cloudflare_id: string;
+    url: string;
+    status: 'processing' | 'ready';
+    thumbnail: string;
+    sort_order: number;
+  }> | null;
 }
 
 interface PageSettings {
@@ -71,6 +78,13 @@ interface LandingPageData {
     cj_price: number;
     images: string[];
     description: string;
+    videos?: Array<{
+      cloudflare_id: string;
+      url: string;
+      status: 'processing' | 'ready';
+      thumbnail: string;
+      sort_order: number;
+    }> | null;
   } | null;
 }
 
@@ -243,6 +257,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         description: initialData.product.description || '',
         category: '',
         slug: initialData.product.slug,
+        videos: initialData.product.videos || null,
       });
 
       // Validate stored feature images against current product images
@@ -348,6 +363,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
       category: cat?.slug || cat?.name || '',
       slug: product.slug,
       warehouse: product.warehouse,
+      videos: product.videos || null,
     };
     setSelectedProduct(prod);
     autoFillSettings(prod);
@@ -508,6 +524,7 @@ export function LandingPageBuilder({ initialData }: LandingPageBuilderProps) {
         category: '',
         slug: imported.slug,
         warehouse: imported.warehouse,
+        videos: imported.videos || null,
       };
       setSelectedProduct(prod);
       autoFillSettings(prod);
