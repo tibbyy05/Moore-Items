@@ -1,12 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Bell, ChevronDown, Package, ShoppingCart, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function TopBar() {
+  const router = useRouter();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
+  // ⌘K / Ctrl+K to focus search
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    // Order number pattern: MI- prefix or pure digits
+    if (/^MI-/i.test(q) || /^\d{4,}$/.test(q)) {
+      router.push(`/admin/orders?search=${encodeURIComponent(q)}`);
+    }
+    // Email pattern
+    else if (q.includes('@')) {
+      router.push(`/admin/orders?search=${encodeURIComponent(q)}`);
+    }
+    // Default: search products
+    else {
+      router.push(`/admin/products?search=${encodeURIComponent(q)}`);
+    }
+
+    setSearchQuery('');
+    searchRef.current?.blur();
+  }
 
   const notifications = [
     { id: 1, icon: ShoppingCart, text: 'New order #MI-10247 placed', time: '2 min ago', unread: true },
@@ -18,11 +56,14 @@ export function TopBar() {
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      <div className="flex-1 max-w-xl">
+      <form onSubmit={handleSearch} className="flex-1 max-w-xl">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
+            ref={searchRef}
             type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search products, orders, customers..."
             className="w-full pl-10 pr-16 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#1a1a2e] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gold-500/40"
           />
@@ -30,7 +71,7 @@ export function TopBar() {
             ⌘K
           </kbd>
         </div>
-      </div>
+      </form>
 
       <div className="flex items-center gap-4 ml-6">
         <div className="relative">

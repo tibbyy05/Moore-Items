@@ -313,21 +313,41 @@ async function reconcileProductStatus(
   if (productError || !product) return;
   if (product.status !== 'active' && product.status !== 'out_of_stock') return;
 
+  // Fetch ALL variants (not just is_active=true) so we can reconcile is_active flags
   const { data: variants } = await supabase
     .from('mi_product_variants')
-    .select('stock_count')
-    .eq('product_id', productId)
-    .eq('is_active', true);
+    .select('id, stock_count, is_active')
+    .eq('product_id', productId);
 
   if (!variants || variants.length === 0) return;
 
   const allZero = variants.every((v) => (v.stock_count ?? 0) === 0);
   const anyStock = variants.some((v) => (v.stock_count ?? 0) > 0);
 
+  // Sync product-level stock_count from variant totals
+  const totalStock = variants
+    .filter((v) => v.is_active !== false || (v.stock_count ?? 0) > 0)
+    .reduce((sum, v) => sum + (v.stock_count ?? 0), 0);
+  await supabase
+    .from('mi_products')
+    .update({ stock_count: totalStock })
+    .eq('id', productId);
+
   if (allZero && product.status === 'active') {
+    // Deactivate all zero-stock variants to keep is_active consistent
+    const zeroStockIds = variants
+      .filter((v) => (v.stock_count ?? 0) === 0 && v.is_active !== false)
+      .map((v) => v.id);
+    if (zeroStockIds.length > 0) {
+      await supabase
+        .from('mi_product_variants')
+        .update({ is_active: false })
+        .in('id', zeroStockIds);
+    }
+
     await supabase
       .from('mi_products')
-      .update({ status: 'out_of_stock' })
+      .update({ status: 'out_of_stock', stock_count: 0 })
       .eq('id', productId);
 
     console.log('[cj-webhook] Product marked out_of_stock:', product.name);
@@ -336,6 +356,17 @@ async function reconcileProductStatus(
       await updateCategoryCount(supabase, product.category_id);
     }
   } else if (anyStock && product.status === 'out_of_stock') {
+    // Reactivate variants that have stock
+    const stockedIds = variants
+      .filter((v) => (v.stock_count ?? 0) > 0 && v.is_active === false)
+      .map((v) => v.id);
+    if (stockedIds.length > 0) {
+      await supabase
+        .from('mi_product_variants')
+        .update({ is_active: true })
+        .in('id', stockedIds);
+    }
+
     await supabase
       .from('mi_products')
       .update({ status: 'active' })

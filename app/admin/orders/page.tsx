@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Package,
   CreditCard,
@@ -130,6 +131,7 @@ const FulfillmentBadge = ({ status }: { status: string }) => {
 };
 
 export default function AdminOrdersPage() {
+  const urlParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<OrdersResponse['summary']>({
@@ -148,7 +150,7 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(1);
   const [totalOrders, setTotalOrders] = useState(0);
   const [activeFilter, setActiveFilter] = useState('paid');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [fulfillLoading, setFulfillLoading] = useState<Record<string, boolean>>({});
   const [retryFulfillLoading, setRetryFulfillLoading] = useState<Record<string, boolean>>({});

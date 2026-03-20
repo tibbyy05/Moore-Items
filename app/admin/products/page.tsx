@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import {
@@ -72,9 +73,10 @@ function isDigital(p: AdminProductRow): boolean {
 }
 
 export default function ProductsPage() {
+  const urlParams = useSearchParams();
   const [products, setProducts] = useState<AdminProductRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [statusMenuId, setStatusMenuId] = useState<string | null>(null);

@@ -434,7 +434,7 @@ export default function ShopPage() {
             )}
           </div>
           <div className="lg:grid lg:grid-cols-[260px_1fr] lg:gap-8">
-            <aside className="hidden lg:block mb-8 lg:mb-0">{filtersContent}</aside>
+            <aside className="hidden lg:block sticky top-[160px] self-start mb-8 lg:mb-0">{filtersContent}</aside>
             <Sheet open={showFilters} onOpenChange={setShowFilters}>
               <SheetContent side="bottom" className="h-[90vh] overflow-y-auto bg-warm-50 p-0">
                 <SheetHeader className="text-left">

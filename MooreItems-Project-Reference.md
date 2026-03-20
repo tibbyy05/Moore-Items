@@ -4,7 +4,7 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 15, 2026 (Session 44 final)
+**Last Updated:** March 17, 2026 (Session 46)
 **Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch first Meta ad**. Full order pipeline validated end-to-end. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.** **Session 44 — Mobile UX overhaul (2 critical + 12 medium + 6 low fixes), shipping times fixed everywhere (dynamic warehouse-aware), availability pipeline hardened (checkout + stock sync + webhooks), order pipeline fixed (variant required, variant_info saved, race condition retries, failed fulfillment surfaced), Featured Product homepage section + admin picker, hero rotation slowed to 12s, CJPacket Ordinary confirmed for CN→US shipping. Free shipping $50+ threshold enforced in checkout. Visitor stats dashboard live (GA4 historical: today/week/month counts + 7-day bar chart). GA4 realtime visitors fixed (force-dynamic + jsonb parse). Blender variant cleanup completed.**
 
 ---
@@ -4166,3 +4166,189 @@ Rewrote `app/api/admin/products/upload-video/route.ts`:
 - GA4 `runReport` with multiple `dateRanges` adds a `dateRange` dimension to each row — use single date range and compute counts from date strings instead
 - `mi_settings` RLS blocks writes by default — admin policies must be explicitly created for new write operations (e.g., featured_product_id upsert)
 - Free shipping threshold must be enforced in checkout route, not just in UI — per-product `shipping_cost` DB values are the actual source used by Stripe, not the `lib/shipping.ts` config
+
+---
+
+#### Session 45 — SEO & Sync Hardening (March 16, 2026)
+
+**Goal:** Fix soft 404 inconsistency in product pages, harden stock sync variant reactivation logic, fix Meta Pixel SDK injection reliability.
+
+---
+
+**generateMetadata soft 404 fix ✅**
+
+`app/product/[slug]/page.tsx`:
+- `generateMetadata` was only calling `notFound()` when `product` was null — did NOT check `status !== 'active'`
+- `ProductPage` already had the full guard: `if (!product || product.status !== 'active') notFound()`
+- Result: inactive/out_of_stock products returned full OG meta tags to crawlers even though the page itself 404'd
+- Fixed: `generateMetadata` now matches `ProductPage` — both call `notFound()` when product is missing OR status !== 'active'
+- GSC soft 404 re-validation submitted
+
+---
+
+**Stock sync variant reactivation — respect manually hidden variants ✅**
+
+`netlify/functions/stock-sync-background.mts` (Case 2 — reactivation path):
+- Previously fetched all variants with `select('id, cj_vid')` and blindly set `is_active: variantStock > 0` on every variant
+- This overrode manually hidden variants (admin set `is_active = false` while `stock_count > 0`) — stock sync would reactivate them
+- Fixed: select now includes `stock_count, is_active`; variants where `is_active === false && stock_count > 0` are skipped entirely (manually hidden, not stock-depleted)
+- Variants with `stock_count === 0` and `is_active === false` are still eligible for reactivation (they were deactivated by stock, not by admin)
+
+---
+
+**Meta Pixel SDK injection fix ✅**
+
+`components/MetaPixel.tsx`:
+- `fbevents.js` was loaded via conditional JSX: `{consentGiven && <Script src="..." />}`
+- Next.js `<Script>` doesn't reliably inject scripts added conditionally after mount
+- Replaced with `useEffect` watching `consentGiven` — when true, creates and appends `<script src="..." async>` via `document.createElement`
+- Duplicate guard: checks `document.getElementById('meta-pixel-sdk')` before injection
+- fbq stub, init, and PageView calls unchanged (still queue via inline `<Script>`)
+
+---
+
+**Key Learnings This Session:**
+
+- `generateMetadata` and the page component must have identical guard conditions — mismatched guards cause crawlers to see valid meta for pages that actually 404
+- Stock sync must distinguish "admin manually hid this variant" (is_active=false, stock_count>0) from "stock ran out" (is_active=false, stock_count=0) — only reactivate the latter
+- Next.js `<Script>` with conditional JSX rendering is unreliable for scripts added after initial mount — use `document.createElement` in a `useEffect` instead
+
+#### Session 46 — Bundle Layout System & Per-Unit Pricing (March 17, 2026)
+
+**What was done:**
+- Bundle layout system: `layout_type` column added to `mi_products` (default: 'standard', 'bundle' for multi-piece products). First product flagged: Portable Blender Juicer (id: `8e3a80a3-6e8f-4682-a0a5-2d88e98f4885`)
+- Per-unit price display: `parseVariantQty()` added to `lib/utils/variant-parser.ts` — regex matches 2pcs/2pc/2pieces patterns, returns integer qty or 1
+- Bundle quantity picker UI: `ProductPageClient.tsx` renders side-by-side 1 Piece / 2 Pieces cards when `layout_type === 'bundle'`. Active card has gold border + "Best value" badge. Unavailable variants show grayed disabled state.
+- Auto-selects 2pc variant and first color on page load for bundle products
+- Price block shows unitPrice (sale_price / qty) as dominant number, total and savings line as secondary — uses invisible placeholders to prevent layout shift
+- White Pink handled as special 2pc combo via `isMultiPcVariant()` / `getMultiPcQty()` helpers — savings calculated via fallback to any active single-unit variant
+- DB script: `scripts/activate-2pack-variants.js` — repriced and activated 3 variants (White/2pcs, Pink/2pcs, White Pink) to $69.99 for the blender product
+- Standard products (`layout_type === 'standard'`) completely unaffected
+- `VariantSelector` gained `hideSizes` prop — hides the size selector when bundle layout replaces it with the quantity picker
+- `layout_type` added to `Product` interface (`lib/types.ts`), `ProductPageData` interface (`lib/seo/fetchers.ts`), and passed from `page.tsx` → `ProductPageClient` as prop
+
+**Key files created/modified:**
+- `lib/utils/variant-parser.ts` — added `parseVariantQty()` export
+- `app/product/[slug]/page.tsx` — passes `layoutType` prop to client component
+- `app/product/[slug]/ProductPageClient.tsx` — bundle layout detection, quantity picker UI, per-unit price display, auto-select logic
+- `components/product/VariantSelector.tsx` — `hideSizes` prop
+- `lib/types.ts` — `layout_type` field on `Product` interface
+- `lib/seo/fetchers.ts` — `layout_type` field on `ProductPageData` interface
+- `scripts/activate-2pack-variants.js` — one-off variant reprice/activation script (DRY_RUN flag)
+
+**Key Learnings This Session:**
+
+- Bundle `layout_type` pattern: explicit DB flag per product is safer than auto-detecting from variant names — prevents false positives across 3,000+ product catalog
+- Always use `invisible` (not conditional rendering) for price sub-lines to prevent layout shift when variant selection changes height of price block
+- White Pink and similar mixed-color 2pc combos have no numeric pattern in name — must use `isMultiPcVariant()` name-pattern helper, not `parseVariantQty` alone
+- `useState` initial value only applies on first render — when variants load async (product starts null), `selectedColor` stays null even after `useMemo` recomputes `initialState`. Must use `useEffect` to set initial selection after data loads.
+- Cards that change content across states (savings line, badges) need fixed `min-h` and invisible placeholders to prevent layout shift during variant switching
+
+---
+
+## Session 41 (Mar 17, 2026): Blender LP Fixes, Bundle Optimizer & Checkout Chain
+
+### What Was Done
+
+**1. Hero Video Field**
+- `LandingPageBuilder.tsx` — Added "Hero Video URL (optional)" text input at bottom of Page Images card. Reads/writes `sections.hero_video_url` using the existing `setSections` pattern.
+- `LandingPageClient.tsx` — Replaced hero media area: if `hero_video_url` is set, renders `<video autoPlay muted loop playsInline>`; if not set, renders a plain static `<img>` with no play button or overlay. Removed old `heroVideoPlaying` state, `heroVideoUrl` computation from product videos, and unused Play/X imports.
+
+**2. Variant Selector Fixes**
+SQL audit revealed 6 variants: White/Pink/Black (null size) + White Pink (null size) + White 2pcs + Pink 2pcs. Three bugs fixed:
+- `null` sizes filtered out entirely — fixed by normalizing `null → "1pc"`, size picker only shown when 2+ distinct values exist
+- Color change could silently leave stale `selectedVariantId` — fixed with exact match → fallback to any variant of that color
+- Same silent failure on size change — fixed with same fallback pattern
+
+**3. Use Cases Section**
+- `LandingPageClient.tsx` — New section between benefits strip and feature block 1. Renders only when `sections.use_cases` has entries with a title. Cream bg, Playfair heading from `sections.use_cases_heading`, 2-col mobile / 4-col desktop grid, square images with navy initial placeholder when no image URL set.
+- `LandingPageBuilder.tsx` — New collapsible "Use Cases (What You Can Make)" card after Page Images. Heading input + 4 card rows (image URL, title, description), pre-filled with Smoothie / Milkshake / Frozen Coffee / Detox Drink defaults. Hydrates from `initialData` on edit. Upload zones use direct browser-to-Supabase Storage (`createBrowserClient`) — bypasses Netlify 6MB limit. Path: `landing-pages/use-cases/${uuid}-${filename}` in `landing-page-images` bucket.
+
+**4. Free Shipping Trust Badge**
+- `LandingPageClient.tsx` line 534 — trust badge row below Add to Cart button: "Free Shipping" → "Free Shipping on $50+".
+
+**5. LP Purchase Panel Rebuilt — Qty-First Flow**
+- Replaced bundle selector + color dropdown with qty-first → color-pick flow
+- Click 1/2/3 item tier row → N unit color dropdowns appear below
+- White ($44.99), Pink ($44.99), Black ($54.99) per dropdown
+- Discounted price shown per unit in gold when tier active
+- White Pink variant filtered out (`v.color !== 'White Pink'`)
+- 2pcs size variants filtered out (`lpVariants` filter)
+- `selectedQty` + `unitColors` state; tier rows now clickable radio buttons
+- Order summary line always visible; Add to Cart button disabled when qty 0
+
+**6. Bundle Discount Tiers & Promo Codes Fixed**
+- LP `quantity_discounts` updated: 2 Items = 22% off, 3 Items = 29% off
+- LP `promo_codes` updated: `qty_2 = LP-PORTABLE-BLENDER-2`, `qty_3 = LP-PORTABLE-BLENDER-3`
+- Both codes inserted into `mi_discount_codes`: LP-PORTABLE-BLENDER-2 (22%), LP-PORTABLE-BLENDER-3 (29%), type=percentage, min_order=0, is_active=true
+
+**7. Bundle Optimizer** (`lib/cj/fulfill-order.ts`)
+`optimizeBundleItems()` function substitutes 1pc SKUs with cheaper CJ 2pcs bundle SKUs before CJ order placement:
+- Rule 1: 1× White + 1× Pink → White Pink 2pcs (`CJJD112318804DW`, $25.55 CJ cost)
+- Rule 2: 2× White → White 2pcs (`CJJD112318805EV`)
+- Rule 3: 2× Pink → Pink 2pcs (`CJJD112318810JQ`)
+- Stock verified before each substitution; falls back to 1pc if stock = 0
+- Full try/catch — any failure returns original items unchanged
+- Logs: `[Bundle optimizer] substituted Nx White + Nx Pink → ...`
+- Saves ~$20 per qualifying 2-unit order
+- Confirmed working via localhost test — correct SKU sent to CJ
+
+**8. LP Promo Code Chain Fixed** (`LandingPageClient.tsx` + `app/cart/page.tsx`)
+- Root cause: promo code only reached cart via "View Cart" link — lost if user navigated via header cart icon
+- Fix: on Add to Cart, store promo to `localStorage` as `pending_promo_code`
+- Cart reads it silently into `silentPromoCode` ref — no UI display, no discount line shown
+- Fires at checkout as fallback behind manual discount codes; cleared after use
+- Result: customer sees $35.09 × 2 = $70.18 in cart, Stripe charges $70.18 correctly
+- Confirmed working end-to-end: Stripe checkout showed $89.98 subtotal → -$19.80 discount → $70.18 total due
+
+**9. Stripe Line Item Names** (`app/api/checkout/route.ts`)
+- Variant color/size now appended to product name in Stripe line items
+- e.g. "Portable Blender Juicer, USB Rechargeable, 350ml — White"
+
+### Pending
+- Fund CJ wallet ($100+ recommended) — $57.55 needed to fulfill first real order
+- Delete test Stripe webhook (`vibrant-voyage`) created in Stripe test mode
+- Take product photos for Use Cases section (Smoothie, Milkshake, Frozen Coffee, Detox Drink cards)
+- LP is ready for ad traffic once CJ wallet funded
+
+### Files Modified
+- `app/lp/[slug]/LandingPageClient.tsx`
+- `components/admin/LandingPageBuilder.tsx`
+- `lib/cj/fulfill-order.ts`
+- `app/cart/page.tsx`
+- `app/api/checkout/route.ts`
+
+---
+
+## Session — March 18, 2026
+
+### Meta Ads — First Campaign Launched
+
+- Debugged and fixed Meta Pixel — was blocked by ad blocker in testing; confirmed working via Network tab (fbevents.js loading, PageView and AddToCart firing correctly)
+- Fixed MetaPixel.tsx: replaced conditional Next.js `<Script>` tag for fbevents.js with `document.createElement` in a `useEffect` — Next.js was silently skipping conditional script injection after mount
+- Stripe confirmed already in live mode
+- Connected MooreItems Pixel (2064810427703961) to Moore Items business ad account (3352207004930578) — was previously connected to personal account only
+- Completed Meta Business Portfolio setup: Page, Ad Account, Pixel all verified
+- Built and published first campaign: MI - Sales - Blender - Mar2026 / MI - AdSet - Broad - $25 / MI - Blender - Video - v1
+- $25/day, broad audience, US only, age 25+, Advantage+ placements, Purchase conversion event, landing page: mooreitems.com/lp/portable-blender-juicer-usb-rechargeable-350ml
+- All Advantage+ creative enhancements turned off to preserve clean creative testing data
+- Ad status: Active as of March 18 2026 ~9AM EST
+
+### Stock Sync Bug Fix
+
+- Identified that Case 2 (reactivation path) in stock-sync-background.mts was resurrecting manually deactivated variants by writing `is_active: variantStock > 0` unconditionally
+- Fix: added guard `if (!v.is_active && (v.stock_count ?? 0) > 0) continue` — skips variants that are inactive but have stock (manually hidden); only reactivates variants that were deactivated due to zero stock
+- Committed: fix: preserve manually deactivated variants during stock sync reactivation
+
+### CN Product Variant Cleanup
+
+- Deactivated "Pink Simple Packaging" and "White Simple Packaging" variants on portable blender (SKUs CJJD112318812LO, CJJD112318813MN) — supplier junk variants with watermark images
+- Also deactivated "Blue 380ml" and "Blue 420ml" variants
+- Added import pipeline filter task: at import time, auto-set `is_active = false` on any variant whose name contains "simple packaging", "no bubble wrap", or "do not include" (case-insensitive)
+
+### Ad Strategy Notes
+
+- Foundation-first strategy validated: Pixel → Stripe live → Business Portfolio → campaign
+- Do not run 3 ads simultaneously at $25/day — split budget too thin for learning. Run 1 ad, gather data for 5-7 days, then test variations sequentially
+- Next test: different hook (first 3 seconds) once CTR data available
+- Key metrics to watch: CTR >1%, CPC <$2, ATC rate, Cost per Purchase vs margin
