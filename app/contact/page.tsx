@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 
@@ -9,9 +9,14 @@ export default function ContactPage() {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [website, setWebsite] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    (window as Record<string, unknown>).__contactFormLoaded = Date.now();
+  }, []);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -23,7 +28,14 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message }),
+        body: JSON.stringify({
+          name,
+          email,
+          subject,
+          message,
+          website,
+          formLoadedAt: (window as Record<string, unknown>).__contactFormLoaded,
+        }),
       });
 
       const data = await res.json();
@@ -70,6 +82,16 @@ export default function ContactPage() {
           )}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Honeypot — hidden from real users */}
+            <input
+              type="text"
+              name="website"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              style={{ display: 'none' }}
+              tabIndex={-1}
+              autoComplete="off"
+            />
             <div>
               <label className="block text-sm font-semibold text-warm-900 mb-2">Name</label>
               <input

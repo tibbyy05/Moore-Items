@@ -5,6 +5,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const contactRateLimiter = new Map<string, number[]>();
 
+const emailRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+function looksLegit(str: string): boolean {
+  return /[a-z]{4,}/i.test(str);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const forwarded = req.headers.get('x-forwarded-for');
@@ -35,7 +41,27 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, subject, message } = body;
+    const { name, email, subject, message, website, formLoadedAt } = body;
+
+    // --- Bot protection: honeypot ---
+    if (website) {
+      return NextResponse.json({ success: true });
+    }
+
+    // --- Bot protection: timing check ---
+    if (typeof formLoadedAt === 'number' && now - formLoadedAt < 3000) {
+      return NextResponse.json({ success: true });
+    }
+
+    // --- Bot protection: gibberish detection ---
+    if (
+      !looksLegit(name ?? '') ||
+      !looksLegit(subject ?? '') ||
+      !looksLegit(message ?? '') ||
+      (message ?? '').length < 10
+    ) {
+      return NextResponse.json({ success: true });
+    }
 
     // Validate required fields
     if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
@@ -50,6 +76,34 @@ export async function POST(req: NextRequest) {
         { error: 'Please enter a valid email address.' },
         { status: 400 },
       );
+    }
+
+    // --- Bot protection: email-based rate limit (2 per 24h) ---
+    const emailKey = email.trim().toLowerCase();
+    const emailWindow = 24 * 60 * 60 * 1000;
+    const emailEntry = emailRateLimit.get(emailKey);
+
+    if (emailEntry) {
+      if (now < emailEntry.resetAt) {
+        if (emailEntry.count >= 2) {
+          return NextResponse.json(
+            { error: 'Too many submissions from this email' },
+            { status: 429 },
+          );
+        }
+        emailEntry.count += 1;
+      } else {
+        emailRateLimit.set(emailKey, { count: 1, resetAt: now + emailWindow });
+      }
+    } else {
+      emailRateLimit.set(emailKey, { count: 1, resetAt: now + emailWindow });
+    }
+
+    // Cleanup: remove expired email entries to prevent memory leak
+    if (emailRateLimit.size > 1000) {
+      Array.from(emailRateLimit.entries()).forEach(([key, entry]) => {
+        if (now >= entry.resetAt) emailRateLimit.delete(key);
+      });
     }
 
     const data = {
