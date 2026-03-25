@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
     const { supabase, error } = await requireAdmin();
     if (error) return error;
     const body = await request.json();
-    const { query, pid, page = 1, pageSize = 20, countryCode } = body;
+    const { query, pid, page = 1, pageSize = 20 } = body;
 
     if (!query && !pid) {
       return NextResponse.json(
@@ -261,11 +261,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Keyword search via product list API
+    // NOTE: Do NOT pass countryCode to CJ's /product/list — their V1 filter
+    // matches product origin country, not warehouse availability, so "US"
+    // returns 0 results for products manufactured in China but stocked in US
+    // warehouses. Instead, we return all results and let the client-side
+    // detectUSWarehouse() + filter handle warehouse filtering.
     const listResult = await cjClient.getProducts({
       productNameEn: trimmedQuery,
       pageNum: page,
       pageSize,
-      ...(countryCode ? { countryCode } : {}),
     });
 
     const products = listResult?.list || [];
