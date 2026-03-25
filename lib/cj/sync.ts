@@ -323,7 +323,8 @@ export function parsePriceValue(value: unknown): number | null {
 
 export function detectUSWarehouse(cjProduct: any): boolean {
   // CJ sourceFrom values: 4 = US warehouse, 1 = 1688 China, 2 = CJ warehouse China
-  if (cjProduct?.sourceFrom === 4) {
+  // Coerce to number — CJ sometimes returns sourceFrom as a string "4"
+  if (Number(cjProduct?.sourceFrom) === 4) {
     return true;
   }
 
