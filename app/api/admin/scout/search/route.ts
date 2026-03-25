@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
 
     if (countryCode) {
       const v2Result = await cjClient.getProductsV2({
-        productNameEn: trimmedQuery,
+        keyWord: trimmedQuery,
         countryCode,
         page,
         size: pageSize,
