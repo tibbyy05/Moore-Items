@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, subject, message, website, formLoadedAt } = body;
+    const { name, email, subject, message, website, formLoadedAt, cfTurnstileToken } = body;
 
     // --- Bot protection: honeypot ---
     if (website) {
@@ -51,6 +51,17 @@ export async function POST(req: NextRequest) {
     // --- Bot protection: timing check ---
     if (typeof formLoadedAt === 'number' && now - formLoadedAt < 3000) {
       return NextResponse.json({ success: true });
+    }
+
+    // --- Bot protection: Cloudflare Turnstile ---
+    const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=${process.env.TURNSTILE_SECRET_KEY}&response=${cfTurnstileToken}`,
+    });
+    const verifyData = await verifyRes.json();
+    if (!verifyData.success) {
+      return NextResponse.json({ error: 'Bot verification failed' }, { status: 400 });
     }
 
     // --- Bot protection: gibberish detection ---

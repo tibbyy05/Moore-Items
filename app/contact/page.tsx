@@ -13,9 +13,19 @@ export default function ContactPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   useEffect(() => {
     (window as unknown as Record<string, unknown>).__contactFormLoaded = Date.now();
+  }, []);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+    (window as any).onTurnstileSuccess = (token: string) => setTurnstileToken(token);
   }, []);
 
   async function handleSubmit(e: FormEvent) {
@@ -35,6 +45,7 @@ export default function ContactPage() {
           message,
           website,
           formLoadedAt: (window as unknown as Record<string, unknown>).__contactFormLoaded,
+          cfTurnstileToken: turnstileToken,
         }),
       });
 
@@ -140,9 +151,10 @@ export default function ContactPage() {
                 placeholder="Write your message..."
               />
             </div>
+            <div className="cf-turnstile" data-sitekey="0x4AAAAAACv2BHNSEx4VaEZF" data-callback="onTurnstileSuccess" data-theme="light"></div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !turnstileToken}
               className="px-6 py-3 rounded-lg bg-gold-500 text-white font-semibold hover:bg-gold-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Sending...' : 'Send Message'}
