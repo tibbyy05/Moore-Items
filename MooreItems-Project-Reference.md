@@ -4,7 +4,7 @@
 **Owner:** Danny Moore
 **Business Email:** mooreitemsshop@gmail.com
 **Started:** February 14, 2026
-**Last Updated:** March 17, 2026 (Session 46)
+**Last Updated:** March 18, 2026 (Session 46+)
 **Status:** Phase 36 — LIVE at mooreitems.com, **ready to launch first Meta ad**. Full order pipeline validated end-to-end. All pre-ads blockers cleared: Cookie consent banner live, Admin refund workflow built, Stripe Tax registration pending FL certificate. Daily auto-import pipeline running. Contact form live. CJ API daily limit upgraded to 5,000 requests/day. Catalog health check script fixed — was generating false alarms (2,019 phantom issues); real catalog health confirmed strong. **Full security audit completed (Session 30) — all 16 vulnerabilities resolved across Critical, High, Medium, and Low tiers.** **Real customer review system live (Session 31) — verified purchase gate, submission form, Verified Purchase badges.** **Landing Pages system fully built (Session 32) — AI-generated one-page landing pages with bundle/quantity discounts, crossfade image gallery, admin builder, public /lp/[slug] pages, view/conversion tracking.** **Homepage polished (Session 33) — hero text/images/animation, footer wordmark, noindex on landing pages, catalog 100% categorized, Product Scout relevance sorting.** **Session 34 — UX polish: search warehouse bug fixed, popular searches dropdown, ticker seamless loop + title case, category description collapse, hero image AI eligibility tagging (635/1000 products tagged), hero grid layout fixed, search "related to" pills.** **Session 35 — Admin dashboard upgrades: live visitor counter (GA4 Realtime API), Pending Fulfillment + Price Drift stat cards, Conversion Rate card removed. SEO fixes: soft 404s resolved (notFound() on inactive products), sitemap www→non-www corrected across 7 files, Search Console Validate Fix submitted.** **Session 44 — Mobile UX overhaul (2 critical + 12 medium + 6 low fixes), shipping times fixed everywhere (dynamic warehouse-aware), availability pipeline hardened (checkout + stock sync + webhooks), order pipeline fixed (variant required, variant_info saved, race condition retries, failed fulfillment surfaced), Featured Product homepage section + admin picker, hero rotation slowed to 12s, CJPacket Ordinary confirmed for CN→US shipping. Free shipping $50+ threshold enforced in checkout. Visitor stats dashboard live (GA4 historical: today/week/month counts + 7-day bar chart). GA4 realtime visitors fixed (force-dynamic + jsonb parse). Blender variant cleanup completed.**
 
 ---
@@ -472,6 +472,14 @@ The core competitive advantage: zero platform fees, full automation from product
 - ✅ **Stripe webhook verified** — `constructEvent()` confirmed called before all order processing; immediate 400 on signature failure
 - ✅ **No secrets in NEXT_PUBLIC_ vars** — All 20 Netlify env vars audited; only publishable/anon keys are public-prefixed
 - ✅ **mi_settings RLS fixed** — Was `to public, using (true)` (anyone with anon key could read CJ token + pricing config); fixed to `service_role` full access + `authenticated + mi_admin_profiles` read-only policy
+
+**Session 47 — Contact Form Bot Protection:**
+- ✅ **Honeypot field** — hidden `<input name="website" />` in form; API silently returns 200 if populated
+- ✅ **Timing check** — `window.__contactFormLoaded` set on mount; API silently discards if submitted in <3000ms
+- ✅ **Gibberish detection** — `looksLegit()` helper rejects name/subject/message with no 4+ consecutive letters; rejects messages under 10 chars
+- ✅ **Email-based rate limit** — `emailRateLimit` Map; 2 submissions per email per 24 hours; returns 429 on breach
+- Both `app/api/contact/route.ts` and `app/contact/page.tsx` updated
+- Note: rotating-email bots may still bypass; Cloudflare Turnstile identified as fallback if needed
 
 ### What's NOT Built Yet
 - ~~❌ **Daily CJ stock/price sync automation**~~ ✅ RESOLVED (real-time CJ webhook system — STOCK/VARIANT/LOGISTICS/PRODUCT events, Sessions 18 + 23)
@@ -3727,14 +3735,23 @@ Built a daily AI-powered ops briefing system that replaces the noisy hourly stoc
 #### Google Merchant Center — Misrepresentation Issue
 GMC flagged Misrepresentation on ~Mar 1 (coinciding with Session 14 SEO changes). All products blocked from US free listings.
 
-**Status:** Identity verification submitted. Review requested (1 of 3 attempts used). Awaiting Google response (3-5 business days).
+**Status:** Identity verification resubmitted (March 18, 2026) with correct Moore Items FL Fictitious Name certificate. Awaiting verification confirmation (1-3 business days). Misrepresentation review failed same day (timing issue — ran before identity verification cleared). Next step: wait for identity verification confirmation email, then immediately request fresh misrepresentation review via GMC "I disagree with the issue".
 
-**What was done:**
+**What was done (Session 37):**
 - Identified as automated check (not human reviewer)
 - Uploaded Ai-genda EIN document for identity verification (sole proprietors share one EIN across all businesses — IRS rule)
 - Submitted review request with "My account meets the policy requirements" confirmed
 - Returns page updated: "Contact support" → links to /contact page (no email exposed publicly)
 - Namecheap email forwarding set up: `support@`, `orders@`, `hello@` → all forward to mooreitemsshop@gmail.com
+
+**What was done (March 18, 2026):**
+- Identity verification root cause identified: previous attempt submitted Ai-genda EIN, not Moore Items documents
+- Google Payments profile is registered as "Moore Items" (two words) — requires matching organization + personal ID documents
+- Filed Florida Fictitious Name registration for "Moore Items" at sunbiz.org — confirmed, Registration Number G26000039688, dated March 18, 2026, $60 fee paid
+- Submitted new identity verification to Google Payments Center with FL state certificate (PDF) as organization document — status: "in progress"
+- Misrepresentation review completed and failed same day (ran before verification cleared — timing issue, not a new strike)
+- Next step: wait for identity verification confirmation email (1-3 business days), then immediately request fresh misrepresentation review via GMC "I disagree with the issue"
+- GMC account attempt count: identity verification attempts unclear; misrepresentation review may have a waiting period before next request allowed
 
 **Key facts learned:**
 - IRS online EIN tool: sole proprietors can only have ONE EIN regardless of number of businesses
@@ -3743,6 +3760,7 @@ GMC flagged Misrepresentation on ~Mar 1 (coinciding with Session 14 SEO changes)
 - Namecheap email forwarding is free — use REDIRECT EMAIL section (not REDIRECT DOMAIN)
 - GMC review limit: 3 attempts; if all fail must wait before trying again
 - GMC chart showed products approved Feb 13–Mar 1, then flipped to Not Approved — triggered by Session 14 SEO changes (metadataBase set to www.mooreitems.com)
+- Google Payments profile name ("Moore Items") must match submitted organization documents exactly — Ai-genda EIN was wrong entity
 
 **Site trust signal checklist confirmed before review:**
 - ✅ About page — describes business, mission, values
@@ -4352,3 +4370,85 @@ SQL audit revealed 6 variants: White/Pink/Black (null size) + White Pink (null s
 - Do not run 3 ads simultaneously at $25/day — split budget too thin for learning. Run 1 ad, gather data for 5-7 days, then test variations sequentially
 - Next test: different hook (first 3 seconds) once CTR data available
 - Key metrics to watch: CTR >1%, CPC <$2, ATC rate, Cost per Purchase vs margin
+
+### Catalog / DB Fixes (March 18, 2026)
+
+- Ran audit of daily briefing claims — 357 OOS figure was misleading; 330 were already correctly flagged out_of_stock, 13 were active with stock_count = 0 (fixed via UPDATE to out_of_stock), 16 are CN warehouse (known stock write bug, unresolved)
+- 291 hidden US products confirmed intentional (sofas, sectionals, large furniture, Christmas trees) — not a problem
+- Price drift: 14 flagged products reviewed — reprice system had already corrected retail prices; cleared price_drift_flagged = false on all 14
+- Health check orphaned 122 products: confirmed all are hidden or out_of_stock, zero active products affected — non-issue
+- Energy Boost Nutritional Powder and Queen Size Bed noted as products to permanently hide when restocked (supplements = Meta policy risk, bed = shipping complexity)
+
+### Google Merchant Center (March 18, 2026)
+
+- Identity verification root cause identified: previous attempt submitted Ai-genda EIN, not Moore Items documents
+- Google Payments profile is registered as "Moore Items" (two words) — requires matching organization + personal ID documents
+- Filed Florida Fictitious Name registration for "Moore Items" at sunbiz.org — confirmed, Registration Number G26000039688, dated March 18, 2026, $60 fee paid
+- Submitted new identity verification to Google Payments Center with FL state certificate (PDF) as organization document — status: "in progress"
+- Misrepresentation review completed and failed same day (ran before verification cleared — timing issue, not a new strike)
+- Next step: wait for identity verification confirmation email (1-3 business days), then immediately request fresh misrepresentation review via GMC "I disagree with the issue"
+- GMC account attempt count: identity verification attempts unclear; misrepresentation review may have a waiting period before next request allowed
+
+### Business / Legal (March 18, 2026)
+
+- Moore Items now officially registered as a Florida Fictitious Name (DBA) under Daniel Ryan Moore
+- Sunbiz tracking number: 600469818116
+- Registration Number: G26000039688, dated March 18, 2026, $60 fee paid
+- Certificate file: COS-G26000039688.pdf (emailed to mooreitemsshop@gmail.com)
+- This registration should be used as the organization document for any future Google, banking, or business verification needs
+
+---
+
+## Session — March 20–24, 2026
+
+### Meta Reach Campaign — Setup and First Delivery
+
+- Reach campaign (MI - Reach - Blender - Mar2026) was previously stuck in "In draft" — toggle was off; never actually published
+- Rebuilt and published the Reach campaign correctly with the following settings:
+  - Objective: Awareness / Reach
+  - Performance goal: Maximize reach of ads
+  - Budget: $5/day daily
+  - Start date: March 20, 2026
+  - Audience: US only, 18+, broad, Advantage+ placements
+  - Frequency cap: 2 impressions per 7 days (Cap mode)
+  - Dynamic creative: Off
+  - Multi-advertiser ads: Off (unchecked to prevent sharing placement with competitors)
+  - Format: Single image or video
+  - Media: LinkBelow-30Sec.mp4 (30-second UGC blender video)
+  - Primary text: "The blender that goes wherever you go. USB rechargeable, compact, and powerful enough for smoothies, shakes & more. 🔋"
+  - Headline: "Your New Favorite Blender"
+  - Destination: Website — https://mooreitems.com/lp/portable-blender-juicer-usb-rechargeable-350ml
+  - CTA: Shop Now
+  - Campaign score: 100
+
+### Delivery Progress
+
+- First impressions confirmed within hours of publishing: 2 → 245 → 1,086 → 7,770+ impressions across 3 days
+- CPM: ~$1.98 (extremely efficient for Reach objective)
+- CPC on Traffic campaign: $0.20 (strong creative resonance signal)
+- Traffic campaign CTR: 7.79% — well above average, confirms video creative is highly relevant
+- Total spend across all campaigns by Mar 23: ~$19.81
+- Traffic campaign was accidentally re-enabled mid-run — turned back off; Reach should run solo for full 7-day warmup period
+
+### Pixel Verification on Landing Page
+
+- Confirmed Meta Pixel fires correctly on /lp/portable-blender-juicer-usb-rechargeable-350ml via Meta Pixel Helper Chrome extension
+- PageView event: Active, load time 29.18ms
+- Pixel ID confirmed: 2064810427703961
+- 24 clicks → 1 Landing Page View discrepancy in Traffic campaign is sample size noise at low impression volume, not a real pixel or page speed issue — LP loads in under 30ms on mobile cellular
+
+### Ad Account Strategy — New Account Warming
+
+- New Meta ad accounts face payment history spending restrictions; full unlock requires ~$1,000 cumulative spend
+- Correct progression for new accounts: Reach (days 1–7) → Traffic (days 8–14) → Sales (day 15+)
+- Do not run multiple campaigns simultaneously while warming — splits thin budget and confuses the algorithm
+- Do not edit active campaigns mid-flight — every edit resets the delivery algorithm learning phase
+- Reach objective purpose: builds payment history and account trust; does NOT optimize for clicks or purchases; 1,000+ people reached ≠ site visitors
+- Once consistently spending full daily budget for 3–4 days on Reach → duplicate campaign, switch to Traffic / Landing Page Views, $10/day for 7 days, then step up to Sales
+
+### Pending
+
+- Let Reach campaign run uninterrupted for 7 full days from March 20 (through ~March 27)
+- After 7 days: evaluate full daily budget being spent consistently → graduate to Traffic campaign at $10/day
+- Keep Sales and Traffic campaigns off until Reach warmup complete
+- Import pipeline task still pending: auto-set `is_active = false` on variants whose name contains "simple packaging", "no bubble wrap", or "do not include" (case-insensitive) at import time
