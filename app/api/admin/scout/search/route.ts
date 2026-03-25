@@ -277,8 +277,10 @@ export async function POST(request: NextRequest) {
         page,
         size: pageSize,
       });
-      products = v2Result?.list || [];
-      total = v2Result?.total || 0;
+      // V2 response shape (after apiCall unwraps data.data):
+      // { content: [{ productList: [...] }], totalRecords: N }
+      products = v2Result?.content?.[0]?.productList || [];
+      total = v2Result?.totalRecords || 0;
     } else {
       const v1Result = await cjClient.getProducts({
         productNameEn: trimmedQuery,

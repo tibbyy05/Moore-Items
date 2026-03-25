@@ -216,7 +216,7 @@ class CJClient {
 
   async getProductsV2(
     params: CJProductListV2Params = {}
-  ): Promise<{ list: any[]; page: number; size: number; total: number }> {
+  ): Promise<{ content: { productList: any[] }[]; totalRecords: number }> {
     const searchParams = new URLSearchParams();
     if (params.page) searchParams.set('page', String(params.page));
     if (params.size) searchParams.set('size', String(params.size));
