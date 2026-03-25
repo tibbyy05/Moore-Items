@@ -273,6 +273,7 @@ export async function POST(request: NextRequest) {
     });
 
     const products = listResult?.list || [];
+    console.log('[scout] CJ raw products sample:', JSON.stringify(products.slice(0, 2), null, 2));
     const total = listResult?.total || 0;
 
     if (products.length === 0) {
