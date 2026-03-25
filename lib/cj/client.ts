@@ -26,6 +26,7 @@ interface CJProductListV2Params {
   orderBy?: number;
   sort?: 'asc' | 'desc';
   categoryId?: string;
+  productNameEn?: string;
 }
 
 interface CJProduct {
@@ -224,6 +225,7 @@ class CJClient {
     if (params.orderBy !== undefined) searchParams.set('orderBy', String(params.orderBy));
     if (params.sort) searchParams.set('sort', params.sort);
     if (params.categoryId) searchParams.set('categoryId', params.categoryId);
+    if (params.productNameEn) searchParams.set('productNameEn', params.productNameEn);
     return this.apiCall(`/product/listV2?${searchParams.toString()}`);
   }
 

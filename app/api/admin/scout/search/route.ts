@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
     const { supabase, error } = await requireAdmin();
     if (error) return error;
     const body = await request.json();
-    const { query, pid, page = 1, pageSize: requestedPageSize = 100 } = body;
+    const { query, pid, page = 1, pageSize: requestedPageSize = 100, countryCode } = body;
     // CJ allows max 100 per request — fetch the max to give client-side
     // warehouse filtering more candidates to work with
     const pageSize = Math.min(requestedPageSize, 100);
@@ -263,20 +263,31 @@ export async function POST(request: NextRequest) {
       // Fall through to keyword search if PID lookup fails
     }
 
-    // Keyword search via product list API
-    // NOTE: Do NOT pass countryCode to CJ's /product/list — their V1 filter
-    // matches product origin country, not warehouse availability, so "US"
-    // returns 0 results for products manufactured in China but stocked in US
-    // warehouses. Instead, we return all results and let the client-side
-    // detectUSWarehouse() + filter handle warehouse filtering.
-    const listResult = await cjClient.getProducts({
-      productNameEn: trimmedQuery,
-      pageNum: page,
-      pageSize,
-    });
+    // Keyword search via CJ product list API
+    // When countryCode is set (e.g. "US"), use V2 — its countryCode filters by
+    // warehouse inventory, not product origin. V1's countryCode filters by origin
+    // country, which returns 0 results for China-manufactured US-warehoused products.
+    let products: any[];
+    let total: number;
 
-    const products = listResult?.list || [];
-    const total = listResult?.total || 0;
+    if (countryCode) {
+      const v2Result = await cjClient.getProductsV2({
+        productNameEn: trimmedQuery,
+        countryCode,
+        page,
+        size: pageSize,
+      });
+      products = v2Result?.list || [];
+      total = v2Result?.total || 0;
+    } else {
+      const v1Result = await cjClient.getProducts({
+        productNameEn: trimmedQuery,
+        pageNum: page,
+        pageSize,
+      });
+      products = v1Result?.list || [];
+      total = v1Result?.total || 0;
+    }
 
     if (products.length === 0) {
       return NextResponse.json({
