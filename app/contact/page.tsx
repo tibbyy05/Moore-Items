@@ -15,7 +15,7 @@ export default function ContactPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    (window as Record<string, unknown>).__contactFormLoaded = Date.now();
+    (window as unknown as Record<string, unknown>).__contactFormLoaded = Date.now();
   }, []);
 
   async function handleSubmit(e: FormEvent) {
