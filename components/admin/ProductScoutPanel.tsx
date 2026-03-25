@@ -647,6 +647,11 @@ function ProductCard({
               <AlertTriangle className="w-4 h-4" />
               Low Stock — {product.total_us_stock} remaining
             </div>
+          ) : product.us_warehouse ? (
+            <div className="flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">
+              <CheckCircle className="w-4 h-4" />
+              US Warehouse
+            </div>
           ) : (
             <div className="flex items-center gap-1.5 text-sm font-medium text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
               <XCircle className="w-4 h-4" />

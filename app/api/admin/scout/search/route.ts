@@ -281,7 +281,6 @@ export async function POST(request: NextRequest) {
       // { content: [{ productList: [...] }], totalRecords: N }
       const v2Products = v2Result?.content?.[0]?.productList || [];
       total = v2Result?.totalRecords || 0;
-      console.log('[v2] raw product sample:', JSON.stringify(v2Products.slice(0, 1), null, 2));
 
       // Normalize V2 field names to match V1 format so the shared mapper works
       products = v2Products.map((p: any) => ({
@@ -291,6 +290,7 @@ export async function POST(request: NextRequest) {
         productSku: p.sku || p.productSku,
         productImage: p.bigImage || p.productImage,
         _usWarehouseGuaranteed: true, // V2 + countryCode=US guarantees US warehouse
+        _usStock: p.warehouseInventoryNum || 0,
       }));
     } else {
       const v1Result = await cjClient.getProducts({
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
         weight_grams: p.productWeight || 0,
         weight_oz: Math.round(((p.productWeight || 0) / 28.3495) * 10) / 10,
         variants: [],
-        total_us_stock: 0,
+        total_us_stock: p._usStock || 0,
         total_variants: 0,
         us_warehouse: isUS,
         catalog_status: catalogStatus,
@@ -365,10 +365,6 @@ export async function POST(request: NextRequest) {
         _needs_enrichment: true,
       } as any;
     });
-
-    if (countryCode) {
-      console.log('[v2] mapped product sample:', JSON.stringify(results.slice(0, 1), null, 2));
-    }
 
     return NextResponse.json({
       results,
