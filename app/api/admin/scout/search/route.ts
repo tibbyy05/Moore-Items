@@ -219,7 +219,10 @@ export async function POST(request: NextRequest) {
     const { supabase, error } = await requireAdmin();
     if (error) return error;
     const body = await request.json();
-    const { query, pid, page = 1, pageSize = 20 } = body;
+    const { query, pid, page = 1, pageSize: requestedPageSize = 100 } = body;
+    // CJ allows max 100 per request — fetch the max to give client-side
+    // warehouse filtering more candidates to work with
+    const pageSize = Math.min(requestedPageSize, 100);
 
     if (!query && !pid) {
       return NextResponse.json(
