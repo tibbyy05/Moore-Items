@@ -279,9 +279,19 @@ export async function POST(request: NextRequest) {
       });
       // V2 response shape (after apiCall unwraps data.data):
       // { content: [{ productList: [...] }], totalRecords: N }
-      products = v2Result?.content?.[0]?.productList || [];
+      const v2Products = v2Result?.content?.[0]?.productList || [];
       total = v2Result?.totalRecords || 0;
-      console.log('[v2] raw product sample:', JSON.stringify(products.slice(0, 1), null, 2));
+      console.log('[v2] raw product sample:', JSON.stringify(v2Products.slice(0, 1), null, 2));
+
+      // Normalize V2 field names to match V1 format so the shared mapper works
+      products = v2Products.map((p: any) => ({
+        ...p,
+        pid: p.id || p.pid,
+        productNameEn: p.nameEn || p.productNameEn,
+        productSku: p.sku || p.productSku,
+        productImage: p.bigImage || p.productImage,
+        _usWarehouseGuaranteed: true, // V2 + countryCode=US guarantees US warehouse
+      }));
     } else {
       const v1Result = await cjClient.getProducts({
         productNameEn: trimmedQuery,
@@ -320,7 +330,7 @@ export async function POST(request: NextRequest) {
       const cjPrice = parsePriceValue(p.sellPrice ?? p.productSellPrice) || 0;
       const shippingCost = PRICING_CONFIG.shippingCostEstimate;
       const pricing = calculatePricing(cjPrice, shippingCost);
-      const isUS = detectUSWarehouse(p);
+      const isUS = p._usWarehouseGuaranteed || detectUSWarehouse(p);
 
       const existing = catalogMap.get(p.pid);
       let catalogStatus: 'in_catalog' | 'not_in_catalog' | 'hidden' = 'not_in_catalog';
