@@ -34,7 +34,7 @@ export default function ContactPage() {
           subject,
           message,
           website,
-          formLoadedAt: (window as Record<string, unknown>).__contactFormLoaded,
+          formLoadedAt: (window as unknown as Record<string, unknown>).__contactFormLoaded,
         }),
       });
 
