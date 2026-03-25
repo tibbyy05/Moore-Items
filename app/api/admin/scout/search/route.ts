@@ -281,6 +281,7 @@ export async function POST(request: NextRequest) {
       // { content: [{ productList: [...] }], totalRecords: N }
       products = v2Result?.content?.[0]?.productList || [];
       total = v2Result?.totalRecords || 0;
+      console.log('[v2] raw product sample:', JSON.stringify(products.slice(0, 1), null, 2));
     } else {
       const v1Result = await cjClient.getProducts({
         productNameEn: trimmedQuery,
@@ -354,6 +355,10 @@ export async function POST(request: NextRequest) {
         _needs_enrichment: true,
       } as any;
     });
+
+    if (countryCode) {
+      console.log('[v2] mapped product sample:', JSON.stringify(results.slice(0, 1), null, 2));
+    }
 
     return NextResponse.json({
       results,
