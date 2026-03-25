@@ -322,8 +322,12 @@ export function parsePriceValue(value: unknown): number | null {
 }
 
 export function detectUSWarehouse(cjProduct: any): boolean {
-  // CJ sourceFrom values: 4 = US warehouse, 1 = 1688 China, 2 = CJ warehouse China
-  // Coerce to number — CJ sometimes returns sourceFrom as a string "4"
+  // Primary check: shippingCountryCodes is an array of country code strings (e.g. ["US", "CN"])
+  if (Array.isArray(cjProduct?.shippingCountryCodes) && cjProduct.shippingCountryCodes.includes('US')) {
+    return true;
+  }
+
+  // Fallback: sourceFrom values — 4 = US warehouse, 1 = 1688 China, 2 = CJ warehouse China
   if (Number(cjProduct?.sourceFrom) === 4) {
     return true;
   }
@@ -335,7 +339,6 @@ export function detectUSWarehouse(cjProduct: any): boolean {
     cjProduct?.shipmentCountryCode,
     cjProduct?.deliveryTime,
     cjProduct?.deliveryTimeText,
-    cjProduct?.sourceFrom,
   ]
     .filter(Boolean)
     .map((value: any) => String(value).toLowerCase());
