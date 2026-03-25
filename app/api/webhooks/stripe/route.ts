@@ -387,25 +387,29 @@ export async function POST(request: NextRequest) {
             const email = session.customer_details?.email || session.customer_email || order.email || '';
 
             if (email) {
-              await sendAbandonedCart({
-                customerName,
-                email,
-                cartUrl: 'https://mooreitems.com/cart',
-                orderItems: (orderItems || []).map((item) => ({
-                  name: item.name || 'Item',
-                  image_url: item.image_url || undefined,
-                  quantity: Number(item.quantity || 1),
-                  unit_price: Number(item.unit_price || 0),
-                })),
-              });
+              try {
+                await sendAbandonedCart({
+                  customerName,
+                  email,
+                  cartUrl: 'https://mooreitems.com/cart',
+                  orderItems: (orderItems || []).map((item) => ({
+                    name: item.name || 'Item',
+                    image_url: item.image_url || undefined,
+                    quantity: Number(item.quantity || 1),
+                    unit_price: Number(item.unit_price || 0),
+                  })),
+                });
 
-              const noteEntry = `[abandoned] ${new Date().toISOString()} abandoned cart email sent`;
-              await supabase
-                .from('mi_orders')
-                .update({
-                  notes: order.notes ? `${order.notes}\n${noteEntry}` : noteEntry,
-                })
-                .eq('id', order.id);
+                const noteEntry = `[abandoned] ${new Date().toISOString()} abandoned cart email sent`;
+                await supabase
+                  .from('mi_orders')
+                  .update({
+                    notes: order.notes ? `${order.notes}\n${noteEntry}` : noteEntry,
+                  })
+                  .eq('id', order.id);
+              } catch (abandonedEmailError) {
+                console.error('[Webhook] Abandoned cart email failed (non-fatal):', abandonedEmailError);
+              }
             }
           }
         }
