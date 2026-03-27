@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const supabase = createAdminClient();
     const { data: order, error: orderError } = await supabase
       .from('mi_orders')
-      .select('id, cj_order_number, fulfillment_status')
+      .select('id, cj_order_id, cj_order_number, fulfillment_status')
       .eq('id', orderId)
       .single();
 
@@ -70,11 +70,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (!order.cj_order_number) {
-      return NextResponse.json({ error: 'Missing CJ order number' }, { status: 400 });
+    const cjTrackingId = order.cj_order_id || order.cj_order_number;
+    if (!cjTrackingId) {
+      return NextResponse.json({ error: 'Missing CJ order ID' }, { status: 400 });
     }
 
-    const trackingPayload = await cjClient.getTracking(order.cj_order_number);
+    const trackingPayload = await cjClient.getTracking(cjTrackingId);
     const { trackingNumber, trackingUrl, carrier, status } = extractTrackingInfo(trackingPayload);
 
     let nextStatus = order.fulfillment_status;

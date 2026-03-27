@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
   const { data: orders, error } = await supabase
     .from('mi_orders')
     .select(
-      'id, order_number, cj_order_number, fulfillment_status, email, shipping_address, shipping_email_sent_at'
+      'id, order_number, cj_order_id, cj_order_number, fulfillment_status, email, shipping_address, shipping_email_sent_at'
     )
     .or('fulfillment_status.eq.processing,fulfillment_status.eq.shipped')
     .not('cj_order_number', 'is', null);
@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
 
   for (const order of orders) {
     try {
-      const trackingPayload = await cjClient.getTracking(order.cj_order_number!);
+      const cjTrackingId = order.cj_order_id || order.cj_order_number;
+      if (!cjTrackingId) continue;
+      const trackingPayload = await cjClient.getTracking(cjTrackingId);
       const { trackingNumber, trackingUrl, carrier, status } = extractTrackingInfo(trackingPayload);
 
       let nextStatus = order.fulfillment_status;
