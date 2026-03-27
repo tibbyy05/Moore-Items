@@ -74,7 +74,7 @@ export default function NotFound() {
             </div>
 
             <CustomButton variant="primary" asChild>
-              <Link href="/">Back to Home</Link>
+              <a href="/">Back to Home</a>
             </CustomButton>
           </div>
         </div>

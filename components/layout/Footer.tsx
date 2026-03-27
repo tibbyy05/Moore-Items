@@ -13,7 +13,7 @@ export function Footer() {
     { label: 'Shipping Policy', href: '/shipping-policy' },
     { label: 'Returns & Refunds', href: '/returns' },
     { label: 'FAQ', href: '/faq' },
-    { label: 'Track Order', href: '/order/confirmation' },
+    { label: 'Track Order', href: '/order/lookup' },
   ];
   const companyLinks = [
     { label: 'About Us', href: '/about' },
