@@ -290,7 +290,7 @@ class CJClient {
   }
 
   async getTracking(orderNumber: string) {
-    return this.apiCall(`/logistic/trackingInfo?orderNumber=${orderNumber}`);
+    return this.apiCall(`/shopping/order/getOrderDetail?orderId=${orderNumber}`);
   }
 }
 
