@@ -91,7 +91,7 @@ export function shippingUpdateTemplate(data: ShippingUpdateData): string {
               <tr><td bgcolor="#f7f6f3" style="background: #f7f6f3; border-radius: 12px; padding: 28px 32px;">
                 <p style="margin: 0 0 4px; font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Order</p>
                 <p style="margin: 0 0 24px; font-family: 'DM Sans', Arial, sans-serif; font-size: 24px; color: #0a0e1a; font-weight: bold;">#${orderNumber}</p>
-                <p style="margin: 0 0 4px; font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Carrier</p>
+                <p style="margin: 0 0 4px; font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Shipping Method</p>
                 <p style="margin: 0 0 24px; font-family: 'DM Sans', Arial, sans-serif; font-size: 20px; color: #0a0e1a; font-weight: 500;">${carrier}</p>
                 <p style="margin: 0 0 4px; font-family: 'DM Sans', Arial, sans-serif; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px;">Tracking Number</p>
                 <p style="margin: 0; font-family: 'DM Sans', Arial, sans-serif; font-size: 20px; color: #0a0e1a; font-weight: 500;">${trackingNumber}</p>
